@@ -48,10 +48,63 @@
             "description": "Additional notes"
           }
         },
-        "required": ["id", "name", "url", "license", "dataType"]
+        "required": [
+          "id",
+          "name",
+          "url",
+          "license",
+          "dataType"
+        ]
       }
     }
   },
-  "required": ["sources"],
-  "sources": []
+  "required": [
+    "sources"
+  ],
+  "sources": [
+    {
+      "id": "adsb-lol",
+      "name": "adsb.lol",
+      "url": "https://adsb.lol/",
+      "license": "TODO: verify terms",
+      "licenseUrl": "",
+      "dataType": "Live ADS-B positions",
+      "updateFrequency": "continuous (polled every 5s via proxy)",
+      "lastUpdated": "2026-09-29",
+      "notes": "Primary ADS-B provider behind PositionProvider. TODO: verify caching/redistribution and non-commercial terms \u2014 https://adsb.lol/"
+    },
+    {
+      "id": "ourairports",
+      "name": "OurAirports",
+      "url": "https://ourairports.com/data/",
+      "license": "Public Domain",
+      "licenseUrl": "https://ourairports.com/data/",
+      "dataType": "Airport database (airports.csv)",
+      "updateFrequency": "nightly",
+      "lastUpdated": "2026-09-29",
+      "notes": "Verified 2026-09-29: 'All data is released to the Public Domain.' Download from https://raw.githubusercontent.com/davidmegginson/ourairports-data/main/airports.csv"
+    },
+    {
+      "id": "tar1090-db",
+      "name": "tar1090-db",
+      "url": "https://github.com/wiedehopf/tar1090-db",
+      "license": "TODO: verify",
+      "licenseUrl": "https://github.com/wiedehopf/tar1090-db",
+      "dataType": "Aircraft registration/type database (aircraft.csv.gz)",
+      "updateFrequency": "monthly",
+      "lastUpdated": "2026-09-29",
+      "notes": "Download: https://github.com/wiedehopf/tar1090-db/raw/refs/heads/csv/aircraft.csv.gz \u2014 underlying DB from Mictronics/readsb (GPL-3.0 code). TODO(license): the CSV database itself carries no explicit licence statement \u2014 verify before redistribution."
+    },
+    {
+      "id": "pdok-brt",
+      "name": "PDOK BRT Achtergrondkaart",
+      "url": "https://www.pdok.nl/",
+      "license": "TODO: verify",
+      "licenseUrl": "https://www.pdok.nl/",
+      "dataType": "Basemap tiles",
+      "updateFrequency": "n/a",
+      "lastUpdated": "2026-09-29",
+      "notes": "TODO: verify current PDOK tile URL and licence terms"
+    }
+  ]
 }
