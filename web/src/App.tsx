@@ -1,10 +1,11 @@
 // Main application component
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { Map, SimpleBanner, TelemetryPanel, SearchBox, AircraftList, NoiseOverlay } from './components';
+import { Map, SimpleBanner, TelemetryPanel, SearchBox, AircraftList, NoiseOverlay, SettingsPanel, AttributionPage } from './components';
 import { useAircraftData } from './hooks';
 import { DEFAULT_POLLING_CONFIG } from './types';
 import type { NoiseContours } from '@vliegvuil/core';
+import { loadUnits, type UnitSettings, DEFAULT_UNITS } from './units';
 
 /**
  * Main application component
@@ -47,6 +48,14 @@ function App(): React.ReactElement {
   const [liveMessage, setLiveMessage] = useState('');
   const [noiseEnabled, setNoiseEnabled] = useState(false);
   const [noiseContours, setNoiseContours] = useState<NoiseContours | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showAttribution, setShowAttribution] = useState(false);
+  const [units, setUnits] = useState<UnitSettings>(DEFAULT_UNITS);
+
+  // Load persisted settings on mount (spec §2: localStorage only)
+  useEffect((): void => {
+    setUnits(loadUnits());
+  }, []);
 
   // Ref so the live region is addressable for testing
   const liveRegionRef = useRef<HTMLDivElement>(null);
@@ -235,6 +244,40 @@ function App(): React.ReactElement {
         <div>Laatste update: {new Date().toLocaleTimeString('nl-NL')}</div>
       </div>
 
+      {/* Settings toggle (session 11) */}
+      <button
+        type="button"
+        className="settings-toggle"
+        onClick={(): void => setShowSettings(prev => !prev)}
+        aria-expanded={showSettings}
+        aria-controls="settings-panel"
+        style={{
+          position: 'absolute',
+          top: '1rem',
+          right: '5rem',
+          zIndex: 20,
+        }}
+      >
+        ⚙
+      </button>
+
+      {/* Attribution link (session 11) */}
+      <button
+        type="button"
+        className="attribution-toggle"
+        onClick={(): void => setShowAttribution(prev => !prev)}
+        aria-expanded={showAttribution}
+        aria-controls="attribution-region"
+        style={{
+          position: 'absolute',
+          bottom: '5.5rem',
+          left: '1rem',
+          zIndex: 20,
+        }}
+      >
+        i
+      </button>
+
       {/* List view toggle */}
       <button
         type="button"
@@ -268,7 +311,21 @@ function App(): React.ReactElement {
           aircraft={selectedAircraft}
           onClose={handleCloseTelemetry}
           noiseContours={noiseContours}
+          units={units}
         />
+      )}
+
+      {/* Settings panel (session 11) */}
+      <SettingsPanel
+        open={showSettings}
+        onClose={(): void => setShowSettings(false)}
+        units={units}
+        onUnitsChange={setUnits}
+      />
+
+      {/* Attribution page (session 11) */}
+      {showAttribution && (
+        <AttributionPage onClose={(): void => setShowAttribution(false)} />
       )}
     </div>
   );
