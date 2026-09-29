@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+coverage/
+*.tsbuildinfo
+.vite/
+
+# Env and secrets (none should exist; see AGENTS.md)
+.env
+.env.*
+!.env.example
+
+# Data build: raw downloads and large outputs (rebuilt on the VPS)
+data-build/cache/
+data-build/tmp/
+*.pmtiles
+*.mbtiles
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
