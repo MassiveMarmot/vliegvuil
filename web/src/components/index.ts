@@ -2,7 +2,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // Export all components
-export { Map, getAircraftColor } from './Map';
+export { Map } from './Map';
+export {
+  ALTITUDE_BANDS,
+  SELECTED_ICON_ID,
+  createAirplaneIcon,
+  getAircraftColor,
+  iconIdForAircraft,
+  registerAircraftIcons,
+} from './aircraftIcons';
 export { Banner, SimpleBanner, type BannerProps } from './Banner';
 export { TelemetryPanel, type TelemetryPanelProps } from './TelemetryPanel';
 export { SearchBox, searchAircraft, type SearchBoxProps } from './SearchBox';

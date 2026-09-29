@@ -9,76 +9,30 @@ import type { DisplayAircraft } from '../types';
 import { useMap } from '../hooks';
 import { DEFAULT_MAP_CONFIG, PDOK_BRT_STYLE } from '../types';
 import { NOISE_BAND_COLORS, NOISE_FILL_OPACITY } from '../noiseStyle';
+import {
+  createAirplaneIcon,
+  registerAircraftIcons,
+  iconIdForAircraft,
+  SELECTED_ICON_ID,
+} from './aircraftIcons';
 
 // Aircraft symbol layer configuration
 const AIRCRAFT_LAYER_ID = 'aircraft-symbols';
-
-/**
- * Build the 24×24 airplane icon as raw RGBA data: a small plane glyph in a
- * white circle with a thin border (spec §3). Pure data — no DOM required.
- */
-function createAirplaneIcon(): { width: number; height: number; data: Uint8Array } {
-  const size = 24;
-  const data = new Uint8Array(size * size * 4);
-  const center = (size - 1) / 2;
-  const radius = size / 2 - 1;
-  const planeDist = 7; // distance from centre for the plane body pixels
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const idx = (y * size + x) * 4;
-      const dx = x - center;
-      const dy = y - center;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      // Thin dark border ring, then white circle fill
-      if (dist <= radius && dist > radius - 1.5) {
-        data[idx] = 0x3b; data[idx + 1] = 0x35; data[idx + 2] = 0x2f; data[idx + 3] = 0xff;
-      } else if (dist <= radius - 1.5) {
-        // Plane glyph: simple upward triangle along the vertical axis
-        const onBody = Math.abs(dx) <= 1.2 && dy >= -planeDist && dy <= planeDist;
-        const onWing = Math.abs(Math.abs(dx) - (planeDist - Math.abs(dy) * 0.6)) < 1.2 && Math.abs(dy) < planeDist * 0.7;
-        const isPlane = onBody || onWing;
-        data[idx] = isPlane ? 0x3b : 0xff;
-        data[idx + 1] = isPlane ? 0x35 : 0xff;
-        data[idx + 2] = isPlane ? 0x2f : 0xff;
-        data[idx + 3] = 0xff;
-      }
-    }
-  }
-  return { width: size, height: size, data };
-}
 const AIRCRAFT_SOURCE_ID = 'aircraft';
 
 // Symbol layer properties
 const SYMBOL_LAYOUT: SymbolLayerSpecification['layout'] = {
-  'icon-image': ['get', 'icon'],
+  'icon-image': ['case', ['==', ['get', 'selected'], true], SELECTED_ICON_ID, ['get', 'icon']],
   'icon-rotate': ['get', 'symbolRotate'],
   'icon-rotation-alignment': 'map',
   'icon-allow-overlap': true,
   'icon-ignore-placement': true,
   'icon-size': 0.5,
-  'text-field': ['get', 'callsign'],
-  'text-font': ['Noto Sans Regular'],
-  'text-size': 10,
-  'text-offset': [0, 1.5],
-  'text-anchor': 'top',
-  'text-allow-overlap': true,
 };
 
 const SYMBOL_PAINT: SymbolLayerSpecification['paint'] = {
-  'text-color': '#000000',
-  'text-halo-color': '#ffffff',
-  'text-halo-width': 1,
+  'icon-opacity': ['case', ['==', ['get', 'isStale'], true], 0.5, 1],
 };
-
-// Color based on altitude
-export function getAircraftColor(alt: number | null): string {
-  if (alt === null) return '#808080';
-  
-  if (alt < 5000) return '#00ff00';
-  if (alt < 10000) return '#ffff00';
-  if (alt < 20000) return '#ffa500';
-  return '#ff0000';
-}
 
 export interface MapProps {
   aircraft: Map<string, DisplayAircraft>;
@@ -104,6 +58,8 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
     if (!map || !mapLoaded) {
       return;
     }
+    // Register the altitude-band icons (session 17)
+    registerAircraftIcons(map);
 
     // Add airplane icon if not already added (24×24 RGBA glyph in a white
     // circle with a thin border, per spec §3)
@@ -129,7 +85,7 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
         isStale: ac.isStale,
         onGround: ac.onGround,
         selected: ac.id === selectedAircraftId,
-        icon: 'airplane',
+        icon: iconIdForAircraft(ac.alt, ac.onGround),
       },
     }));
 
@@ -186,28 +142,6 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
         }
       });
     }
-
-    // Update icon color based on selection, stale status, and altitude
-    map.setPaintProperty(AIRCRAFT_LAYER_ID, 'icon-color', [
-      'case',
-      ['==', ['get', 'selected'], true], '#ff0000',
-      ['==', ['get', 'isStale'], true], '#808080',
-      ['==', ['get', 'onGround'], true], '#0000ff',
-      ['get', 'alt'],
-    ]);
-
-    // Update icon opacity based on stale status
-    map.setPaintProperty(AIRCRAFT_LAYER_ID, 'icon-opacity', [
-      'case',
-      ['==', ['get', 'isStale'], true], 0.5,
-      1,
-    ]);
-
-    map.setPaintProperty(AIRCRAFT_LAYER_ID, 'text-color', [
-      'case',
-      ['==', ['get', 'selected'], true], '#ffffff',
-      '#000000',
-    ]);
 
   }, [map, mapLoaded, aircraft, selectedAircraftId, onAircraftClick]);
 
