@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "VliegVuil data sources with metadata",
+  "type": "object",
+  "properties": {
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the source"
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable name"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Source URL"
+          },
+          "license": {
+            "type": "string",
+            "description": "License identifier (SPDX)"
+          },
+          "licenseUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to license text"
+          },
+          "dataType": {
+            "type": "string",
+            "description": "Type of data provided"
+          },
+          "updateFrequency": {
+            "type": "string",
+            "description": "How often the data is updated"
+          },
+          "lastUpdated": {
+            "type": "string",
+            "format": "date",
+            "description": "Last update date"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Additional notes"
+          }
+        },
+        "required": ["id", "name", "url", "license", "dataType"]
+      }
+    }
+  },
+  "required": ["sources"],
+  "sources": []
+}
