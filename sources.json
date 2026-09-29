@@ -66,12 +66,12 @@
       "id": "adsb-lol",
       "name": "adsb.lol",
       "url": "https://adsb.lol/",
-      "license": "TODO: verify terms",
-      "licenseUrl": "",
+      "license": "BSD-3-Clause (API code)",
+      "licenseUrl": "https://github.com/adsblol/api/blob/main/LICENSE",
       "dataType": "Live ADS-B positions",
       "updateFrequency": "continuous (polled every 5s via proxy)",
       "lastUpdated": "2026-09-29",
-      "notes": "Primary ADS-B provider behind PositionProvider. TODO: verify caching/redistribution and non-commercial terms \u2014 https://adsb.lol/"
+      "notes": "API source is BSD-3-Clause (https://github.com/adsblol/api). Data comes from community feeders. TODO: note dynamic rate limits — future API key may require feeding adsb.lol (see README)."
     },
     {
       "id": "ourairports",
@@ -88,23 +88,45 @@
       "id": "tar1090-db",
       "name": "tar1090-db",
       "url": "https://github.com/wiedehopf/tar1090-db",
-      "license": "TODO: verify",
-      "licenseUrl": "https://github.com/wiedehopf/tar1090-db",
+      "license": "ODC-By-1.0 (derived from Mictronics aircraft-database)",
+      "licenseUrl": "https://github.com/Mictronics/aircraft-database/blob/main/LICENSE",
       "dataType": "Aircraft registration/type database (aircraft.csv.gz)",
       "updateFrequency": "monthly",
       "lastUpdated": "2026-09-29",
-      "notes": "Download: https://github.com/wiedehopf/tar1090-db/raw/refs/heads/csv/aircraft.csv.gz \u2014 underlying DB from Mictronics/readsb (GPL-3.0 code). TODO(license): the CSV database itself carries no explicit licence statement \u2014 verify before redistribution."
+      "notes": "Download: https://github.com/wiedehopf/tar1090-db/raw/refs/heads/csv/aircraft.csv.gz — derived from Mictronics/aircraft-database, whose exports are made available under the Open Data Commons Attribution License (ODC-By-1.0)."
     },
     {
       "id": "pdok-brt",
       "name": "PDOK BRT Achtergrondkaart",
       "url": "https://www.pdok.nl/",
-      "license": "TODO: verify",
-      "licenseUrl": "https://www.pdok.nl/",
+      "license": "CC-BY 4.0",
+      "licenseUrl": "https://www.pdok.nl/open-data",
       "dataType": "Basemap tiles",
       "updateFrequency": "n/a",
       "lastUpdated": "2026-09-29",
-      "notes": "TODO: verify current PDOK tile URL and licence terms"
+      "notes": "Licence overview at https://www.pdok.nl/open-data. TODO: verify current PDOK tile URL"
+    },
+    {
+      "id": "rivm-atlas-schiphol",
+      "name": "RIVM / Atlas Leefomgeving — Schiphol noise contours",
+      "url": "https://atlasleefomgeving.nl/",
+      "license": "Open data (no explicit licence statement; distributed via Nationaal Georegister / data.overheid.nl, typically CC-BY 4.0)",
+      "licenseUrl": "https://www.atlasleefomgeving.nl/veelgestelde-vragen",
+      "dataType": "Schiphol Lden noise contours (48/56/70 dB)",
+      "updateFrequency": "per study year",
+      "lastUpdated": "2026-09-29",
+      "notes": "Schiphol Lden contours as shown in Atlas Leefomgeving 'Geluid in Nederland'. Atlas FAQ: all maps are public and may be used freely; datasets distributed via Nationaal Georegister / data.overheid.nl (Dutch government open data, typically CC-BY 4.0). TODO: verify exact dataset year before use."
+    },
+    {
+      "id": "clo-nlr-regional",
+      "name": "CLO/NLR — regional noise contours 2018 & 2024",
+      "url": "https://www.clo.nl/",
+      "license": "CC-BY (unless stated otherwise)",
+      "licenseUrl": "https://www.clo.nl/en/copyright",
+      "dataType": "Lden contours for Rotterdam, Eindhoven, Maastricht, Groningen Eelde",
+      "updateFrequency": "2018 & 2024 studies",
+      "lastUpdated": "2026-09-29",
+      "notes": "CC-BY applies to CLO content unless stated otherwise (clo.nl copyright page). Eindhoven: civil Lden contours chosen (decision made); label 'civil traffic only' per spec §10. Rotterdam/Groningen/Maastricht lack an airport decree — note in layer info text."
     }
   ]
 }

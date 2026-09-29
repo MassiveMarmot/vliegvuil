@@ -32,6 +32,26 @@ export interface AircraftSnapshot {
   date: string;
 }
 
+/** Noise band levels (dB Lden) — spec §2 */
+export type NoiseBandLevel = 48 | 56 | 70;
+
+/** Noise contour GeoJSON feature (output of the noise build) */
+export interface NoiseContourFeature {
+  type: 'Feature';
+  geometry:
+    | { type: 'Polygon'; coordinates: number[][][] }
+    | { type: 'MultiPolygon'; coordinates: number[][][][] };
+  properties: {
+    airport: string;
+    band: NoiseBandLevel;
+    year: number;
+    metric: string;
+    source: string;
+    license: string;
+    caveat?: string;
+  };
+}
+
 /** Metadata for a produced snapshot file */
 export interface SnapshotMeta {
   file: string;
