@@ -3,9 +3,10 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // Main application component
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { Map, SimpleBanner, TelemetryPanel, SearchBox, AircraftList, NoiseOverlay, SettingsPanel, AttributionPage } from './components';
 import { useAircraftData } from './hooks';
+import { useSmoothedAircraft } from './movement/useSmoothedAircraft';
 import { DEFAULT_POLLING_CONFIG } from './types';
 import type { NoiseContours } from '@vliegvuil/core';
 import { loadUnits, type UnitSettings, DEFAULT_UNITS } from './units';
@@ -46,6 +47,23 @@ function App(): React.ReactElement {
     stopPolling,
     refreshAircraft,
   } = useAircraftData({ ...DEFAULT_POLLING_CONFIG, enabled: true });
+
+  // Session 16: dead-reckon aircraft between polls (capped ~10 fps);
+  // jumps straight to the newest fix under prefers-reduced-motion.
+  const { smoothed: smoothedPositions } = useSmoothedAircraft(aircraft);
+  const smoothedAircraft = useMemo(() => {
+    if (smoothedPositions.size === 0) {
+      return aircraft;
+    }
+    const merged = new globalThis.Map(aircraft);
+    for (const [id, pos] of smoothedPositions) {
+      const ac = merged.get(id);
+      if (ac) {
+        merged.set(id, { ...ac, lat: pos.lat, lon: pos.lon });
+      }
+    }
+    return merged;
+  }, [aircraft, smoothedPositions]);
 
   const [selectedAircraftId, setSelectedAircraftId] = useState<string | null>(null);
   const [showList, setShowList] = useState(false);
@@ -214,7 +232,7 @@ function App(): React.ReactElement {
 
       {/* Map */}
       <Map
-        aircraft={aircraft}
+        aircraft={smoothedPositions.size > 0 ? smoothedAircraft : aircraft}
         selectedAircraftId={selectedAircraftId}
         onAircraftClick={handleAircraftClick}
         noiseContours={noiseContours ? noiseContoursToGeoJson(noiseContours) : null}
