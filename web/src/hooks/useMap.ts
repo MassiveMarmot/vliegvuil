@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState } from 'react';
 import maplibregl, { Map as MapLibreMap, LngLatBounds } from 'maplibre-gl';
 import type { MapConfig, MapStyle } from '../types';
-import { NETHERLANDS_BBOX } from '../types';
+import { NETHERLANDS_BBOX, getBasemapUrl, PDOK_BRT_ATTRIBUTION } from '../types';
 
 // Hook return type
 export interface UseMapReturn {
@@ -19,7 +19,7 @@ export interface UseMapReturn {
 /**
  * Initialize and manage a MapLibre GL map instance
  */
-export function useMap(config: MapConfig, style: MapStyle): UseMapReturn {
+export function useMap(config: MapConfig, _style?: MapStyle): UseMapReturn {
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<MapLibreMap | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -39,9 +39,9 @@ export function useMap(config: MapConfig, style: MapStyle): UseMapReturn {
           sources: {
             'pdok-brt': {
               type: 'raster',
-              tiles: [style.url],
+              tiles: [getBasemapUrl()],
               tileSize: 256,
-              attribution: 'PDOK BRT Achtergrondkaart',
+              attribution: PDOK_BRT_ATTRIBUTION,
             },
           },
           layers: [
@@ -92,7 +92,7 @@ export function useMap(config: MapConfig, style: MapStyle): UseMapReturn {
       setMapError(error instanceof Error ? error.message : 'Unknown map error');
       console.error('Failed to initialize map:', error);
     }
-  }, [config.center, config.zoom, config.minZoom, config.maxZoom, config.pitch, config.bearing, style.url]);
+  }, [config.center, config.zoom, config.minZoom, config.maxZoom, config.pitch, config.bearing]);
 
   return {
     mapContainer,

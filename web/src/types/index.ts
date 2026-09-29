@@ -97,11 +97,22 @@ export const DEFAULT_MAP_CONFIG: MapConfig = {
   bearing: 0,
 };
 
-// PDOK BRT (Base Register Topografie) style
+// PDOK BRT Achtergrondkaart WMTS (verified against the GetCapabilities
+// document, EPSG:3857 tile matrix set; see session 17 PR for the excerpt)
+export const PDOK_BRT_TILE_URL =
+  'https://service.pdok.nl/kadaster/brt-achtergrondkaart/wmts/v2_0/standaard/EPSG:3857/{z}/{x}/{y}.png';
+
+export const PDOK_BRT_ATTRIBUTION = 'Kaartgegevens © PDOK / Kadaster';
+
 export const PDOK_BRT_STYLE: MapStyle = {
-  url: 'https://geodata.nationaalgeoregister.nl/tiles/service/tms/1.0.0/brtachtergrondkaart/{z}/{x}/{y}.png',
+  url: PDOK_BRT_TILE_URL,
   name: 'PDOK BRT Achtergrondkaart',
 };
+
+/** Basemap tile URL from config (VITE_TILE_URL), PDOK default */
+export function getBasemapUrl(): string {
+  return import.meta.env.VITE_TILE_URL ?? PDOK_BRT_TILE_URL;
+}
 
 // Default polling configuration
 export const DEFAULT_POLLING_CONFIG: PollingConfig = {
