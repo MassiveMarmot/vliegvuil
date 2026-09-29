@@ -13,6 +13,8 @@
     "noData": "No data available"
   },
   "telemetry": {
+    "title": "Aircraft details",
+    "close": "Close",
     "callsign": "Callsign",
     "registration": "Registration",
     "type": "Type",
