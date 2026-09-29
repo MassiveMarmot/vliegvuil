@@ -6,10 +6,14 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { DisplayAircraft } from '../types';
+import type { NoiseContours } from '@vliegvuil/core';
+import { NoiseBadge } from './NoiseOverlay';
 
 export interface TelemetryPanelProps {
   aircraft: DisplayAircraft;
   onClose: () => void;
+  /** Noise contours for the membership badge (session 10) */
+  noiseContours?: NoiseContours | null;
 }
 
 /** Format a nullable value, falling back to an em dash */
@@ -53,7 +57,7 @@ function formatDataAge(timestamp: number): string {
  * Managed focus: on mount focus moves to the panel; on close (button or Esc)
  * focus returns to the previously focused element.
  */
-export function TelemetryPanel({ aircraft, onClose }: TelemetryPanelProps): React.ReactElement {
+export function TelemetryPanel({ aircraft, onClose, noiseContours }: TelemetryPanelProps): React.ReactElement {
   const { t } = useTranslation();
   const panelRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<Element | null>(null);
@@ -151,6 +155,9 @@ export function TelemetryPanel({ aircraft, onClose }: TelemetryPanelProps): Reac
         </div>
       </dl>
 
+      {noiseContours && (
+        <NoiseBadge lat={aircraft.lat} lon={aircraft.lon} contours={noiseContours} />
+      )}
       {aircraft.isStale && (
         <p className="telemetry-badge" role="status">
           {t('map.staleData')}
