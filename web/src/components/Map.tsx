@@ -5,6 +5,7 @@ import maplibregl, { SymbolLayerSpecification, MapLayerMouseEvent } from 'maplib
 import type { DisplayAircraft } from '../types';
 import { useMap } from '../hooks';
 import { DEFAULT_MAP_CONFIG, PDOK_BRT_STYLE } from '../types';
+import { NOISE_BAND_COLORS, NOISE_FILL_OPACITY } from '../noiseStyle';
 
 // Aircraft symbol layer configuration
 const AIRCRAFT_LAYER_ID = 'aircraft-symbols';
@@ -46,12 +47,19 @@ export interface MapProps {
   aircraft: Map<string, DisplayAircraft>;
   selectedAircraftId: string | null;
   onAircraftClick: (id: string) => void;
+  /** Noise contour GeoJSON for the overlay fill layer (session 10) */
+  noiseContours?: { type: 'FeatureCollection'; features: Array<{ type: 'Feature'; geometry: unknown; properties: Record<string, unknown> }> } | null;
+  /** Whether the noise overlay layer is visible */
+  noiseEnabled?: boolean;
 }
 
 /**
  * Map component that renders aircraft on a MapLibre map
  */
-export function Map({ aircraft, selectedAircraftId, onAircraftClick }: MapProps): React.ReactElement {
+const NOISE_SOURCE_ID = 'noise-contours';
+const NOISE_LAYER_ID = 'noise-contours-fill';
+
+export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContours, noiseEnabled = false }: MapProps): React.ReactElement {
   const { mapContainer, map, mapLoaded } = useMap(DEFAULT_MAP_CONFIG, PDOK_BRT_STYLE);
 
   // Update aircraft layer when data changes
@@ -164,6 +172,54 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick }: MapProps)
     ]);
 
   }, [map, mapLoaded, aircraft, selectedAircraftId, onAircraftClick]);
+
+  // Noise overlay layer (session 10): fill below aircraft symbols
+  useEffect((): void => {
+    if (!map || !mapLoaded || !noiseContours) {
+      return;
+    }
+    const noiseData = noiseContours as unknown as maplibregl.GeoJSONSourceSpecification['data'];
+    if (!map.getSource(NOISE_SOURCE_ID)) {
+      map.addSource(NOISE_SOURCE_ID, {
+        type: 'geojson',
+        data: noiseData,
+      });
+    } else {
+      (map.getSource(NOISE_SOURCE_ID) as maplibregl.GeoJSONSource).setData(noiseData);
+    }
+    if (!map.getLayer(NOISE_LAYER_ID)) {
+      map.addLayer(
+        {
+          id: NOISE_LAYER_ID,
+          type: 'fill',
+          source: NOISE_SOURCE_ID,
+          layout: { visibility: noiseEnabled ? 'visible' : 'none' },
+          paint: {
+            'fill-color': [
+              'match',
+              ['get', 'band'],
+              48, NOISE_BAND_COLORS[48],
+              56, NOISE_BAND_COLORS[56],
+              70, NOISE_BAND_COLORS[70],
+              '#cccccc',
+            ],
+            'fill-opacity': NOISE_FILL_OPACITY,
+            'fill-outline-color': [
+              'match',
+              ['get', 'band'],
+              48, NOISE_BAND_COLORS[56],
+              56, NOISE_BAND_COLORS[70],
+              70, '#7a0c16',
+              '#999999',
+            ],
+          },
+        },
+        AIRCRAFT_LAYER_ID,
+      );
+    } else {
+      map.setLayoutProperty(NOISE_LAYER_ID, 'visibility', noiseEnabled ? 'visible' : 'none');
+    }
+  }, [map, mapLoaded, noiseContours, noiseEnabled]);
 
   return (
     <div

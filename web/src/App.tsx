@@ -1,14 +1,35 @@
 // Main application component
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { Map, SimpleBanner, TelemetryPanel, SearchBox, AircraftList } from './components';
+import { Map, SimpleBanner, TelemetryPanel, SearchBox, AircraftList, NoiseOverlay } from './components';
 import { useAircraftData } from './hooks';
 import { DEFAULT_POLLING_CONFIG } from './types';
+import type { NoiseContours } from '@vliegvuil/core';
 
 /**
  * Main application component
  * Displays map with aircraft, telemetry panel, search, list view, and status banners
  */
+/** Convert core contours back into the GeoJSON FeatureCollection the map layer needs */
+type NoiseGeoJson = { type: 'FeatureCollection'; features: Array<{ type: 'Feature'; geometry: unknown; properties: Record<string, unknown> }> };
+
+function noiseContoursToGeoJson(contours: NoiseContours): NoiseGeoJson {
+  return {
+    type: 'FeatureCollection',
+    features: contours.contours.map((c): { type: 'Feature'; geometry: unknown; properties: Record<string, unknown> } => ({
+      type: 'Feature',
+      geometry: c.geometry,
+      properties: {
+        airport: c.airport,
+        band: c.band,
+        year: c.year,
+        source: c.properties.source,
+        license: c.properties.license,
+      },
+    })),
+  };
+}
+
 function App(): React.ReactElement {
   const {
     aircraft,
@@ -24,6 +45,8 @@ function App(): React.ReactElement {
   const [selectedAircraftId, setSelectedAircraftId] = useState<string | null>(null);
   const [showList, setShowList] = useState(false);
   const [liveMessage, setLiveMessage] = useState('');
+  const [noiseEnabled, setNoiseEnabled] = useState(false);
+  const [noiseContours, setNoiseContours] = useState<NoiseContours | null>(null);
 
   // Ref so the live region is addressable for testing
   const liveRegionRef = useRef<HTMLDivElement>(null);
@@ -72,6 +95,59 @@ function App(): React.ReactElement {
       return next;
     });
   }, [announce]);
+
+  // Noise overlay toggle with announcement (spec §6)
+  const handleToggleNoise = useCallback((enabled: boolean): void => {
+    setNoiseEnabled(enabled);
+    announce(enabled ? 'Geluidscontouren getoond' : 'Geluidscontouren verborgen');
+  }, [announce]);
+
+  // Load the noise contour snapshot (built by data-build, spec §5)
+  useEffect((): (() => void) => {
+    let cancelled = false;
+    fetch('/noise-contours.geojson')
+      .then((res): Promise<unknown> => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
+      .then((data: unknown): void => {
+        if (cancelled) return;
+        const fc = data as { type?: string; features?: unknown[] };
+        if (fc?.type !== 'FeatureCollection' || !Array.isArray(fc.features)) return;
+        const contours = (fc.features as Array<{ geometry?: unknown; properties?: Record<string, unknown> }>)
+          .filter((f): boolean => f.geometry !== undefined && f.properties !== undefined)
+          .map((f): { geometry: unknown; properties: Record<string, unknown> } => ({
+            geometry: f.geometry,
+            properties: f.properties ?? {},
+          }))
+          .map((f): NoiseContours['contours'][number] | null => {
+            const p = f.properties;
+            const band = p['band'];
+            const airport = p['airport'];
+            const year = p['year'];
+            if (typeof band !== 'number' || typeof airport !== 'string' || typeof year !== 'number') return null;
+            if (band !== 48 && band !== 56 && band !== 70) return null;
+            return {
+              airport,
+              year,
+              band,
+              geometry: f.geometry as NoiseContours['contours'][number]['geometry'],
+              properties: {
+                source: typeof p['source'] === 'string' ? p['source'] : '',
+                license: typeof p['license'] === 'string' ? p['license'] : '',
+                date: String(p['date'] ?? year),
+                ...(typeof p['caveat'] === 'string' ? { caveat: p['caveat'] } : {}),
+              },
+            };
+          })
+          .filter((c): c is NoiseContours['contours'][number] => c !== null);
+        setNoiseContours({ contours });
+      })
+      .catch((): void => {
+        // Snapshot absent (e.g. not yet built) — overlay stays hidden
+        setNoiseContours(null);
+      });
+    return (): void => {
+      cancelled = true;
+    };
+  }, []);
 
   const selectedAircraft = selectedAircraftId
     ? aircraft.get(selectedAircraftId) ?? null
@@ -128,6 +204,15 @@ function App(): React.ReactElement {
         aircraft={aircraft}
         selectedAircraftId={selectedAircraftId}
         onAircraftClick={handleAircraftClick}
+        noiseContours={noiseContours ? noiseContoursToGeoJson(noiseContours) : null}
+        noiseEnabled={noiseEnabled}
+      />
+
+      {/* Noise overlay toggle + legend (session 10) */}
+      <NoiseOverlay
+        enabled={noiseEnabled}
+        onToggle={handleToggleNoise}
+        contours={noiseContours}
       />
 
       {/* Info overlay */}
@@ -182,6 +267,7 @@ function App(): React.ReactElement {
         <TelemetryPanel
           aircraft={selectedAircraft}
           onClose={handleCloseTelemetry}
+          noiseContours={noiseContours}
         />
       )}
     </div>
