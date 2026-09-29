@@ -7,6 +7,7 @@ import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { Map, SimpleBanner, TelemetryPanel, SearchBox, AircraftList, NoiseOverlay, SettingsPanel, AttributionPage } from './components';
 import { useAircraftData } from './hooks';
 import { useSmoothedAircraft } from './movement/useSmoothedAircraft';
+import { useTranslation } from 'react-i18next';
 import { DEFAULT_POLLING_CONFIG } from './types';
 import type { NoiseContours } from '@vliegvuil/core';
 import { loadUnits, type UnitSettings, DEFAULT_UNITS } from './units';
@@ -36,6 +37,7 @@ function noiseContoursToGeoJson(contours: NoiseContours): NoiseGeoJson {
 }
 
 function App(): React.ReactElement {
+  const { t, i18n } = useTranslation();
   const {
     aircraft,
     lastUpdate,
@@ -97,14 +99,14 @@ function App(): React.ReactElement {
   const handleAircraftSelect = useCallback((id: string): void => {
     setSelectedAircraftId(id);
     const ac = aircraft.get(id);
-    announce(ac ? `${ac.callsign ?? ac.icao24} geselecteerd` : '');
+    announce(ac ? t('aria.selected', '{{callsign}} geselecteerd', { callsign: ac.callsign ?? ac.icao24 }) : '');
   }, [aircraft, announce]);
 
   const handleAircraftClick = useCallback((id: string): void => {
     setSelectedAircraftId(prev => {
       const next = prev === id ? null : id;
       const ac = aircraft.get(id);
-      announce(next && ac ? `${ac.callsign ?? ac.icao24} geselecteerd` : '');
+      announce(next && ac ? t('aria.selected', '{{callsign}} geselecteerd', { callsign: ac.callsign ?? ac.icao24 }) : '');
       return next;
     });
   }, [aircraft, announce]);
@@ -122,7 +124,7 @@ function App(): React.ReactElement {
   const handleToggleList = useCallback((): void => {
     setShowList(prev => {
       const next = !prev;
-      announce(next ? 'Lijstweergave geopend' : 'Lijstweergave gesloten');
+      announce(next ? t('list.opened', 'Lijstweergave geopend') : t('list.closed', 'Lijstweergave gesloten'));
       return next;
     });
   }, [announce]);
@@ -130,7 +132,7 @@ function App(): React.ReactElement {
   // Noise overlay toggle with announcement (spec §6)
   const handleToggleNoise = useCallback((enabled: boolean): void => {
     setNoiseEnabled(enabled);
-    announce(enabled ? 'Geluidscontouren getoond' : 'Geluidscontouren verborgen');
+    announce(enabled ? t('noise.opened', 'Geluidscontouren getoond') : t('noise.closed', 'Geluidscontouren verborgen'));
   }, [announce]);
 
   // Load the noise contour snapshot (built by data-build, spec §5)
@@ -190,7 +192,7 @@ function App(): React.ReactElement {
       {isLoading && (
         <SimpleBanner
           type="info"
-          message="Laden..."
+          message={t('banner.loading', 'Laden...')}
           visible={true}
         />
       )}
@@ -261,9 +263,13 @@ function App(): React.ReactElement {
           zIndex: 10,
         }}
       >
-        <div><strong>VliegVuil.nl</strong></div>
-        <div>Vliegtuigen: {aircraft.size}</div>
-        <div>Laatste update: {lastUpdate != null ? new Date(lastUpdate).toLocaleTimeString('nl-NL') : '—'}</div>
+        <div><strong>{t('app.title', 'VliegVuil.nl')}</strong></div>
+        <div>{t('info.aircraftCount', 'Vliegtuigen: {{count}}', { count: aircraft.size })}</div>
+        <div>{t('info.lastUpdate', 'Laatste update: {{time}}', {
+          time: lastUpdate != null
+            ? new Date(lastUpdate).toLocaleTimeString(i18n.language === 'en' ? 'en-GB' : 'nl-NL')
+            : '—',
+        })}</div>
       </div>
 
       {/* Settings toggle (session 11) */}

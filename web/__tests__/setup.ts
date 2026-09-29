@@ -1,3 +1,23 @@
+
+// jsdom lacks matchMedia; useSmoothedAircraft queries prefers-reduced-motion
+if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
+  window.matchMedia = ((query: string): MediaQueryList => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: (): void => undefined,
+    removeListener: (): void => undefined,
+    addEventListener: (): void => undefined,
+    removeEventListener: (): void => undefined,
+    dispatchEvent: (): boolean => false,
+  })) as unknown as typeof window.matchMedia;
+}
+
+// maplibre-gl creates a worker blob URL at import time; jsdom lacks it
+if (typeof window !== 'undefined' && typeof window.URL.createObjectURL !== 'function') {
+  window.URL.createObjectURL = (): string => 'blob:mock';
+  window.URL.revokeObjectURL = (): void => undefined;
+}
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';

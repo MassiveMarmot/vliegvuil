@@ -7,7 +7,7 @@
 // Spec §6: managed focus (moves in on select, returns on close, Esc to close) — not a focus trap.
 
 import React, { useEffect, useRef, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next';import type { TFunction } from 'i18next';
 import type { DisplayAircraft } from '../types';
 import type { NoiseContours } from '@vliegvuil/core';
 import { NoiseBadge } from './NoiseOverlay';
@@ -33,20 +33,22 @@ function formatHeading(track: number | null): string {
   return track != null ? `${Math.round(track)}°` : '—';
 }
 
-/** Format vertical rate in ft/min with direction indicator */
-function formatVerticalRate(rate: number | null): string {
+/** Format vertical rate with direction indicator */
+function formatVerticalRate(rate: number | null, unit: string): string {
   if (rate == null) return '—';
   const arrow = rate > 0 ? '↑' : rate < 0 ? '↓' : '';
-  return `${arrow}${Math.abs(Math.round(rate)).toLocaleString()} ft/min`;
+  return `${arrow}${Math.abs(Math.round(rate)).toLocaleString()} ${unit}`;
 }
 
 /** Format data age from a Unix-seconds timestamp */
-function formatDataAge(timestamp: number): string {
+function formatDataAge(timestamp: number, t: TFunction): string {
   const ageSeconds = Math.max(0, Math.floor(Date.now() / 1000 - timestamp));
-  if (ageSeconds < 60) return `${ageSeconds}s`;
+  if (ageSeconds < 60) {
+    return t('telemetry.dataAgeSeconds', '{{count}}s', { count: ageSeconds });
+  }
   const minutes = Math.floor(ageSeconds / 60);
   const seconds = ageSeconds % 60;
-  return `${minutes}m ${seconds}s`;
+  return t('telemetry.dataAgeMinutes', '{{count}}m {{seconds}}s', { count: minutes, seconds });
 }
 
 /**
@@ -140,7 +142,7 @@ export function TelemetryPanel({ aircraft, onClose, noiseContours, units = DEFAU
         </div>
         <div className="telemetry-row">
           <dt className="telemetry-label">{t('telemetry.verticalRate')}</dt>
-          <dd className="telemetry-value">{formatVerticalRate(aircraft.verticalRate)}</dd>
+          <dd className="telemetry-value">{formatVerticalRate(aircraft.verticalRate, t('telemetry.verticalRateUnit', 'ft/min'))}</dd>
         </div>
         <div className="telemetry-row">
           <dt className="telemetry-label">{t('telemetry.squawk')}</dt>
@@ -148,7 +150,7 @@ export function TelemetryPanel({ aircraft, onClose, noiseContours, units = DEFAU
         </div>
         <div className="telemetry-row">
           <dt className="telemetry-label">{t('telemetry.dataAge')}</dt>
-          <dd className="telemetry-value">{formatDataAge(aircraft.timestamp)}</dd>
+          <dd className="telemetry-value">{formatDataAge(aircraft.timestamp, t)}</dd>
         </div>
       </dl>
 
