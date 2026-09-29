@@ -105,6 +105,11 @@ For data sessions add: "Fetch and read each official source page and licence tex
 - Open decisions in spec §11: licence (MPL-2.0 / EUPL-1.2 / dual), PDOK style vs MapLibre.
 - Review each PR: new dependencies, CSP, anything that adds a network request.
 - Large data outputs (PMTiles) and all deployment happen on your Hetzner VPS, not in the sandbox.
+- - **Before 13:** give the agent the copyright holder name and year for the MPL-2.0 header.
+- **Before 17:** decide self-hosted glyphs vs. no map labels.
+- **Before 19:** accept that the proxy needs a custom Caddy build (two modules), or say if you'd rather use a different approach.
+- **Before 21/22:** verify yourself, on the official pages, each source's current URL and licence: tar1090-db (the current `sources.json` says ODC-By-1.0 via Mictronics; re-check), OurAirports, the Schiphol dataset and its year (currently "typically CC-BY", unverified), the CLO/NLR regional datasets, and whether Schiphol offers finer bands than 48/56/70 dB.
+- **After 26:** deploy on the VPS yourself, open the site with browser dev tools, and confirm the only requests are your own origin and PDOK; compare against `privacy.md`; check the live feed with real aircraft.
 - Re-read noise badge and legend wording for factual tone.
 
 ## 7. Sources checked
