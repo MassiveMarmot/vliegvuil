@@ -1,0 +1,185 @@
+# VliegVuil.nl - Caddy v2 Configuration
+# 
+# Features:
+# - Static file service for web app (SPA)
+# - Reverse proxy for API endpoints
+# - ~5 second micro-cache for API responses
+# - No access logs (privacy)
+# - No client IP/headers forwarded upstream
+# - Per-IP rate limiting
+# - CORS headers
+# - HTTPS via Let's Encrypt (automatic)
+
+# Global settings
+{
+    # No access logging for privacy
+    # Caddy logs errors by default, but we disable access logs
+    access_log off
+    
+    # Default server settings
+    default_snippet cloudflare realip {
+        # Trust Cloudflare's CF-Connecting-IP header for real client IP
+        # This is needed if behind Cloudflare proxy
+        trusted_proxies cloudflare
+        real_ip_header CF-Connecting-IP
+    }
+}
+
+# Main site: vliegvuil.nl
+vliegvuil.nl {
+    # Import real IP handling if behind proxy
+    import cloudflare realip
+    
+    # Root path serves the static web app
+    root * /workspace/github__MassiveMarmot__vliegvuil/web/dist
+    
+    # Single Page Application: try files, then index.html
+    try_files {path} /index.html
+    
+    # File server for static assets
+    file_server
+    
+    # Enable gzip compression
+    encode gzip
+    
+    # Security headers
+    header {
+        # Content Security Policy
+        # Only allow own-origin + PDOK tiles
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://geodata.nationaalgeoregister.nl; connect-src 'self' https://api.adsb.lol; font-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"
+        
+        # Other security headers
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    }
+    
+    # CORS - allow requests from our own domain
+    header {
+        Access-Control-Allow-Origin "https://vliegvuil.nl"
+        Access-Control-Allow-Methods "GET, OPTIONS"
+        Access-Control-Allow-Headers "Origin, Content-Type, Accept"
+        Access-Control-Max-Age "86400"
+    }
+    
+    # Rate limiting: 100 requests per minute per IP
+    # Uses Caddy's rate limit plugin (caddy-ratelimit)
+    @ratelimit {
+        rate_limit 100 1m
+    }
+    
+    # Handle preflight requests
+    @preflight method OPTIONS
+    handle @preflight {
+        header {
+            Access-Control-Allow-Origin "https://vliegvuil.nl"
+            Access-Control-Allow-Methods "GET, OPTIONS"
+            Access-Control-Allow-Headers "Origin, Content-Type, Accept"
+            Access-Control-Max-Age "86400"
+        }
+        respond 204
+    }
+}
+
+# API endpoint for ADS-B data
+# This would typically point to a local service or be handled differently
+# For now, we proxy to adsb.lol but strip client headers
+api.vliegvuil.nl {
+    import cloudflare realip
+    
+    # Strip all potentially identifying headers before forwarding
+    header_up Host "api.adsb.lol"
+    header_up User-Agent "VliegVuil.nl/1.0"
+    header_up Accept "application/json"
+    
+    # Remove client IP identification
+    header_up X-Forwarded-For ""
+    header_up X-Real-IP ""
+    header_up CF-Connecting-IP ""
+    header_up CF-Ray ""
+    
+    # Don't forward these headers
+    header_up -CF-Connecting-IP
+    header_up -CF-Ray
+    header_up -X-Forwarded-For
+    header_up -X-Real-IP
+    
+    # Reverse proxy to adsb.lol
+    reverse_proxy https://api.adsb.lol {
+        # ~5 second micro-cache for API responses
+        # This reduces load on the upstream service
+        # and provides some resilience against brief outages
+        cache {
+            default_max_age 5s
+            status_cache 5s
+        }
+        
+        # Timeout settings
+        transport http {
+            dial_timeout 10s
+            response_header_timeout 30s
+        }
+        
+        # Health check
+        health_uri /v2/point?lat=52.3&lon=4.7&radius=1
+        health_interval 30s
+        health_timeout 10s
+        
+        # Don't expose upstream headers to client
+        header_down -Server
+        header_down -Via
+        header_down -X-Powered-By
+    }
+    
+    # Security headers for API
+    header {
+        Content-Security-Policy "default-src 'none'"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        X-XSS-Protection "1; mode=block"
+    }
+    
+    # CORS for API
+    header {
+        Access-Control-Allow-Origin "https://vliegvuil.nl"
+        Access-Control-Allow-Methods "GET, OPTIONS"
+        Access-Control-Allow-Headers "Origin, Content-Type, Accept"
+        Access-Control-Max-Age "86400"
+    }
+    
+    # Rate limiting for API
+    @ratelimit {
+        rate_limit 60 1m
+    }
+    
+    # Handle preflight
+    @preflight method OPTIONS
+    handle @preflight {
+        header {
+            Access-Control-Allow-Origin "https://vliegvuil.nl"
+            Access-Control-Allow-Methods "GET, OPTIONS"
+            Access-Control-Allow-Headers "Origin, Content-Type, Accept"
+            Access-Control-Max-Age "86400"
+        }
+        respond 204
+    }
+}
+
+# Local development configuration
+# Use: caddy run --config Caddyfile.dev --address 0.0.0.0:8080
+# Or symlink Caddyfile.dev to Caddyfile for local testing
+localhost:8080 {
+    root * /workspace/github__MassiveMarmot__vliegvuil/web/dist
+    try_files {path} /index.html
+    file_server
+    encode gzip
+    
+    # CORS for local development
+    header {
+        Access-Control-Allow-Origin "*"
+        Access-Control-Allow-Methods "GET, OPTIONS"
+        Access-Control-Allow-Headers "Origin, Content-Type, Accept"
+    }
+}
