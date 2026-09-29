@@ -14,6 +14,11 @@ Read docs/SPEC.md and docs/BUILD.md before every task. If code and spec disagree
 - One task per session, one branch/PR per task, PR description lists: what changed, what was verified, what was not.
 - Do not merge, deploy, or touch anything outside this repo. Commit only small generated files (< ~2 MB); larger outputs are built by the maintainer.
 - Accessibility: semantic landmarks, managed focus (not a trap) on the telemetry panel, prefers-reduced-motion, colour-independent legends.
-
+- No mock or random data in production code paths. Mocks live under `__tests__/` or behind an explicit dev-only flag that is off by default.
+- Test fixtures for external APIs must come from a real response (fetch once, strip anything personal, commit it). Never invent a response shape from memory.
+- Any config you write must be run through its own validator (`caddy validate`, `tsc`, `vite build`) and the command plus its output must be in the PR description. If you cannot run it, say so; do not claim it works.
+- Code licence is MPL-2.0. Data licences come only from `sources.json`; do not edit a licence without citing the official page you read.
+- Never hard-code a filesystem path from your sandbox (`/workspace/...`) or a personal GitHub username in any file.
+  
 ## Layout
 /core  /web  /data-build  /locales  /docs  AGENTS.md
