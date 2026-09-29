@@ -1,13 +1,13 @@
 // Main application component
 
-import React, { useEffect, useState, useCallback } from 'react';
-import { Map, SimpleBanner, TelemetryPanel, SearchBox } from './components';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { Map, SimpleBanner, TelemetryPanel, SearchBox, AircraftList } from './components';
 import { useAircraftData } from './hooks';
 import { DEFAULT_POLLING_CONFIG } from './types';
 
 /**
  * Main application component
- * Displays map with aircraft, telemetry panel, search, and status banners
+ * Displays map with aircraft, telemetry panel, search, list view, and status banners
  */
 function App(): React.ReactElement {
   const {
@@ -22,6 +22,11 @@ function App(): React.ReactElement {
   } = useAircraftData({ ...DEFAULT_POLLING_CONFIG, enabled: true });
 
   const [selectedAircraftId, setSelectedAircraftId] = useState<string | null>(null);
+  const [showList, setShowList] = useState(false);
+  const [liveMessage, setLiveMessage] = useState('');
+
+  // Ref so the live region is addressable for testing
+  const liveRegionRef = useRef<HTMLDivElement>(null);
 
   // Start polling on mount
   useEffect((): (() => void) => {
@@ -29,14 +34,26 @@ function App(): React.ReactElement {
     return (): void => stopPolling();
   }, [startPolling, stopPolling]);
 
-  // Handle aircraft selection (map click, search result, or toggle off)
-  const handleAircraftSelect = useCallback((id: string): void => {
-    setSelectedAircraftId(id);
+  // Announce selection changes to screen readers (spec §6)
+  const announce = useCallback((message: string): void => {
+    setLiveMessage(message);
   }, []);
 
+  // Handle aircraft selection (map click, search result, list row)
+  const handleAircraftSelect = useCallback((id: string): void => {
+    setSelectedAircraftId(id);
+    const ac = aircraft.get(id);
+    announce(ac ? `${ac.callsign ?? ac.icao24} geselecteerd` : '');
+  }, [aircraft, announce]);
+
   const handleAircraftClick = useCallback((id: string): void => {
-    setSelectedAircraftId(prev => (prev === id ? null : id));
-  }, []);
+    setSelectedAircraftId(prev => {
+      const next = prev === id ? null : id;
+      const ac = aircraft.get(id);
+      announce(next && ac ? `${ac.callsign ?? ac.icao24} geselecteerd` : '');
+      return next;
+    });
+  }, [aircraft, announce]);
 
   const handleCloseTelemetry = useCallback((): void => {
     setSelectedAircraftId(null);
@@ -46,6 +63,15 @@ function App(): React.ReactElement {
   const handleDismissBanner = useCallback((): void => {
     refreshAircraft();
   }, [refreshAircraft]);
+
+  // List view toggle with announcement (spec §6: layer/panel toggles announced)
+  const handleToggleList = useCallback((): void => {
+    setShowList(prev => {
+      const next = !prev;
+      announce(next ? 'Lijstweergave geopend' : 'Lijstweergave gesloten');
+      return next;
+    });
+  }, [announce]);
 
   const selectedAircraft = selectedAircraftId
     ? aircraft.get(selectedAircraftId) ?? null
@@ -80,6 +106,17 @@ function App(): React.ReactElement {
         />
       )}
 
+      {/* ARIA live region for selection and toggle announcements */}
+      <div
+        ref={liveRegionRef}
+        role="status"
+        aria-live="polite"
+        className="visually-hidden"
+        data-testid="aria-live"
+      >
+        {liveMessage}
+      </div>
+
       {/* Search */}
       <SearchBox
         aircraft={aircraft}
@@ -112,6 +149,33 @@ function App(): React.ReactElement {
         <div>Vliegtuigen: {aircraft.size}</div>
         <div>Laatste update: {new Date().toLocaleTimeString('nl-NL')}</div>
       </div>
+
+      {/* List view toggle */}
+      <button
+        type="button"
+        className="aircraft-list-toggle"
+        onClick={handleToggleList}
+        aria-expanded={showList}
+        aria-controls="aircraft-list-region"
+        style={{
+          position: 'absolute',
+          top: '1rem',
+          right: '1rem',
+          zIndex: 20,
+        }}
+      >
+        Lijst
+      </button>
+
+      {/* Aircraft list view (keyboard/screen-reader alternative) */}
+      {showList && (
+        <AircraftList
+          aircraft={aircraft}
+          selectedAircraftId={selectedAircraftId}
+          onSelect={handleAircraftSelect}
+          onClose={handleToggleList}
+        />
+      )}
 
       {/* Telemetry panel for selected aircraft */}
       {selectedAircraft && (

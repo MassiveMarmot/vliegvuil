@@ -30,6 +30,12 @@
     "placeholder": "Search by callsign, registration or ICAO24",
     "noResults": "No results found"
   },
+  "list": {
+    "title": "List view",
+    "toggle": "Show/hide list view",
+    "opened": "List view opened",
+    "closed": "List view closed"
+  },
   "settings": {
     "title": "Settings",
     "language": "Language",

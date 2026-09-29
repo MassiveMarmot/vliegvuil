@@ -30,6 +30,12 @@
     "placeholder": "Zoek op roepletters, registratie of ICAO24",
     "noResults": "Geen resultaten gevonden"
   },
+  "list": {
+    "title": "Lijstweergave",
+    "toggle": "Toon/verberg lijstweergave",
+    "opened": "Lijstweergave geopend",
+    "closed": "Lijstweergave gesloten"
+  },
   "settings": {
     "title": "Instellingen",
     "language": "Taal",
