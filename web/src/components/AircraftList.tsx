@@ -1,3 +1,6 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // Aircraft list view — sortable table alternative to the map
 // Spec §2: "Aircraft list view (sortable table) as the keyboard/screen-reader alternative to the map."
 // Spec §6: accessible list view, ARIA live announcements, visible focus states,

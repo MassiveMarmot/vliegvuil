@@ -1,3 +1,6 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // Noise overlay UI: toggle, legend, and contour-membership badge.
 // Spec §2: bands at 48 / 56 / 70 dB Lden, warm coral-to-red gradient
 // (colour-blind-safe) with a pattern fallback, legend shows data year and
