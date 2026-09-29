@@ -36,7 +36,11 @@
     "heading": "Heading",
     "verticalRate": "Vertical rate",
     "squawk": "Squawk",
-    "dataAge": "Data age"
+    "dataAge": "Data age",
+    "ground": "On ground",
+    "verticalRateUnit": "ft/min",
+    "dataAgeSeconds": "{{count}}s",
+    "dataAgeMinutes": "{{count}}m {{seconds}}s"
   },
   "search": {
     "placeholder": "Search by callsign, registration or ICAO24",
@@ -65,5 +69,20 @@
     "sources": "Sources",
     "license": "License",
     "odbl": "Live aircraft data from adsb.lol — © adsb.lol contributors, licensed under the Open Database License (ODbL) v1.0."
+  },
+  "banner": {
+    "loading": "Loading...",
+    "close": "Close"
+  },
+  "aria": {
+    "selected": "{{callsign}} selected"
+  },
+  "info": {
+    "aircraftCount": "Aircraft: {{count}}",
+    "lastUpdate": "Last update: {{time}}"
+  },
+  "stale": {
+    "connection": "Data not up to date: connection error",
+    "outdated": "Data may be outdated"
   }
 }

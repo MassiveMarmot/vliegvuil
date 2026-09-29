@@ -4,6 +4,7 @@
 // Banner component for displaying status messages
 
 import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export interface BannerProps {
   type: 'info' | 'warning' | 'error';
@@ -37,6 +38,7 @@ const BANNER_STYLES: Record<'info' | 'warning' | 'error', { bg: string; text: st
  * Banner component for displaying status/alert messages
  */
 export function Banner({ type, message, visible, onDismiss, autoHide = false, duration = 5000 }: BannerProps): React.ReactElement | null {
+  const { t } = useTranslation();
   const styles = BANNER_STYLES[type];
 
   useEffect(() => {
@@ -64,7 +66,7 @@ export function Banner({ type, message, visible, onDismiss, autoHide = false, du
         <button
           onClick={onDismiss}
           className="ml-4 text-lg font-bold hover:opacity-70"
-          aria-label="Sluiten"
+          aria-label={t('banner.close', 'Sluiten')}
         >
           &times;
         </button>
@@ -89,6 +91,7 @@ function getIcon(type: 'info' | 'warning' | 'error'): string {
 
 // Simple banner without Tailwind (for plain CSS)
 export function SimpleBanner({ type, message, visible, onDismiss }: BannerProps): React.ReactElement | null {
+  const { t } = useTranslation();
   if (!visible || !message) {
     return null;
   }
@@ -130,7 +133,7 @@ export function SimpleBanner({ type, message, visible, onDismiss }: BannerProps)
             cursor: 'pointer',
             padding: 0,
           }}
-          aria-label="Sluiten"
+          aria-label={t('banner.close', 'Sluiten')}
         >
           ×
         </button>

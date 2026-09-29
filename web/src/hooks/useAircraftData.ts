@@ -8,6 +8,7 @@ import type { DisplayAircraft, AppState } from '../types';
 import { DEFAULT_POLLING_CONFIG } from '../types';
 import type { AircraftPosition, PositionProvider } from '@vliegvuil/core';
 import { createAdsblolProvider } from '@vliegvuil/core';
+import i18n from '../i18n';
 
 /** Aircraft not seen for longer than this are dropped from the display */
 export const MAX_AGE_SECONDS = 60;
@@ -168,7 +169,7 @@ export function useAircraftData(
       // Show stale banner if we have data but error occurred
       if (aircraft.size > 0) {
         setShowStaleBanner(true);
-        setStaleMessage('Gegevens niet up-to-date: verbindingsfout');
+        setStaleMessage(i18n.t('stale.connection', 'Gegevens niet up-to-date: verbindingsfout'));
       }
       // Retry if configured
       if (
@@ -226,7 +227,7 @@ export function useAircraftData(
       setLastUpdate((last) => {
         if (last != null && Date.now() - last > pollingConfig.interval * 3) {
           setShowStaleBanner(true);
-          setStaleMessage('Gegevens mogelijk verouderd');
+          setStaleMessage(i18n.t('stale.outdated', 'Gegevens mogelijk verouderd'));
         }
         return last;
       });
