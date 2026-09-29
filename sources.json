@@ -66,12 +66,12 @@
       "id": "adsb-lol",
       "name": "adsb.lol",
       "url": "https://adsb.lol/",
-      "license": "TODO: verify terms",
-      "licenseUrl": "",
+      "license": "BSD-3-Clause (API code)",
+      "licenseUrl": "https://github.com/adsblol/api/blob/main/LICENSE",
       "dataType": "Live ADS-B positions",
       "updateFrequency": "continuous (polled every 5s via proxy)",
       "lastUpdated": "2026-09-29",
-      "notes": "Primary ADS-B provider behind PositionProvider. TODO: verify caching/redistribution and non-commercial terms \u2014 https://adsb.lol/"
+      "notes": "API source is BSD-3-Clause (https://github.com/adsblol/api). Data comes from community feeders. TODO: note dynamic rate limits \u2014 future API key may require feeding adsb.lol (see README)."
     },
     {
       "id": "ourairports",
@@ -99,12 +99,34 @@
       "id": "pdok-brt",
       "name": "PDOK BRT Achtergrondkaart",
       "url": "https://www.pdok.nl/",
-      "license": "TODO: verify",
-      "licenseUrl": "https://www.pdok.nl/",
+      "license": "CC-BY 4.0",
+      "licenseUrl": "https://www.pdok.nl/open-data",
       "dataType": "Basemap tiles",
       "updateFrequency": "n/a",
       "lastUpdated": "2026-09-29",
-      "notes": "TODO: verify current PDOK tile URL and licence terms"
+      "notes": "Licence overview at https://www.pdok.nl/open-data. TODO: verify current PDOK tile URL"
+    },
+    {
+      "id": "rivm-atlas-schiphol",
+      "name": "RIVM / Atlas Leefomgeving \u2014 Schiphol noise contours",
+      "url": "https://atlasleefomgeving.nl/",
+      "license": "TODO: verify",
+      "licenseUrl": "https://atlasleefomgeving.nl/",
+      "dataType": "Schiphol Lden noise contours (48/56/70 dB)",
+      "updateFrequency": "per study year",
+      "lastUpdated": "2026-09-29",
+      "notes": "TODO: verify exact dataset, year and licence on Atlas Leefomgeving before use"
+    },
+    {
+      "id": "clo-nlr-regional",
+      "name": "CLO/NLR \u2014 regional noise contours 2018 & 2024",
+      "url": "https://www.clo.nl/",
+      "license": "TODO: verify",
+      "licenseUrl": "https://www.clo.nl/",
+      "dataType": "Lden contours for Rotterdam, Eindhoven, Maastricht, Groningen Eelde",
+      "updateFrequency": "2018 & 2024 studies",
+      "lastUpdated": "2026-09-29",
+      "notes": "TODO: verify dataset and licence. Eindhoven: civil Lden contours chosen (decision made); label 'civil traffic only' per spec \u00a710. Rotterdam/Groningen/Maastricht lack an airport decree \u2014 note in layer info text."
     }
   ]
 }
