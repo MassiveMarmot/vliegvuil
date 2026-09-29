@@ -56,10 +56,13 @@
     "meters": "Meters",
     "knots": "Knots",
     "kmh": "km/h",
-    "save": "Save"
+    "save": "Save",
+    "altitudeUnit": "Altitude",
+    "speedUnit": "Speed"
   },
   "attribution": {
     "title": "Attribution",
-    "sources": "Sources"
+    "sources": "Sources",
+    "license": "License"
   }
 }
