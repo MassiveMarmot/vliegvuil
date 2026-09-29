@@ -36,7 +36,11 @@
     "heading": "Koers",
     "verticalRate": "Stijg-/daalsnelheid",
     "squawk": "Squawk",
-    "dataAge": "Gegevens leeftijd"
+    "dataAge": "Gegevens leeftijd",
+    "ground": "Aan de grond",
+    "verticalRateUnit": "ft/min",
+    "dataAgeSeconds": "{{count}}s",
+    "dataAgeMinutes": "{{count}}m {{seconds}}s"
   },
   "search": {
     "placeholder": "Zoek op roepletters, registratie of ICAO24",
@@ -65,5 +69,20 @@
     "sources": "Bronnen",
     "license": "Licentie",
     "odbl": "Live vliegtuigdata van adsb.lol — © adsb.lol-bijdragers, gelicentieerd onder de Open Database License (ODbL) v1.0."
+  },
+  "banner": {
+    "loading": "Laden...",
+    "close": "Sluiten"
+  },
+  "aria": {
+    "selected": "{{callsign}} geselecteerd"
+  },
+  "info": {
+    "aircraftCount": "Vliegtuigen: {{count}}",
+    "lastUpdate": "Laatste update: {{time}}"
+  },
+  "stale": {
+    "connection": "Gegevens niet up-to-date: verbindingsfout",
+    "outdated": "Gegevens mogelijk verouderd"
   }
 }
