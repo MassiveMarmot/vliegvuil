@@ -1,3 +1,6 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // Attribution page: sources and licences generated from sources.json
 // (spec §2: "Attribution/licenses page, generated from sources.json").
 import React from 'react';
@@ -77,6 +80,9 @@ export function AttributionPage({ onClose }: AttributionPageProps): React.ReactE
           </li>
         ))}
       </ul>
+      <p className="attribution-odbl">
+        {t('attribution.odbl', 'Live aircraft data from adsb.lol —© adsb.lol contributors, licensed under the Open Database License (ODbL) v1.0.')}
+      </p>
     </section>
   );
 }

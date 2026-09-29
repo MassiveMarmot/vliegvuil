@@ -63,6 +63,7 @@
   "attribution": {
     "title": "Bronvermelding",
     "sources": "Bronnen",
-    "license": "Licentie"
+    "license": "Licentie",
+    "odbl": "Live vliegtuigdata van adsb.lol — © adsb.lol-bijdragers, gelicentieerd onder de Open Database License (ODbL) v1.0."
   }
 }

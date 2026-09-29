@@ -1,3 +1,6 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // Settings panel: language (NL/EN) and units (ft/m, kt/km/h), persisted in
 // localStorage only (spec §2, §6). Managed focus, Esc to close.
 import React, { useEffect, useRef, useState, useCallback } from 'react';

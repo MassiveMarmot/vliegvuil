@@ -1,3 +1,6 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // Aircraft database build — tar1090-db aircraft.csv.gz snapshot
 //
 // Source (verified 2026-09-29): https://github.com/wiedehopf/tar1090-db

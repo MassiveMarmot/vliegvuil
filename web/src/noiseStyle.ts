@@ -1,3 +1,6 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // Noise band styling: colour-blind-safe warm coral-to-red gradient (spec §3)
 // with a CSS pattern fallback per band so the legend is colour-independent
 // (AGENTS.md: colour-independent legends).
