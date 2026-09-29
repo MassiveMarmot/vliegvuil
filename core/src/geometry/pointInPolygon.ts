@@ -29,15 +29,41 @@ export function pointInPolygon(point: Point, polygon: Polygon): boolean {
 
 /**
  * Check if a point is inside any of the polygons in a multi-polygon
+ * Can accept either:
+ * - number[][][][]: GeoJSON MultiPolygon (array of polygons, each polygon is array of rings)
+ * - number[][][]: Array of rings (simplified, each ring treated as a polygon)
  */
 export function pointInMultiPolygon(
   point: Point,
   multiPolygon: number[][][] | number[][][][],
 ): boolean {
-  for (const polygon of multiPolygon as number[][][]) {
-    if (pointInPolygon(point, { coordinates: polygon })) {
-      return true;
+  // Check if this is a full MultiPolygon (4D) or array of rings (3D)
+  // For GeoJSON MultiPolygon: array of polygons, each polygon is array of rings
+  // For simplified: array of rings directly
+  // 
+  // Check: mp[0][0][0] is a coordinate pair (array of 2 numbers) -> 4D
+  //        mp[0][0] is a coordinate pair -> 3D
+  const firstPoly = multiPolygon[0];
+  const firstRing = firstPoly?.[0];
+  
+  // If firstRing[0] is an array (coordinate pair), then this is a 4D MultiPolygon
+  if (firstRing && Array.isArray(firstRing[0]) && firstRing[0].length === 2) {
+    // Input is number[][][][] - GeoJSON MultiPolygon (array of polygons)
+    for (const polygon of multiPolygon as number[][][][]) {
+      // Each polygon is an array of rings; use the first (exterior) ring
+      const exteriorRing = polygon[0];
+      if (exteriorRing && pointInPolygon(point, { coordinates: exteriorRing })) {
+        return true;
+      }
+    }
+  } else {
+    // Input is number[][][] - array of rings
+    for (const ring of multiPolygon as number[][][]) {
+      if (pointInPolygon(point, { coordinates: ring })) {
+        return true;
+      }
     }
   }
+  
   return false;
 }
