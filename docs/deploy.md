@@ -1,287 +1,172 @@
-# VliegVuil.nl - Deployment Guide
+# VliegVuil.nl — Deployment Guide
 
 ## Overview
 
-VliegVuil.nl is a static web application with a reverse proxy configuration for API requests. The application consists of:
+VliegVuil.nl runs on a single Hetzner VPS. There is no Cloudflare or other
+proxy in front: the browser connects directly to Caddy, which serves the
+static app and reverse-proxies the ADS-B API on the **same origin**
+(`/api/*` → `https://api.adsb.lol/v2/*`). Because the API is same-origin,
+CORS is not needed and no CORS headers are sent.
 
-- **`/web`**: Static SPA built with Vite + React + TypeScript + MapLibre GL
-- **`/core`**: Pure TypeScript library for data processing
-- **`/data-build`**: Scripts for producing data snapshots and tiles
-
-## Deployment Architecture
-
+```text
+┌───────────────────────────────┐        ┌──────────────────┐
+│  Browser                      │        │  adsb.lol API    │
+│  https://vliegvuil.nl         │        │  (external)      │
+│   ├── static app  ────────────┼──► Caddy ── /api/* ───────►│
+│   └── /api/*      (same origin)│  (VPS)  ~5s micro-cache    │
+└───────────────────────────────┘        no client IP sent   │
+                                         └──────────────────┘
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      vliegvuil.nl                              │
-│  ┌─────────────────────┐  ┌─────────────────────────────────┐ │
-│  │   Static SPA         │  │        Caddy Reverse Proxy         │ │
-│  │  (Vite build output) │  │   - api.vliegvuil.nl → adsb.lol   │ │
-│  │  /web/dist           │  │   - ~5s micro-cache               │ │
-│  │                     │  │   - No client IP forwarding        │ │
-│  └─────────────────────┘  │   - Rate limiting                 │ │
-│                         └─────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-                    ┌──────────────────┐
-                    │  adsb.lol API    │
-                    │  (external)      │
-                    └──────────────────┘
-```
+
+Deployment model: git pull from GitHub (read-only deploy key), then build on
+the server. No Docker, no CD pipeline.
 
 ## Prerequisites
 
-- A Linux server (recommended: Ubuntu 22.04 LTS or newer)
-- Domain name (vliegvuil.nl) with DNS configured
-- SSH access to the server
-- Docker (optional, for containerized deployment)
+- Hetzner VPS (Ubuntu 22.04 LTS or newer) with ports 80/443 open
+- Domain `vliegvuil.nl` with an A record pointing at the server IP
+- Go toolchain (for `xcaddy`; any currently supported Go version)
+- Node.js and pnpm (for building the web app)
+- SSH access
 
-## Quick Start with Caddy
+## 1. Build Caddy with the required modules
 
-### 1. Install Caddy
+Rate limiting and the micro-cache are **Caddy modules**, not part of the
+standard distribution. Build a custom binary once with
+[xcaddy](https://github.com/caddyserver/xcaddy):
 
 ```bash
-# On Ubuntu/Debian
-sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
-sudo apt update
-sudo apt install -y caddy
+go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
+xcaddy build \
+  --with github.com/mholt/caddy-ratelimit \
+  --with github.com/caddyserver/cache-handler \
+  --with github.com/darkweak/storages/otter/caddy \
+  --output /usr/local/bin/caddy
 ```
 
-### 2. Verify Caddy Installation
+Modules used (both Apache-2.0):
+
+- `mholt/caddy-ratelimit` — the `rate_limit` directive
+  (<https://github.com/mholt/caddy-ratelimit>)
+- `caddyserver/cache-handler` — the `cache` directive for the ~5s micro-cache
+  (<https://github.com/caddyserver/cache-handler>). Since Souin v1.7.0 a
+  storage module must be built in, hence `darkweak/storages/otter/caddy`
+  (<https://github.com/darkweak/storages>).
+
+Check the binary:
 
 ```bash
 caddy version
-caddy validate --config /path/to/Caddyfile
+caddy list-modules | grep -E 'ratelimit|cache'
 ```
 
-### 3. Configure Caddy
-
-Copy the `Caddyfile` to `/etc/caddy/Caddyfile`:
+## 2. Install the app
 
 ```bash
-sudo cp Caddyfile /etc/caddy/Caddyfile
+# Deploy key (read-only) as the git user
+sudo useradd -m -d /srv/vliegvuil vliegvuil || true
+sudo -u vliegvuil ssh-keygen -t ed25519 -N '' -f /srv/vliegvuil/.ssh/id_ed25519
+# Add /srv/vliegvuil/.ssh/id_ed25519.pub as a read-only deploy key in GitHub
+
+sudo -u vliegvuil git clone git@github.com:MassiveMarmot/vliegvuil.git /srv/vliegvuil
+```
+
+## 3. Build the web app
+
+```bash
+cd /srv/vliegvuil
+pnpm install --frozen-lockfile
+pnpm --filter web build
+```
+
+The built app ends up in `/srv/vliegvuil/web/dist` — the path the Caddyfile
+expects.
+
+## 4. Install the Caddyfile
+
+```bash
+sudo cp /srv/vliegvuil/Caddyfile /etc/caddy/Caddyfile
 sudo chown root:root /etc/caddy/Caddyfile
 sudo chmod 644 /etc/caddy/Caddyfile
-```
-
-### 4. Set Up Directory Structure
-
-```bash
-sudo mkdir -p /var/www/vliegvuil
-sudo chown -R $USER:$USER /var/www/vliegvuil
-```
-
-### 5. Build and Deploy the Web App
-
-```bash
-# Build the web app
-cd /workspace/github__MassiveMarmot__vliegvuil
-pnpm --filter web build
-
-# Copy to web root
-cp -r web/dist/* /var/www/vliegvuil/
-```
-
-### 6. Update Caddyfile Paths
-
-Edit `/etc/caddy/Caddyfile` and update the root path:
-
-```caddyfile
-vliegvuil.nl {
-    root * /var/www/vliegvuil
-    # ... rest of config
-}
-```
-
-### 7. Start Caddy
-
-```bash
-# Test configuration
 sudo caddy validate --config /etc/caddy/Caddyfile
+```
 
-# Start Caddy (runs as a service)
-sudo systemctl restart caddy
+**Always run `caddy validate` with the custom binary from step 1** — the
+standard distribution rejects the `rate_limit` and `cache` directives.
 
-# Check status
+If you use the packaged systemd unit, point `ExecStart` at the custom binary
+(`/usr/local/bin/caddy`), then:
+
+```bash
+sudo systemctl enable --now caddy
 sudo systemctl status caddy
 ```
 
-### 8. Enable HTTPS
+## 5. Privacy properties (what to expect)
 
-Caddy automatically provisions and renews Let's Encrypt certificates. Ensure:
-- Port 80 and 443 are open in your firewall
-- DNS A records point to your server IP
+- **No access logs.** Caddy does not write access logs unless one is
+  explicitly configured; the Caddyfile does not configure one. There is no
+  `access_log off` directive because that is not valid Caddy syntax — see
+  <https://caddyserver.com/docs/caddyfile/directives/log>. Error logs go to
+  stderr (visible via `journalctl -u caddy`).
+- **No client IP upstream.** All requests to `/api/*` are forwarded with
+  `X-Forwarded-For` (and friends) deleted and a fixed
+  `User-Agent: VliegVuil.nl/1.0`. adsb.lol never learns the visitor IP.
+- **Same-origin API.** `connect-src 'self'` is the whole CSP connect policy;
+  there are no third-party API calls and no CORS headers.
+- **Only third-party request from the browser:** PDOK tiles
+  (`https://service.pdok.nl`), allowed in `img-src`.
 
-```bash
-# Check firewall
-sudo ufw status
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-sudo ufw enable
-```
-
-## Docker Deployment
-
-### 1. Build Docker Image
-
-```bash
-# Build the web app
-docker build -t vliegvuil/web -f web/Dockerfile .
-```
-
-### 2. Run with Docker Compose
-
-Create `docker-compose.yml`:
-
-```yaml
-version: '3.8'
-
-services:
-  web:
-    image: vliegvuil/web
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy_data:/data
-      - caddy_config:/config
-    restart: unless-stopped
-
-volumes:
-  caddy_data:
-  caddy_config:
-```
+Verify the header stripping at any time:
 
 ```bash
-docker-compose up -d
+scripts/verify-caddy-headers.sh /usr/local/bin/caddy
 ```
 
-## Configuration Details
+This spins up a local echo upstream, proxies through Caddy with the same
+`header_up` directives, and fails if any client-identifying header or the
+test client IP reaches the upstream.
 
-### Caddy Features
+## 6. Rate limiting and micro-cache
 
-| Feature | Configuration | Purpose |
-|---------|--------------|---------|
-| `access_log off` | Global | No access logging for privacy |
-| `try_files {path} /index.html` | vliegvuil.nl | SPA routing support |
-| `encode gzip` | vliegvuil.nl | Compression for faster loads |
-| CSP Headers | vliegvuil.nl | Security: restrict resource loading |
-| Rate Limiting | Both hosts | Prevent abuse (100 req/min site, 60 req/min API) |
-| Cache | api.vliegvuil.nl | ~5s micro-cache reduces upstream load |
-| Header Stripping | api.vliegvuil.nl | No client IP/headers forwarded to adsb.lol |
+| Zone | Key | Limit | Purpose |
+|------|-----|-------|---------|
+| `static_per_ip` | `{remote_host}` | 120 events / 1 min | Static assets |
+| `api_per_ip` | `{remote_host}` | 60 events / 1 min | `/api/*` proxy |
 
-### Security Headers
+The `/api/*` responses are micro-cached for 5 s (`cache { ttl 5s }`, otter
+storage), which bounds upstream request pressure regardless of visitor
+count. Note the app polls roughly every few seconds per visitor; the 60/min
+zone leaves generous headroom while capping abuse.
 
-The CSP policy allows:
-- `default-src 'self'`: All resources from own origin
-- `script-src 'self'`: Scripts from own origin only
-- `style-src 'self' 'unsafe-inline'`: Styles from own origin + inline (for MapLibre)
-- `img-src 'self' data: https://geodata.nationaalgeoregister.nl`: Images from self, data URIs, and PDOK tiles
-- `connect-src 'self' https://api.adsb.lol`: XHR/fetch to self and adsb.lol
-- `font-src 'self'`: Fonts from own origin
-- `frame-src 'none'`: No iframes
-- `object-src 'none'`: No plugins (Flash, etc.)
-- `base-uri 'self'`: Base tag only from self
-- `form-action 'self'`: Form submissions only to self
-
-### Privacy Protections
-
-1. **No Access Logs**: `access_log off` prevents logging of every request
-2. **No Client IP Forwarding**: Headers like `X-Forwarded-For`, `X-Real-IP`, `CF-Connecting-IP` are stripped before forwarding to upstream services
-3. **No Third-Party Requests**: Only own-origin and PDOK tiles are allowed by CSP
-4. **Rate Limiting**: Prevents any single IP from overwhelming the service
-
-## Monitoring
-
-### Check Caddy Logs
+## 7. Updates
 
 ```bash
-# Error logs (access logs are disabled)
-journalctl -u caddy -f
-
-# Or for Docker
-docker logs <container_name>
-```
-
-### Health Checks
-
-```bash
-# Check if Caddy is running
-curl -I https://vliegvuil.nl
-
-# Check API proxy
-curl -I https://api.vliegvuil.nl/v2/point?lat=52.3&lon=4.7&radius=1
-```
-
-## Updates
-
-### Update Caddy
-
-```bash
-sudo apt update && sudo apt upgrade caddy
-sudo systemctl restart caddy
-```
-
-### Update Application
-
-```bash
-# Pull latest changes
-cd /workspace/github__MassiveMarmot__vliegvuil
-git pull origin main
-
-# Rebuild
+cd /srv/vliegvuil
+sudo -u vliegvuil git pull
+pnpm install --frozen-lockfile
 pnpm --filter web build
-
-# Deploy
-cp -r web/dist/* /var/www/vliegvuil/
-
-# Restart Caddy (if needed)
-sudo systemctl restart caddy
+sudo caddy validate --config /etc/caddy/Caddyfile
+sudo systemctl reload caddy
 ```
+
+Reload (not restart) keeps the rate-limit state and picks up the new build
+without dropping connections.
 
 ## Troubleshooting
 
-### Caddy Validation
-
 ```bash
+# Validation must pass before every reload
 caddy validate --config /etc/caddy/Caddyfile
+
+# Error logs (no access logs exist)
+journalctl -u caddy -f
+
+# Live checks
+curl -sSI https://vliegvuil.nl | head -20
+curl -sS https://vliegvuil.nl/api/point/52.37/4.9/5 | head -c 200
 ```
 
-### Test Configuration Locally
-
-```bash
-# Run Caddy locally for testing
-caddy run --config Caddyfile --address 0.0.0.0:8080
-
-# Then access http://localhost:8080
-```
-
-### Common Issues
-
-1. **Port Conflicts**: Ensure no other service is using port 80 or 443
-2. **DNS Issues**: Verify DNS records are correct and propagated
-3. **Firewall**: Check that ports 80 and 443 are open
-4. **Certificate Issues**: Caddy handles this automatically, but check `journalctl -u caddy` for errors
-
-## Performance Considerations
-
-- The ~5s micro-cache on API responses reduces load on adsb.lol
-- Gzip compression is enabled for static assets
-- Rate limiting prevents abuse while allowing normal usage
-- For high traffic, consider adding a CDN in front of Caddy
-
-## Backup
-
-### Backup Caddy Data
-
-```bash
-# Certificates and configuration
-sudo tar czvf caddy_backup.tar.gz /etc/caddy /var/www/vliegvuil
-```
-
-## License
-
-This deployment configuration is provided as-is. The application itself is MIT licensed.
+If `caddy validate` reports an unknown directive (`rate_limit`, `cache`),
+you are running the standard distribution instead of the custom binary from
+step 1.
