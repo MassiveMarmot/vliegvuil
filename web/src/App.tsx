@@ -100,7 +100,7 @@ function App(): React.ReactElement {
     setSelectedAircraftId(id);
     const ac = aircraft.get(id);
     announce(ac ? t('aria.selected', '{{callsign}} geselecteerd', { callsign: ac.callsign ?? ac.icao24 }) : '');
-  }, [aircraft, announce]);
+  }, [aircraft, announce, t]);
 
   const handleAircraftClick = useCallback((id: string): void => {
     setSelectedAircraftId(prev => {
@@ -109,7 +109,7 @@ function App(): React.ReactElement {
       announce(next && ac ? t('aria.selected', '{{callsign}} geselecteerd', { callsign: ac.callsign ?? ac.icao24 }) : '');
       return next;
     });
-  }, [aircraft, announce]);
+  }, [aircraft, announce, t]);
 
   const handleCloseTelemetry = useCallback((): void => {
     setSelectedAircraftId(null);
@@ -127,13 +127,13 @@ function App(): React.ReactElement {
       announce(next ? t('list.opened', 'Lijstweergave geopend') : t('list.closed', 'Lijstweergave gesloten'));
       return next;
     });
-  }, [announce]);
+  }, [announce, t]);
 
   // Noise overlay toggle with announcement (spec §6)
   const handleToggleNoise = useCallback((enabled: boolean): void => {
     setNoiseEnabled(enabled);
     announce(enabled ? t('noise.opened', 'Geluidscontouren getoond') : t('noise.closed', 'Geluidscontouren verborgen'));
-  }, [announce]);
+  }, [announce, t]);
 
   // Load the noise contour snapshot (built by data-build, spec §5)
   useEffect((): (() => void) => {

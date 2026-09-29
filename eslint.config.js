@@ -1,4 +1,5 @@
 import eslint from '@eslint/js';
+import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 
 export default [
@@ -21,6 +22,16 @@ export default [
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/prefer-nullish-coalescing': 'error',
       '@typescript-eslint/prefer-optional-chain': 'error',
+    },
+  },
+  {
+    files: ['web/src/**/*.tsx', 'web/src/**/*.ts'],
+    plugins: {
+      'react-hooks': reactHooks,
+    },
+    rules: {
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
     },
   },
 ];
