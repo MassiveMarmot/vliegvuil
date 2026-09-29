@@ -4,3 +4,4 @@ export { Banner, SimpleBanner, type BannerProps } from './Banner';
 export { TelemetryPanel, type TelemetryPanelProps } from './TelemetryPanel';
 export { SearchBox, searchAircraft, type SearchBoxProps } from './SearchBox';
 export { AircraftList, sortAircraft, type AircraftListProps, type SortColumn, type SortDirection } from './AircraftList';
+export { NoiseOverlay, NoiseBadge, buildLegendEntries, type NoiseOverlayProps, type NoiseBadgeProps, type NoiseLegendEntry } from './NoiseOverlay';

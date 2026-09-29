@@ -10,7 +10,19 @@
     "noise": "Noise pollution",
     "toggleNoise": "Show noise contours",
     "staleData": "Data is stale",
-    "noData": "No data available"
+    "noData": "No data available",
+    "hideNoise": "Hide noise contours"
+  },
+  "noise": {
+    "legendTitle": "Noise contours legend",
+    "metric": "dB Lden (annual average)",
+    "bandLabel": "≥{{band}} dB {{metric}}",
+    "source": "Source: {{source}} ({{license}})",
+    "annualAverage": "Contours show the annual average noise load, not live noise.",
+    "annualAverageShort": "annual average, not live noise",
+    "badge": "Inside the ≥{{band}} dB Lden contour of {{airport}}, {{year}}",
+    "opened": "Noise contours shown",
+    "closed": "Noise contours hidden"
   },
   "telemetry": {
     "title": "Aircraft details",

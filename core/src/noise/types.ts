@@ -21,6 +21,8 @@ export interface NoiseContour {
     source: string;
     license: string;
     date: string;
+    /** E.g. "civil traffic only" for Eindhoven civil Lden */
+    caveat?: string;
   };
 }
 
