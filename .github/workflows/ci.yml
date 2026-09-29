@@ -11,10 +11,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm install -g pnpm
+          cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
 
@@ -22,10 +23,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm install -g pnpm
+          cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
 
@@ -33,20 +35,53 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm install -g pnpm
+          cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
 
   validate-sources:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm install -g pnpm
+          cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm validate:sources
+
+  validate-caddyfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The Caddyfile uses the rate_limit (mholt/caddy-ratelimit) and cache
+      # (caddyserver/cache-handler + otter storage) modules, so it must be
+      # validated with a custom binary. See docs/deploy.md.
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: false
+      - run: go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
+      - run: xcaddy build
+          --with github.com/mholt/caddy-ratelimit
+          --with github.com/caddyserver/cache-handler
+          --with github.com/darkweak/storages/otter/caddy
+          --output ./caddy-custom
+      - run: ./caddy-custom validate --config Caddyfile
