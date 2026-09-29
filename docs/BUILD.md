@@ -79,6 +79,8 @@ One session = one PR = one merge. Start each new session from updated `main`. If
 | 24 | **PWA, fonts, bundle.** Self-host Space Grotesk (woff2, OFL). Manifest with 192/512 px PNG and maskable icons. Service worker: app shell only; exclude `/api` and tile requests from caching and from the navigation fallback. Lazy-load MapLibre to cut the 1 MB main chunk. | Lighthouse-style check of the manifest; no `/api` in SW precache |
 | 25 | **Styling and a11y pass.** Move inline styles out of `App.tsx` into CSS; semantic landmarks (`main`, `aside`, `section`); playful-minimal look per spec §3 in the chrome only; panel slide/pop motion with `prefers-reduced-motion` off-switch; add axe-core checks (jest-axe) for the main views if not already present. | No serious axe violations |
 | 26 | **Docs and release prep.** Update README, `architecture.md`, `privacy.md`, `deploy.md` to match reality; refresh screenshots from the real app; add CHANGELOG and a release checklist. | Docs contain no statement the code does not do |
+| 25 | **UI shell**: header, menu, About page (details below) | Keyboard-only and screen-reader checklist passes; axe clean; NL and EN key sets identical |
+
 
 
 Free plan is 2 sessions/day, so expect this to take ~a week; paid allows far more.
