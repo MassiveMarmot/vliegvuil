@@ -1,13 +1,13 @@
 // Main application component
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { Map, SimpleBanner } from './components';
+import { Map, SimpleBanner, TelemetryPanel, SearchBox } from './components';
 import { useAircraftData } from './hooks';
 import { DEFAULT_POLLING_CONFIG } from './types';
 
 /**
  * Main application component
- * Displays map with aircraft and status banners
+ * Displays map with aircraft, telemetry panel, search, and status banners
  */
 function App(): React.ReactElement {
   const {
@@ -29,9 +29,17 @@ function App(): React.ReactElement {
     return (): void => stopPolling();
   }, [startPolling, stopPolling]);
 
-  // Handle aircraft click
+  // Handle aircraft selection (map click, search result, or toggle off)
+  const handleAircraftSelect = useCallback((id: string): void => {
+    setSelectedAircraftId(id);
+  }, []);
+
   const handleAircraftClick = useCallback((id: string): void => {
-    setSelectedAircraftId(prev => prev === id ? null : id);
+    setSelectedAircraftId(prev => (prev === id ? null : id));
+  }, []);
+
+  const handleCloseTelemetry = useCallback((): void => {
+    setSelectedAircraftId(null);
   }, []);
 
   // Handle banner dismiss
@@ -39,24 +47,9 @@ function App(): React.ReactElement {
     refreshAircraft();
   }, [refreshAircraft]);
 
-  // Render selected aircraft details
-  const renderAircraftDetails = (): React.ReactElement | null => {
-    const ac = aircraft.get(selectedAircraftId ?? '');
-    if (!ac) return null;
-    
-    return (
-      <div>
-        <p><strong>Callsign:</strong> {ac.callsign}</p>
-        <p><strong>ICAO24:</strong> {ac.icao24}</p>
-        <p><strong>Type:</strong> {ac.type ?? 'Onbekend'}</p>
-        <p><strong>Hoogte:</strong> {ac.alt != null ? `${Math.round(ac.alt)} ft` : 'N/A'}</p>
-        <p><strong>Snelheid:</strong> {ac.speed != null ? `${Math.round(ac.speed)} kn` : 'N/A'}</p>
-        <p><strong>Koers:</strong> {ac.track != null ? `${Math.round(ac.track)}°` : 'N/A'}</p>
-        <p><strong>Positie:</strong> {ac.lat?.toFixed(4)}, {ac.lon?.toFixed(4)}</p>
-        <p><strong>Op de grond:</strong> {ac.onGround ? 'Ja' : 'Nee'}</p>
-      </div>
-    );
-  };
+  const selectedAircraft = selectedAircraftId
+    ? aircraft.get(selectedAircraftId) ?? null
+    : null;
 
   return (
     <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
@@ -87,6 +80,12 @@ function App(): React.ReactElement {
         />
       )}
 
+      {/* Search */}
+      <SearchBox
+        aircraft={aircraft}
+        onSelect={handleAircraftSelect}
+      />
+
       {/* Map */}
       <Map
         aircraft={aircraft}
@@ -106,6 +105,7 @@ function App(): React.ReactElement {
           boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
           fontFamily: 'system-ui, -apple-system, sans-serif',
           fontSize: '0.875rem',
+          zIndex: 10,
         }}
       >
         <div><strong>VliegVuil.nl</strong></div>
@@ -113,25 +113,12 @@ function App(): React.ReactElement {
         <div>Laatste update: {new Date().toLocaleTimeString('nl-NL')}</div>
       </div>
 
-      {/* Selected aircraft details */}
-      {selectedAircraftId && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '1rem',
-            right: '1rem',
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            padding: '1rem',
-            borderRadius: '0.25rem',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-            fontFamily: 'system-ui, -apple-system, sans-serif',
-            fontSize: '0.875rem',
-            maxWidth: '300px',
-          }}
-        >
-          <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem' }}>Vliegtuig Details</h3>
-          {renderAircraftDetails()}
-        </div>
+      {/* Telemetry panel for selected aircraft */}
+      {selectedAircraft && (
+        <TelemetryPanel
+          aircraft={selectedAircraft}
+          onClose={handleCloseTelemetry}
+        />
       )}
     </div>
   );

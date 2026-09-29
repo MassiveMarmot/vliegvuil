@@ -13,6 +13,8 @@
     "noData": "Geen gegevens beschikbaar"
   },
   "telemetry": {
+    "title": "Vliegtuigdetails",
+    "close": "Sluiten",
     "callsign": "Roepletters",
     "registration": "Registratie",
     "type": "Type",
