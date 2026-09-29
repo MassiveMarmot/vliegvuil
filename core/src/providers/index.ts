@@ -5,4 +5,4 @@
 export type { AircraftPosition, BoundingBox, PositionProvider, PositionProviderConfig } from './types';
 export { NETHERLANDS_BBOX } from './types';
 export { PositionProvider as BasePositionProvider } from './PositionProvider';
-export { AdsblolProvider } from './adsb-lol';
+export { AdsblolProvider, createAdsblolProvider, radiusForBoundingBox } from './adsb-lol';
