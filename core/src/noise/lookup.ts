@@ -30,8 +30,7 @@ export function lookupNoiseBand(
       }
     } else if (geometry.type === 'MultiPolygon') {
       const coordinates = geometry.coordinates;
-      const coords2D = coordinates as unknown as number[][][];
-      if (coordinates && pointInMultiPolygon(point, coords2D)) {
+      if (coordinates && pointInMultiPolygon(point, coordinates)) {
         return {
           airport: contour.airport,
           band: contour.band,
