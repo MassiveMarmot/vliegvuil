@@ -7,6 +7,8 @@ interface ImportMetaEnv {
   readonly VITE_MAPTILER_KEY: string;
   /** Dev-only: set to '1' to serve mock aircraft data */
   readonly VITE_MOCK: string;
+  /** Optional override for the basemap tile URL (PDOK default) */
+  readonly VITE_TILE_URL: string;
 }
 
 interface ImportMeta {
