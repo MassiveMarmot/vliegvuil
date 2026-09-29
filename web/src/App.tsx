@@ -37,6 +37,7 @@ function noiseContoursToGeoJson(contours: NoiseContours): NoiseGeoJson {
 function App(): React.ReactElement {
   const {
     aircraft,
+    lastUpdate,
     isLoading,
     error,
     showStaleBanner,
@@ -244,7 +245,7 @@ function App(): React.ReactElement {
       >
         <div><strong>VliegVuil.nl</strong></div>
         <div>Vliegtuigen: {aircraft.size}</div>
-        <div>Laatste update: {new Date().toLocaleTimeString('nl-NL')}</div>
+        <div>Laatste update: {lastUpdate != null ? new Date(lastUpdate).toLocaleTimeString('nl-NL') : '—'}</div>
       </div>
 
       {/* Settings toggle (session 11) */}
