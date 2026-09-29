@@ -88,12 +88,12 @@
       "id": "tar1090-db",
       "name": "tar1090-db",
       "url": "https://github.com/wiedehopf/tar1090-db",
-      "license": "TODO: verify",
-      "licenseUrl": "https://github.com/wiedehopf/tar1090-db",
+      "license": "ODC-By-1.0 (derived from Mictronics aircraft-database)",
+      "licenseUrl": "https://github.com/Mictronics/aircraft-database/blob/main/LICENSE",
       "dataType": "Aircraft registration/type database (aircraft.csv.gz)",
       "updateFrequency": "monthly",
       "lastUpdated": "2026-09-29",
-      "notes": "Download: https://github.com/wiedehopf/tar1090-db/raw/refs/heads/csv/aircraft.csv.gz \u2014 underlying DB from Mictronics/readsb (GPL-3.0 code). TODO(license): the CSV database itself carries no explicit licence statement \u2014 verify before redistribution."
+      "notes": "Download: https://github.com/wiedehopf/tar1090-db/raw/refs/heads/csv/aircraft.csv.gz \u2014 derived from Mictronics/aircraft-database, whose exports are made available under the Open Data Commons Attribution License (ODC-By-1.0)."
     },
     {
       "id": "pdok-brt",
