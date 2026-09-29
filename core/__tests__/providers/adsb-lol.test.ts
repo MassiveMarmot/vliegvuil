@@ -1,9 +1,30 @@
 // Tests for ADS-B.lol position provider
+// Fixture comes from a real response fetched from
+// https://api.adsb.lol/v2/point/52.1/5.3/50 (see fixture file for details)
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { AdsblolProvider } from '../../src/providers/adsb-lol';
-import { NETHERLANDS_BBOX, DEFAULT_PROVIDER_CONFIG } from '../../src/providers/types';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import {
+  AdsblolProvider,
+  radiusForBoundingBox,
+} from '../../src/providers/adsb-lol';
+import { NETHERLANDS_BBOX } from '../../src/providers/types';
+import type { AdsblolAircraft } from '../../src/providers/adsb-lol';
 
-// Mock global fetch
+const fixturePath = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  'fixtures',
+  'adsb-lol-point.json',
+);
+interface Fixture {
+  ac: AdsblolAircraft[];
+  now: number;
+  fetched_from: string;
+}
+const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as Fixture;
+
 global.fetch = vi.fn();
 
 describe('AdsblolProvider', () => {
@@ -14,222 +35,156 @@ describe('AdsblolProvider', () => {
     provider = new AdsblolProvider();
   });
 
-  describe('constructor', () => {
-    it('should use default configuration', () => {
-      expect(provider).toBeDefined();
+  describe('radiusForBoundingBox', () => {
+    it('computes a radius large enough for the NL bbox corners', () => {
+      const radius = radiusForBoundingBox(NETHERLANDS_BBOX);
+      expect(radius).toBeGreaterThan(100);
+      expect(radius).toBeLessThanOrEqual(250);
     });
 
-    it('should accept custom configuration', () => {
-      const customConfig = {
-        baseUrl: 'https://custom.api',
-        pollInterval: 10000,
-      };
-      const customProvider = new AdsblolProvider(customConfig);
-      expect(customProvider).toBeDefined();
+    it('caps the radius at the API maximum of 250 nm', () => {
+      const radius = radiusForBoundingBox({
+        minLatitude: -60,
+        maxLatitude: 60,
+        minLongitude: -60,
+        maxLongitude: 60,
+      });
+      expect(radius).toBe(250);
     });
   });
 
-  describe('fetchFromSource', () => {
-    it('should fetch and filter aircraft within bounding box', async () => {
-      const mockResponse: { acList: unknown[] } = {
-        acList: [
+  describe('buildUrl / fetchFromSource', () => {
+    it('requests the real /v2/point/{lat}/{lon}/{radius} shape', async () => {
+      (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(fixture),
+      } as Response);
+      await provider.fetchFromSource(NETHERLANDS_BBOX);
+      const calledUrl = (fetch as unknown as ReturnType<typeof vi.fn>).mock
+        .calls[0]?.[0] as string;
+      expect(calledUrl).toMatch(
+        /\/v2\/point\/52\.25\d*\/5\.0\d*\/\d+$/,
+      );
+      expect(calledUrl).not.toContain('lat=');
+    });
+
+    it('parses the real fixture: airborne aircraft keep altitude, callsign, squawk', async () => {
+      (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(fixture),
+      } as Response);
+      const positions = await provider.fetchFromSource(NETHERLANDS_BBOX);
+      expect(positions.length).toBeGreaterThan(0);
+      const airborne = positions.find((p) => p.callsign === 'TRA16U');
+      expect(airborne).toBeDefined();
+      expect(airborne?.icao24).toBe('484C5A');
+      expect(airborne?.altitude).toBeGreaterThan(0);
+      expect(airborne?.altitude).toBe(Math.round(
+        fixture.ac.find((a) => a.hex === '484c5a')?.alt_baro as number,
+      ));
+      expect(airborne?.onGround).toBe(false);
+      expect(airborne?.squawk).toBe('1000');
+      expect(airborne?.timestamp).toBe(
+        Math.round(fixture.now - (fixture.ac.find((a) => a.hex === '484c5a')?.seen_pos ?? 0)),
+      );
+    });
+
+    it('handles alt_baro "ground": onGround true, altitude null', async () => {
+      (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(fixture),
+      } as Response);
+      const positions = await provider.fetchFromSource(NETHERLANDS_BBOX);
+      const ground = positions.find(
+        (p) => p.icao24 === '4854CB',
+      );
+      expect(ground).toBeDefined();
+      expect(ground?.onGround).toBe(true);
+      expect(ground?.altitude).toBeNull();
+    });
+
+    it('keeps heading 0 (north) as 0, not null', async () => {
+      const response = {
+        ...fixture,
+        ac: [
           {
-            Icao: '484001',
-            Call: 'KLM123',
-            Reg: 'PH-BFA',
-            Type: 'B738',
-            Op: 'KLM',
-            Lat: 52.3086,
-            Long: 4.7639,
-            Alt: 35000,
-            Spd: 450,
-            Hdg: 270,
-            VerRate: 0,
-            Squawk: '4201',
-            Ts: 1700000000,
-            Gnd: false,
-          },
-          {
-            Icao: '484002',
-            Call: 'EZY456',
-            Reg: 'PH-EZA',
-            Type: 'A320',
-            Op: 'EasyJet',
-            Lat: 51.965,
-            Long: 4.479,
-            Alt: 28000,
-            Spd: 420,
-            Hdg: 180,
-            VerRate: -500,
-            Squawk: '6201',
-            Ts: 1700000000,
-            Gnd: false,
-          },
-          // Outside bbox
-          {
-            Icao: '484003',
-            Call: 'OUTSIDE',
-            Reg: 'PH-OUT',
-            Type: 'B789',
-            Op: 'Other',
-            Lat: 60.0,
-            Long: 10.0,
-            Alt: 32000,
-            Spd: 480,
-            Hdg: 90,
-            VerRate: 100,
-            Squawk: '2000',
-            Ts: 1700000000,
-            Gnd: false,
+            ...fixture.ac.find((a) => a.hex === '484c5a')!,
+            hex: '484c5a',
+            track: 0,
           },
         ],
       };
-
-      (fetch as typeof global.fetch).mockResolvedValue({
+      (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve(mockResponse),
+        json: () => Promise.resolve(response),
       } as Response);
-
       const positions = await provider.fetchFromSource(NETHERLANDS_BBOX);
-
-      expect(positions).toHaveLength(2);
-      expect(positions[0].icao24).toBe('484001');
-      expect(positions[1].icao24).toBe('484002');
+      expect(positions[0]?.heading).toBe(0);
+      expect(positions[0]?.heading).not.toBeNull();
     });
 
-    it('should handle API errors', async () => {
-      (fetch as typeof global.fetch).mockResolvedValue({
+    it('keeps heading undefined when the feed has no track', async () => {
+      const response = {
+        ...fixture,
+        ac: [
+          {
+            ...fixture.ac.find((a) => a.hex === '484c5a')!,
+            hex: '484c5a',
+            track: undefined,
+          },
+        ],
+      };
+      (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(response),
+      } as Response);
+      const positions = await provider.fetchFromSource(NETHERLANDS_BBOX);
+      expect(positions[0]?.heading).toBeNull();
+    });
+
+    it('filters aircraft without lat/lon', async () => {
+      const response = {
+        ...fixture,
+        ac: [{ hex: 'deadbeef' } as AdsblolAircraft, ...fixture.ac],
+      };
+      (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(response),
+      } as Response);
+      const positions = await provider.fetchFromSource(NETHERLANDS_BBOX);
+      expect(positions.find((p) => p.icao24 === 'DEADBEEF')).toBeUndefined();
+    });
+
+    it('handles API errors', async () => {
+      (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
       } as Response);
-
       await expect(provider.fetchFromSource(NETHERLANDS_BBOX)).rejects.toThrow(
         'ADS-B.lol API error: 500 Internal Server Error',
       );
     });
 
-    it('should filter out aircraft with zero coordinates', async () => {
-      const mockResponse = {
-        acList: [
-          {
-            Icao: '484001',
-            Call: 'VALID',
-            Reg: 'PH-VAL',
-            Type: 'B738',
-            Op: 'KLM',
-            Lat: 52.3086,
-            Long: 4.7639,
-            Alt: 35000,
-            Spd: 450,
-            Hdg: 270,
-            VerRate: 0,
-            Squawk: '4201',
-            Ts: 1700000000,
-            Gnd: false,
-          },
-          {
-            Icao: '484002',
-            Call: 'INVALID',
-            Reg: '',
-            Type: '',
-            Op: '',
-            Lat: 0,
-            Long: 0,
-            Alt: 0,
-            Spd: 0,
-            Hdg: 0,
-            VerRate: 0,
-            Squawk: '',
-            Ts: 0,
-            Gnd: false,
-          },
-        ],
-      };
-
-      (fetch as typeof global.fetch).mockResolvedValue({
+    it('treats a missing ac array as empty', async () => {
+      (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve(mockResponse),
+        json: () => Promise.resolve({ now: 1700000000 }),
       } as Response);
-
       const positions = await provider.fetchFromSource(NETHERLANDS_BBOX);
-
-      expect(positions).toHaveLength(1);
-      expect(positions[0].icao24).toBe('484001');
-    });
-  });
-
-  describe('convertAircraft', () => {
-    it('should convert ADS-B.lol aircraft to AircraftPosition', () => {
-      const adsbAircraft = {
-        Icao: '484001',
-        Call: 'KLM123',
-        Reg: 'PH-BFA',
-        Type: 'B738',
-        Op: 'KLM',
-        Lat: 52.3086,
-        Long: 4.7639,
-        Alt: 35000,
-        Spd: 450,
-        Hdg: 270,
-        VerRate: -100,
-        Squawk: '4201',
-        Ts: 1700000000,
-        Gnd: false,
-      };
-
-      const converted = (provider as unknown as { convertAircraft: (ac: typeof adsbAircraft) => unknown }).convertAircraft(adsbAircraft);
-
-      expect(converted).toMatchObject({
-        icao24: '484001',
-        callsign: 'KLM123',
-        registration: 'PH-BFA',
-        type: 'B738',
-        operator: 'KLM',
-        latitude: 52.3086,
-        longitude: 4.7639,
-        altitude: 35000,
-        speed: 450,
-        heading: 270,
-        verticalRate: -100,
-        squawk: '4201',
-        timestamp: 1700000000,
-        onGround: false,
-      });
+      expect(positions).toEqual([]);
     });
 
-    it('should handle empty string values', () => {
-      const adsbAircraft = {
-        Icao: '484001',
-        Call: '',
-        Reg: '',
-        Type: '',
-        Op: '',
-        Lat: 52.3086,
-        Long: 4.7639,
-        Alt: 0,
-        Spd: 0,
-        Hdg: 0,
-        VerRate: 0,
-        Squawk: '',
-        Ts: 1700000000,
-        Gnd: true,
-      };
-
-      const converted = (provider as unknown as { convertAircraft: (ac: typeof adsbAircraft) => unknown }).convertAircraft(adsbAircraft);
-
-      expect(converted).toMatchObject({
-        callsign: null,
-        registration: null,
-        type: null,
-        operator: null,
-        altitude: null,
-        speed: null,
-        heading: null,
-        verticalRate: null,
-        squawk: null,
-        onGround: true,
-      });
+    it('accepts a configurable base URL', async () => {
+      const custom = new AdsblolProvider({ baseUrl: 'https://proxy.example/v2' });
+      (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(fixture),
+      } as Response);
+      await custom.fetchFromSource(NETHERLANDS_BBOX);
+      const calledUrl = (fetch as unknown as ReturnType<typeof vi.fn>).mock
+        .calls[0]?.[0] as string;
+      expect(calledUrl).toContain('https://proxy.example/v2/point/');
     });
   });
 });

@@ -35,8 +35,8 @@ describe('deadReckoning', () => {
 
     const result = deadReckoning(current, velocity, 10);
 
-    // With heading 0, should move north (increase latitude)
-    expect(result.latitude).toBeGreaterThanOrEqual(current.latitude);
+    // With heading 0, should move north (strictly increase latitude)
+    expect(result.latitude).toBeGreaterThan(current.latitude);
     expect(result.longitude).toBeCloseTo(current.longitude, 6);
   });
 
@@ -68,8 +68,8 @@ describe('deadReckoning', () => {
 
     const result = deadReckoning(current, velocity, 10);
 
-    // Moving north should increase latitude
-    expect(result.latitude).toBeGreaterThanOrEqual(current.latitude);
+    // Moving north should strictly increase latitude
+    expect(result.latitude).toBeGreaterThan(current.latitude);
     expect(result.longitude).toBeCloseTo(current.longitude, 6);
   });
 
