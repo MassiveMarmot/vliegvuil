@@ -1,3 +1,6 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // Telemetry panel component with managed focus
 // Spec §2: callsign, registration, type, operator, altitude, speed, heading,
 // vertical rate, squawk, data age.

@@ -41,4 +41,4 @@ See [docs/deploy.md](docs/deploy.md) for the VPS setup (Caddy static serving + A
 
 ## Licence
 
-See [LICENSE](LICENSE) for the code. Data sources and their licences are listed in `sources.json` and shown in the app's attribution page.
+Code is licensed under the [MPL-2.0](LICENSE). Data sources and their licences are listed in `sources.json`, validated in CI (`pnpm validate:sources`), and shown in the app's attribution page.
