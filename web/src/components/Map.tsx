@@ -9,6 +9,40 @@ import { NOISE_BAND_COLORS, NOISE_FILL_OPACITY } from '../noiseStyle';
 
 // Aircraft symbol layer configuration
 const AIRCRAFT_LAYER_ID = 'aircraft-symbols';
+
+/**
+ * Build the 24×24 airplane icon as raw RGBA data: a small plane glyph in a
+ * white circle with a thin border (spec §3). Pure data — no DOM required.
+ */
+function createAirplaneIcon(): { width: number; height: number; data: Uint8Array } {
+  const size = 24;
+  const data = new Uint8Array(size * size * 4);
+  const center = (size - 1) / 2;
+  const radius = size / 2 - 1;
+  const planeDist = 7; // distance from centre for the plane body pixels
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const idx = (y * size + x) * 4;
+      const dx = x - center;
+      const dy = y - center;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      // Thin dark border ring, then white circle fill
+      if (dist <= radius && dist > radius - 1.5) {
+        data[idx] = 0x3b; data[idx + 1] = 0x35; data[idx + 2] = 0x2f; data[idx + 3] = 0xff;
+      } else if (dist <= radius - 1.5) {
+        // Plane glyph: simple upward triangle along the vertical axis
+        const onBody = Math.abs(dx) <= 1.2 && dy >= -planeDist && dy <= planeDist;
+        const onWing = Math.abs(Math.abs(dx) - (planeDist - Math.abs(dy) * 0.6)) < 1.2 && Math.abs(dy) < planeDist * 0.7;
+        const isPlane = onBody || onWing;
+        data[idx] = isPlane ? 0x3b : 0xff;
+        data[idx + 1] = isPlane ? 0x35 : 0xff;
+        data[idx + 2] = isPlane ? 0x2f : 0xff;
+        data[idx + 3] = 0xff;
+      }
+    }
+  }
+  return { width: size, height: size, data };
+}
 const AIRCRAFT_SOURCE_ID = 'aircraft';
 
 // Symbol layer properties
@@ -68,9 +102,10 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
       return;
     }
 
-    // Add airplane icon if not already added
+    // Add airplane icon if not already added (24×24 RGBA glyph in a white
+    // circle with a thin border, per spec §3)
     if (!map.hasImage('airplane')) {
-      map.addImage('airplane', { width: 24, height: 24, data: new Uint8Array() } as unknown as HTMLImageElement);
+      map.addImage('airplane', createAirplaneIcon());
     }
 
     // Convert aircraft map to GeoJSON feature collection
