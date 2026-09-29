@@ -10,7 +10,19 @@
     "noise": "Geluidsoverlast",
     "toggleNoise": "Toon geluidscontouren",
     "staleData": "Gegevens zijn verouderd",
-    "noData": "Geen gegevens beschikbaar"
+    "noData": "Geen gegevens beschikbaar",
+    "hideNoise": "Verberg geluidscontouren"
+  },
+  "noise": {
+    "legendTitle": "Legenda geluidscontouren",
+    "metric": "dB Lden (jaargemiddelde)",
+    "bandLabel": "≥{{band}} dB {{metric}}",
+    "source": "Bron: {{source}} ({{license}})",
+    "annualAverage": "Contouren tonen het jaargemiddelde van de geluidsbelasting, geen live geluid.",
+    "annualAverageShort": "jaargemiddelde, geen live geluid",
+    "badge": "Binnen de ≥{{band}} dB Lden-contour van {{airport}}, {{year}}",
+    "opened": "Geluidscontouren getoond",
+    "closed": "Geluidscontouren verborgen"
   },
   "telemetry": {
     "title": "Vliegtuigdetails",
