@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import path from 'path';
 
 export default defineConfig({
   plugins: [
@@ -13,6 +14,8 @@ export default defineConfig({
         short_name: 'VliegVuil',
         description: 'Visualisatie van vliegvervuiling in Nederland',
         theme_color: '#ffffff',
+        background_color: '#f5f5f5',
+        display: 'standalone',
         icons: [
           {
             src: 'favicon.ico',
@@ -28,12 +31,17 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@vliegvuil/core': '@vliegvuil/core',
+      '@vliegvuil/core': path.resolve(__dirname, '../core/src'),
     },
   },
   build: {
     outDir: 'dist',
     sourcemap: true,
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+      },
+    },
   },
   server: {
     port: 3000,
