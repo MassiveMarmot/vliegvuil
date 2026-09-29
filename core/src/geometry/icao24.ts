@@ -1,3 +1,6 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // ICAO24 address block to country mapping
 // Based on ICAO Doc 9866 (Mode S address assignment)
 // See: https://www.icao.int/publications/DOC9866/DOC9866_PART1_EN.pdf

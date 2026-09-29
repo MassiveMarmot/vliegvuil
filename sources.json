@@ -1,77 +1,16 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "description": "VliegVuil data sources with metadata",
-  "type": "object",
-  "properties": {
-    "sources": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Unique identifier for the source"
-          },
-          "name": {
-            "type": "string",
-            "description": "Human-readable name"
-          },
-          "url": {
-            "type": "string",
-            "format": "uri",
-            "description": "Source URL"
-          },
-          "license": {
-            "type": "string",
-            "description": "License identifier (SPDX)"
-          },
-          "licenseUrl": {
-            "type": "string",
-            "format": "uri",
-            "description": "URL to license text"
-          },
-          "dataType": {
-            "type": "string",
-            "description": "Type of data provided"
-          },
-          "updateFrequency": {
-            "type": "string",
-            "description": "How often the data is updated"
-          },
-          "lastUpdated": {
-            "type": "string",
-            "format": "date",
-            "description": "Last update date"
-          },
-          "notes": {
-            "type": "string",
-            "description": "Additional notes"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "url",
-          "license",
-          "dataType"
-        ]
-      }
-    }
-  },
-  "required": [
-    "sources"
-  ],
+  "$schema": "./sources.schema.json",
   "sources": [
     {
       "id": "adsb-lol",
       "name": "adsb.lol",
       "url": "https://adsb.lol/",
-      "license": "BSD-3-Clause (API code)",
-      "licenseUrl": "https://github.com/adsblol/api/blob/main/LICENSE",
+      "license": "ODbL-1.0",
+      "licenseUrl": "https://opendatacommons.org/licenses/odbl/1.0/",
       "dataType": "Live ADS-B positions",
       "updateFrequency": "continuous (polled every 5s via proxy)",
       "lastUpdated": "2026-09-29",
-      "notes": "API source is BSD-3-Clause (https://github.com/adsblol/api). Data comes from community feeders. TODO: note dynamic rate limits — future API key may require feeding adsb.lol (see README)."
+      "notes": "Official docs (api.adsb.lol/docs): \"The license for the API as well as all data ADSB.lol makes public is ODbL\" (Open Database License v1.0, same as OpenStreetMap). API source code is BSD-3-Clause (https://github.com/adsblol/api). Future API key may require feeding adsb.lol (see README); rate limits are dynamic."
     },
     {
       "id": "ourairports",

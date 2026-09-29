@@ -63,6 +63,7 @@
   "attribution": {
     "title": "Attribution",
     "sources": "Sources",
-    "license": "License"
+    "license": "License",
+    "odbl": "Live aircraft data from adsb.lol — © adsb.lol contributors, licensed under the Open Database License (ODbL) v1.0."
   }
 }
