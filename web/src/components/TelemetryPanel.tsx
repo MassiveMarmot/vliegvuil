@@ -8,12 +8,15 @@ import { useTranslation } from 'react-i18next';
 import type { DisplayAircraft } from '../types';
 import type { NoiseContours } from '@vliegvuil/core';
 import { NoiseBadge } from './NoiseOverlay';
+import { formatAltitude, formatSpeed, type UnitSettings, DEFAULT_UNITS } from '../units';
 
 export interface TelemetryPanelProps {
   aircraft: DisplayAircraft;
   onClose: () => void;
   /** Noise contours for the membership badge (session 10) */
   noiseContours?: NoiseContours | null;
+  /** Units for altitude/speed display (session 11) */
+  units?: UnitSettings;
 }
 
 /** Format a nullable value, falling back to an em dash */
@@ -21,15 +24,6 @@ function formatValue(value: string | null): string {
   return value ?? '—';
 }
 
-/** Format altitude in feet */
-function formatAltitude(alt: number | null): string {
-  return alt != null ? `${Math.round(alt).toLocaleString()} ft` : '—';
-}
-
-/** Format speed in knots */
-function formatSpeed(speed: number | null): string {
-  return speed != null ? `${Math.round(speed)} kt` : '—';
-}
 
 /** Format heading in degrees */
 function formatHeading(track: number | null): string {
@@ -57,7 +51,7 @@ function formatDataAge(timestamp: number): string {
  * Managed focus: on mount focus moves to the panel; on close (button or Esc)
  * focus returns to the previously focused element.
  */
-export function TelemetryPanel({ aircraft, onClose, noiseContours }: TelemetryPanelProps): React.ReactElement {
+export function TelemetryPanel({ aircraft, onClose, noiseContours, units = DEFAULT_UNITS }: TelemetryPanelProps): React.ReactElement {
   const { t } = useTranslation();
   const panelRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<Element | null>(null);
@@ -131,11 +125,11 @@ export function TelemetryPanel({ aircraft, onClose, noiseContours }: TelemetryPa
         </div>
         <div className="telemetry-row">
           <dt className="telemetry-label">{t('telemetry.altitude')}</dt>
-          <dd className="telemetry-value">{formatAltitude(aircraft.alt)}</dd>
+          <dd className="telemetry-value">{formatAltitude(aircraft.alt, units.altitude)}</dd>
         </div>
         <div className="telemetry-row">
           <dt className="telemetry-label">{t('telemetry.speed')}</dt>
-          <dd className="telemetry-value">{formatSpeed(aircraft.speed)}</dd>
+          <dd className="telemetry-value">{formatSpeed(aircraft.speed, units.speed)}</dd>
         </div>
         <div className="telemetry-row">
           <dt className="telemetry-label">{t('telemetry.heading')}</dt>

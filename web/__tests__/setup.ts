@@ -3,6 +3,10 @@ import { cleanup } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: {
+    type: '3rdParty',
+    init: (): void => {},
+  },
   useTranslation: () => ({
     t: (key: string, fallbackOrOptions?: string | Record<string, unknown>, maybeOptions?: Record<string, unknown>) => {
       const options = (maybeOptions ?? {}) as Record<string, unknown>;

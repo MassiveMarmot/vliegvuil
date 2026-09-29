@@ -56,10 +56,13 @@
     "meters": "Meter",
     "knots": "Knoop",
     "kmh": "km/u",
-    "save": "Opslaan"
+    "save": "Opslaan",
+    "altitudeUnit": "Hoogte",
+    "speedUnit": "Snelheid"
   },
   "attribution": {
     "title": "Bronvermelding",
-    "sources": "Bronnen"
+    "sources": "Bronnen",
+    "license": "Licentie"
   }
 }
