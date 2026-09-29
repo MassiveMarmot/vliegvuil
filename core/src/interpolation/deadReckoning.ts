@@ -33,8 +33,9 @@ export function deadReckoning(
   velocity: Velocity,
   timeDelta: number,
 ): Position {
-  // Handle invalid velocity (speed 0 or heading 0)
-  if (velocity.speed <= 0 || velocity.heading === null || velocity.heading === 0) {
+  // Heading 0 is a valid heading (due north); only null or non-moving
+  // aircraft stay put
+  if (velocity.speed <= 0 || velocity.heading === null) {
     return { ...current };
   }
 
