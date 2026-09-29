@@ -1,5 +1,25 @@
 /* VliegVuil.nl - Main Stylesheet */
 
+/* Design tokens: warm playful-minimalism (spec §3) — cream/sand chrome,
+   soft shadows, generous rounding; whimsy stays in the chrome, never the data. */
+:root {
+  --vv-cream: #f7f3ec;
+  --vv-sand: #efe7d9;
+  --vv-ink: #3b352f;
+  --vv-muted: #6f675e;
+  --vv-water: #b8c6cc;
+  --vv-coral: #e8896b;
+  --vv-red: #b2182b;
+  --vv-accent: #4a7a96;
+  --vv-surface: rgba(255, 253, 249, 0.95);
+  --vv-border: #d9d2c4;
+  --vv-radius-lg: 16px;
+  --vv-radius-md: 12px;
+  --vv-radius-sm: 8px;
+  --vv-shadow-soft: 0 8px 20px rgba(80, 65, 45, 0.14), 0 2px 6px rgba(80, 65, 45, 0.08);
+  --vv-ease: cubic-bezier(0.25, 0.8, 0.3, 1);
+}
+
 /* Reset and base styles */
 *,
 *::before,
@@ -18,11 +38,11 @@ body,
 }
 
 body {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Space Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-size: 16px;
   line-height: 1.5;
-  color: #333;
-  background: #f5f5f5;
+  color: var(--vv-ink);
+  background: var(--vv-cream);
 }
 
 /* Map container */
@@ -142,10 +162,11 @@ body {
   right: 1rem;
   width: 300px;
   max-width: calc(100vw - 2rem);
-  background-color: rgba(255, 255, 255, 0.95);
-  border: 1px solid #d4d0c8;
-  border-radius: 12px;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.16);
+  background-color: var(--vv-surface);
+  border: 1px solid var(--vv-border);
+  border-radius: var(--vv-radius-lg);
+  box-shadow: var(--vv-shadow-soft);
+  animation: vv-slide-in 0.28s var(--vv-ease);
   padding: 1rem;
   font-size: 0.875rem;
   z-index: 20;
@@ -779,4 +800,58 @@ body {
 
 .attribution-url a {
   word-break: break-all;
+}
+
+/* Panel slide-in (spec §3: panel slides in with soft easing) */
+@keyframes vv-slide-in {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.settings-panel,
+.attribution-page,
+.noise-legend {
+  background-color: var(--vv-surface);
+  border: 1px solid var(--vv-border);
+  border-radius: var(--vv-radius-md);
+  box-shadow: var(--vv-shadow-soft);
+  animation: vv-slide-in 0.28s var(--vv-ease);
+}
+
+.settings-toggle,
+.attribution-toggle,
+.noise-toggle,
+.aircraft-list-toggle {
+  border-radius: var(--vv-radius-sm);
+  border: 1px solid var(--vv-border);
+  background-color: var(--vv-surface);
+  color: var(--vv-ink);
+  transition: background-color 0.15s var(--vv-ease);
+}
+
+.settings-toggle:hover,
+.attribution-toggle:hover,
+.noise-toggle:hover,
+.aircraft-list-toggle:hover {
+  background-color: var(--vv-sand);
+}
+
+.noise-legend-title,
+.settings-title,
+.attribution-title {
+  color: var(--vv-ink);
+}
+
+.noise-legend-caveat,
+.noise-legend-source,
+.noise-badge-caveat,
+.attribution-dataType,
+.attribution-license {
+  color: var(--vv-muted);
 }
