@@ -1,0 +1,45 @@
+{
+  "app": {
+    "title": "VliegVuil.nl",
+    "description": "Visualisatie van vliegvervuiling in Nederland",
+    "loading": "Laden...",
+    "error": "Fout"
+  },
+  "map": {
+    "aircraft": "Vliegtuigen",
+    "noise": "Geluidsoverlast",
+    "toggleNoise": "Toon geluidscontouren",
+    "staleData": "Gegevens zijn verouderd",
+    "noData": "Geen gegevens beschikbaar"
+  },
+  "telemetry": {
+    "callsign": "Roepletters",
+    "registration": "Registratie",
+    "type": "Type",
+    "operator": "Operator",
+    "altitude": "Hoogte",
+    "speed": "Snelheid",
+    "heading": "Koers",
+    "verticalRate": "Stijg-/daalsnelheid",
+    "squawk": "Squawk",
+    "dataAge": "Gegevens leeftijd"
+  },
+  "search": {
+    "placeholder": "Zoek op roepletters, registratie of ICAO24",
+    "noResults": "Geen resultaten gevonden"
+  },
+  "settings": {
+    "title": "Instellingen",
+    "language": "Taal",
+    "units": "Eenheden",
+    "feet": "Voet",
+    "meters": "Meter",
+    "knots": "Knoop",
+    "kmh": "km/u",
+    "save": "Opslaan"
+  },
+  "attribution": {
+    "title": "Bronvermelding",
+    "sources": "Bronnen"
+  }
+}

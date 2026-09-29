@@ -1,0 +1,45 @@
+{
+  "app": {
+    "title": "VliegVuil.nl",
+    "description": "Visualization of aviation pollution in the Netherlands",
+    "loading": "Loading...",
+    "error": "Error"
+  },
+  "map": {
+    "aircraft": "Aircraft",
+    "noise": "Noise pollution",
+    "toggleNoise": "Show noise contours",
+    "staleData": "Data is stale",
+    "noData": "No data available"
+  },
+  "telemetry": {
+    "callsign": "Callsign",
+    "registration": "Registration",
+    "type": "Type",
+    "operator": "Operator",
+    "altitude": "Altitude",
+    "speed": "Speed",
+    "heading": "Heading",
+    "verticalRate": "Vertical rate",
+    "squawk": "Squawk",
+    "dataAge": "Data age"
+  },
+  "search": {
+    "placeholder": "Search by callsign, registration or ICAO24",
+    "noResults": "No results found"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "units": "Units",
+    "feet": "Feet",
+    "meters": "Meters",
+    "knots": "Knots",
+    "kmh": "km/h",
+    "save": "Save"
+  },
+  "attribution": {
+    "title": "Attribution",
+    "sources": "Sources"
+  }
+}
