@@ -50,9 +50,9 @@ Caddy serves the static app and reverse-proxies the ADS-B API with a ~5s micro-c
 No access logs. No client IP or headers forwarded upstream. In-memory per-IP rate limiting.
 CORS configured for the web origin and future Capacitor origins.
 Data builds: scheduled GitHub Actions workflows run the /data-build check (weekly, opens or updates one issue) and refresh (monthly, plus manual dispatch; opens a pull request with the changed snapshots and sources.json). Validation gates and an atomic swap apply inside the workflow. Noise sources refresh only on manual dispatch after human review. The VPS runs no data jobs.
-Deploy: git pull from GitHub (read-only deploy key), then build, run by hand on the VPS after merging. Nothing deploys from GitHub.
+Deploy: the server clones over HTTPS while the repo is public (read-only deploy key only if the repo is private), then build, run by hand on the VPS after merging. Nothing deploys from GitHub.
 GitHub Actions: CI (lint, typecheck, tests, build, validators) on pushes and pull requests, plus the scheduled data check and refresh workflows, which only open issues and pull requests. No deploy jobs, no secrets other than GITHUB_TOKEN, no third-party actions beyond pnpm/action-setup, actions pinned to commit SHAs, minimal per-job permissions.
-Debian stable, unattended-upgrades, SSH keys only.
+Ubuntu 26.04 LTS, unattended-upgrades, SSH keys only.
 
 Future native apps: Capacitor wraps the same web build.
 

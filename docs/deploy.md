@@ -2,10 +2,11 @@
 
 ## Overview
 
-VliegVuil.nl runs on a single OVHcloud VPS (2 vCPU, 4 GB RAM, 40 GB storage). There is no Cloudflare or other
-proxy in front: the browser connects directly to Caddy, which serves the
-static app and reverse-proxies the ADS-B API on the **same origin**
-(`/api/*` → `https://api.adsb.lol/v2/*`). Because the API is same-origin,
+VliegVuil.nl runs on a single OVHcloud VPS (2 vCPU, 4 GB RAM, 40 GB storage)
+with Ubuntu 26.04 LTS. There is no Cloudflare or other proxy in front: the
+browser connects directly to Caddy, which serves the static app and
+reverse-proxies the ADS-B API on the **same origin**
+(`/api/*` → `https://api.adsb.lol/v2/*`). Because the API is same origin,
 CORS is not needed and no CORS headers are sent.
 
 ```text
@@ -18,160 +19,123 @@ CORS is not needed and no CORS headers are sent.
                                          └──────────────────┘
 ```
 
-Deployment model: git pull from GitHub (read-only deploy key), then build on
-the server, by hand. No Docker, no CD pipeline, nothing deploys from GitHub.
-Data refreshes arrive as reviewed pull requests (see §8); the server never
-runs them.
+Deployment model: git pull from GitHub, then build on the server, by hand.
+No Docker, no CD pipeline, nothing deploys from GitHub. Data refreshes arrive
+as reviewed pull requests (see §8); the server never runs them.
+
+Throughout this guide, replace `<owner>` with the GitHub account that owns
+the repository.
 
 ## Prerequisites
 
-- VPS (Debian stable or Ubuntu LTS) with ports 80/443 open, SSH by key only
-- Domain `vliegvuil.nl` with an A record pointing at the server IP
-- Go toolchain (for `xcaddy`; any currently supported Go version)
-- Node.js and pnpm (for building the web app)
-- SSH access
+- VPS running **Ubuntu 26.04 LTS** with ports 80 and 443 (TCP) reachable
+- Domain `vliegvuil.nl` with an A record (and an AAAA record if the VPS has
+  IPv6) pointing at the server
+- `git`, `curl`, a Go toolchain (for `xcaddy`) and Node.js with Corepack (for
+  building the web app)
+- SSH access with a key
 
-## 0. One-time server setup and hardening (OVHcloud, 2 vCPU / 4 GB / 40 GB)
+Ubuntu 26.04 notes (from the Ubuntu 26.04 release notes):
 
-Run these once on a fresh Debian stable or Ubuntu LTS install, before
-anything in the sections below. Order matters: keep one SSH session open
-until key-based login is confirmed working.
+- `sudo` is now **sudo-rs** and most core utilities are the Rust **uutils**
+  implementations. In 26.04, `cp`, `mv` and `rm` are **still GNU** (they
+  switch in 26.10), and the commands in this guide use only basic features
+  anyway. The traditional sudo is available as `sudo.ws` (and the GNU
+  coreutils as the `coreutils-from-gnu` package) if anything misbehaves.
+- Check what you actually have: `go version` and `node -v`. CI builds with
+  Node 22; if Caddy or `xcaddy` needs a newer Go than Ubuntu provides,
+  install Go from <https://go.dev/dl/>.
 
-### 0.1 System basics
+### Server baseline (once)
 
 ```bash
-sudo apt update && sudo apt full-upgrade -y
-sudo apt install -y unattended-upgrades git curl
-sudo dpkg-reconfigure -plow unattended-upgrades
-sudo timedatectl set-timezone Europe/Amsterdam
-```
+sudo apt update && sudo apt upgrade
+sudo apt install git curl golang-go nodejs npm
+# unattended security updates (usually enabled on Ubuntu Server; verify)
+sudo apt install unattended-upgrades
+systemctl status unattended-upgrades --no-pager
 
-### 0.2 SSH: keys only, no root login
-
-Generate a **dedicated key** on your own machine (not a general-purpose
-key), e.g. `ssh-keygen -t ed25519 -C "vliegvuil-vps"`, and add the public
-half to the instance (in the OVHcloud panel at creation, or into
-`~/.ssh/authorized_keys` afterwards). Keeping the private key in a
-password manager with SSH-agent support (e.g. KeePassXC) is fine, but the
-key is your only way in once password login is off, so also keep a
-break-glass path: the OVHcloud web console (KVM) works without SSH.
-
-Then, in `/etc/ssh/sshd_config` (or a drop-in under
-`/etc/ssh/sshd_config.d/`):
-
-```
+# SSH by key only (keep your current session open while testing!)
+sudo tee /etc/ssh/sshd_config.d/10-vliegvuil.conf <<'CONF'
 PasswordAuthentication no
-KbdInteractiveAuthentication no
 PermitRootLogin no
-PubkeyAuthentication yes
-```
+CONF
+sudo sshd -t && sudo systemctl reload ssh
 
-```bash
-sudo sshd -t && sudo systemctl restart ssh
-```
-
-Leave the current session open and verify login from a **new** terminal
-before closing it.
-
-### 0.3 Firewall and brute-force protection
-
-```bash
-sudo apt install -y ufw fail2ban
-sudo ufw default deny incoming
-sudo ufw default allow outgoing
+# Firewall (Ubuntu ships ufw inactive). Allow SSH first.
 sudo ufw allow OpenSSH
-sudo ufw allow 80,443/tcp
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw allow 443/udp     # HTTP/3
+sudo ufw logging off       # ufw logs blocked packets with source IPs
 sudo ufw enable
-sudo systemctl enable --now fail2ban
 ```
 
-Nothing else is public: no database, no Node listener, no monitoring
-port. OVHcloud applies anti-DDoS filtering at its network edge.
+If your provider also offers a network firewall, allow the same ports there.
+Time sync is handled by `chrony`, the default on new Ubuntu 26.04 installs.
 
-### 0.4 Automatic security updates
+Post-setup checklist:
 
-Enabled in §0.1 (`unattended-upgrades`, security updates only). Verify:
+- [ ] key login as a non-root user works, from a **new** terminal
+- [ ] `ssh -o PreferredAuthentications=password <user>@vliegvuil.nl` is refused
+- [ ] `sudo ufw status` shows only OpenSSH, 80/tcp, 443/tcp, 443/udp
+- [ ] `systemctl is-active unattended-upgrades` prints active
+- [ ] the OVHcloud web console (KVM) was tested once — it is the break-glass
+      path once password SSH is off
 
-```bash
-systemctl is-active unattended-upgrades
-sudo tail -5 /var/log/unattended-upgrades/unattended-upgrades.log
-```
-
-### 0.5 A second human user (admin) and the service user
-
-Do not run anything as root beyond setup. The app is owned by the
-`vliegvuil` user (created in §2); Caddy runs as its packaged service
-user. If you want a separate admin account with sudo:
-
-```bash
-sudo adduser <your-admin-name>
-sudo usermod -aG sudo <your-admin-name>
-# install your SSH key for the new user, then test login in a new terminal
-```
-
-### 0.6 No access logs, ever
-
-The Caddyfile (§4) deliberately configures no access log, and the
-service never logs client IPs. Do not add access logging later without
-rewriting `docs/privacy.md` first. OVHcloud's own network-layer
-infrastructure logs are outside our control and covered in
-`privacy.md`.
-
-### 0.7 Node.js and pnpm
-
-Install Node 22 (the repo's `engines.node`) from NodeSource, then enable
-pnpm via corepack:
-
-```bash
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-sudo apt install -y nodejs
-sudo corepack enable
-corepack prepare pnpm@10.34.1 --activate
-```
-
-(The pnpm version comes from `packageManager` in `package.json`.)
-
-### 0.8 Go toolchain (for the custom Caddy build in §1)
-
-```bash
-sudo apt install -y golang-go
-```
-
-Any currently supported Go version works for `xcaddy`.
-
-### 0.9 DNS
-
-Point an A record for `vliegvuil.nl` at the instance IPv4 address and an
-AAAA record at its IPv6 address. Caddy obtains and renews Let's Encrypt
-certificates automatically via the ACME HTTP-01 challenge on port 80.
-
-### 0.10 Post-setup checklist
-
-- [ ] `ssh <admin>@vliegvuil.nl` works with the key, as non-root
-- [ ] `ssh -o PreferredAuthentications=password <admin>@vliegvuil.nl` is refused
-- [ ] `sudo ufw status` shows only OpenSSH and 80,443/tcp allowed
-- [ ] `systemctl is-active fail2ban unattended-upgrades` prints active twice
-- [ ] OVHcloud web console login tested once (break-glass path)
-- [ ] `ss -tlnp` shows nothing unexpected listening before Caddy starts
-
-Then continue with §1 (custom Caddy build).
-
-## 1. Build Caddy with the required modules
+## 1. Install Caddy with the required modules
 
 Rate limiting and the micro-cache are **Caddy modules**, not part of the
-standard distribution. Build a custom binary once with
-[xcaddy](https://github.com/caddyserver/xcaddy):
+standard distribution. Install Caddy from its official apt repository first
+(this provides the `caddy` user, `/etc/caddy`, `/var/lib/caddy` and the
+systemd unit), then swap in a custom binary the way Caddy's documentation
+describes (<https://caddyserver.com/docs/build>, "Package support files for
+custom builds for Debian/Ubuntu/Raspbian").
 
 ```bash
-go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
-xcaddy build \
-  --with github.com/mholt/caddy-ratelimit \
-  --with github.com/caddyserver/cache-handler \
-  --with github.com/darkweak/storages/otter/caddy \
-  --output /usr/local/bin/caddy
+# 1a. Caddy from the official repository. If these commands differ from the
+#     current instructions at https://caddyserver.com/docs/install, follow those.
+sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
+  | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
+  | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+sudo chmod o+r /usr/share/keyrings/caddy-stable-archive-keyring.gpg \
+               /etc/apt/sources.list.d/caddy-stable.list
+sudo apt update && sudo apt install caddy
 ```
 
-Modules used (both Apache-2.0):
+```bash
+# 1b. Build the custom binary as an unprivileged user (not root).
+sudo useradd -m -s /bin/bash vliegvuil || true   # also used in §2
+sudo -u vliegvuil -H bash -c '
+  go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
+  cd ~ && ~/go/bin/xcaddy build \
+    --with github.com/mholt/caddy-ratelimit \
+    --with github.com/caddyserver/cache-handler \
+    --with github.com/darkweak/storages/otter/caddy
+'
+```
+
+To build against a known Caddy version instead of the latest one, pin it
+(`xcaddy build <caddy-version> --with module@<version>`) and record the
+versions you deployed.
+
+```bash
+# 1c. Install it next to the packaged binary (official procedure).
+sudo dpkg-divert --divert /usr/bin/caddy.default --rename /usr/bin/caddy
+sudo mv /home/vliegvuil/caddy /usr/bin/caddy.custom
+sudo chown root:root /usr/bin/caddy.custom && sudo chmod 755 /usr/bin/caddy.custom
+sudo update-alternatives --install /usr/bin/caddy caddy /usr/bin/caddy.default 10
+sudo update-alternatives --install /usr/bin/caddy caddy /usr/bin/caddy.custom 50
+sudo systemctl restart caddy
+```
+
+With this setup the packaged systemd unit keeps working unchanged and
+`apt upgrade` can no longer overwrite the custom binary.
+
+Modules used (three; confirm each licence in its repository before relying
+on it):
 
 - `mholt/caddy-ratelimit` — the `rate_limit` directive
   (<https://github.com/mholt/caddy-ratelimit>)
@@ -189,25 +153,39 @@ caddy list-modules | grep -E 'ratelimit|cache'
 
 ## 2. Install the app
 
-```bash
-# Deploy key (read-only) as the git user
-sudo useradd -m -d /srv/vliegvuil vliegvuil || true
-sudo -u vliegvuil ssh-keygen -t ed25519 -N '' -f /srv/vliegvuil/.ssh/id_ed25519
-# Add /srv/vliegvuil/.ssh/id_ed25519.pub as a read-only deploy key in GitHub
+The repository is public, so the server can clone it over HTTPS **without
+any credential**. If the repository is ever made private again, use a
+read-only deploy key instead (GitHub → Settings → Deploy keys, leave "Allow
+write access" unchecked, and verify GitHub's SSH host key fingerprint
+against the one published in GitHub's documentation before accepting it).
 
-sudo -u vliegvuil git clone git@github.com:MassiveMarmot/vliegvuil.git /srv/vliegvuil
+```bash
+# The app lives in /srv/vliegvuil (owned by the vliegvuil user); the user's
+# home is /home/vliegvuil, so the clone target is an empty directory.
+sudo useradd -m -s /bin/bash vliegvuil || true
+sudo mkdir -p /srv/vliegvuil
+sudo chown vliegvuil:vliegvuil /srv/vliegvuil
+sudo chmod 755 /srv/vliegvuil          # the caddy user must be able to read it
+
+sudo -u vliegvuil git clone https://github.com/<owner>/vliegvuil.git /srv/vliegvuil
 ```
 
 ## 3. Build the web app
 
+Run builds as the `vliegvuil` user so files are not owned by root.
+
 ```bash
-cd /srv/vliegvuil
-pnpm install --frozen-lockfile
-pnpm --filter web build
+sudo corepack enable          # once: lets `pnpm` resolve to the version pinned in package.json
+sudo -u vliegvuil -H bash -c '
+  cd /srv/vliegvuil
+  pnpm install --frozen-lockfile
+  pnpm --filter web build
+'
 ```
 
 The built app ends up in `/srv/vliegvuil/web/dist` — the path the Caddyfile
-expects.
+expects. Later sessions add build-time variables (for example
+`VITE_SITE_ORIGIN`); document them here when they exist.
 
 ## 4. Install the Caddyfile
 
@@ -216,18 +194,18 @@ sudo cp /srv/vliegvuil/Caddyfile /etc/caddy/Caddyfile
 sudo chown root:root /etc/caddy/Caddyfile
 sudo chmod 644 /etc/caddy/Caddyfile
 sudo caddy validate --config /etc/caddy/Caddyfile
+
+# The caddy user must be able to read the built app:
+sudo -u caddy test -r /srv/vliegvuil/web/dist/index.html && echo "readable"
+
+sudo systemctl reload caddy
+sudo systemctl status caddy --no-pager
 ```
 
 **Always run `caddy validate` with the custom binary from step 1** — the
-standard distribution rejects the `rate_limit` and `cache` directives.
-
-If you use the packaged systemd unit, point `ExecStart` at the custom binary
-(`/usr/local/bin/caddy`), then:
-
-```bash
-sudo systemctl enable --now caddy
-sudo systemctl status caddy
-```
+standard distribution rejects the `rate_limit` and `cache` directives. On
+the first start Caddy obtains the TLS certificate automatically; this needs
+the DNS record from the prerequisites and ports 80/443 open.
 
 ## 5. Privacy properties (what to expect)
 
@@ -243,16 +221,41 @@ sudo systemctl status caddy
   there are no third-party API calls and no CORS headers.
 - **Only third-party request from the browser:** PDOK tiles
   (`https://service.pdok.nl`), allowed in `img-src`.
+- **System logs are a separate thing.** `sshd` logs administrator logins and
+  the firewall logging is turned off in the baseline (`ufw logging off`).
 
 Verify the header stripping at any time:
 
 ```bash
-scripts/verify-caddy-headers.sh /usr/local/bin/caddy
+cd /srv/vliegvuil && scripts/verify-caddy-headers.sh "$(command -v caddy)"
 ```
 
 This spins up a local echo upstream, proxies through Caddy with the same
 `header_up` directives, and fails if any client-identifying header or the
 test client IP reaches the upstream.
+
+Verify that visitor IPs do not end up in the journal. Open the site from a
+device, then check:
+
+```bash
+sudo journalctl -u caddy --since "1 hour ago" \
+  | grep -E '([0-9]{1,3}\.){3}[0-9]{1,3}' || echo "no IPv4 addresses found"
+```
+
+Caddy's error logs can mention client addresses in some situations (for
+example failed TLS handshakes; not verified here). If addresses appear, cap
+journal retention, for example:
+
+```bash
+sudo mkdir -p /etc/systemd/journald.conf.d
+sudo tee /etc/systemd/journald.conf.d/10-retention.conf <<'CONF'
+[Journal]
+MaxRetentionSec=7day
+CONF
+sudo systemctl restart systemd-journald
+```
+
+and update `docs/privacy.md` to describe what is actually logged.
 
 ## 6. Rate limiting and micro-cache
 
@@ -269,10 +272,14 @@ zone leaves generous headroom while capping abuse.
 ## 7. Updates
 
 ```bash
-cd /srv/vliegvuil
-sudo -u vliegvuil git pull --ff-only
-pnpm install --frozen-lockfile
-pnpm --filter web build
+sudo -u vliegvuil -H bash -c '
+  cd /srv/vliegvuil
+  git pull --ff-only
+  pnpm install --frozen-lockfile
+  pnpm --filter web build
+'
+# Only if the Caddyfile changed in this update:
+sudo cp /srv/vliegvuil/Caddyfile /etc/caddy/Caddyfile
 sudo caddy validate --config /etc/caddy/Caddyfile
 sudo systemctl reload caddy
 ```
@@ -280,20 +287,28 @@ sudo systemctl reload caddy
 Reload (not restart) keeps the rate-limit state and picks up the new build
 without dropping connections.
 
+The build replaces `web/dist` in place, so for the ~15 seconds it takes the
+site can serve a half-written app. That is acceptable for now. If it ever
+matters, build into a release directory and switch a symlink that the
+Caddyfile's `root` points at.
+
 This is also the whole deploy after you merge a data refresh PR. Keep the
 server's working tree clean (`git status` should show nothing): if it is
 not, `git pull --ff-only` fails, which is the signal that something edited
 tracked files on the server.
+
+Rolling back a bad release: revert the pull request on GitHub, then repeat
+the commands above.
 
 ## 8. Data updates (option C)
 
 The server runs **no data jobs**. Data freshness is handled by GitHub Actions
 workflows (session 22c): a scheduled check opens or updates one issue when
 upstream datasets changed, and a scheduled or manually dispatched refresh
-opens a pull request with the changed snapshots and `sources.json`. You review
-and merge the PR, then deploy as in §7.
+opens a pull request with the changed snapshots and `sources.json`. You
+review and merge the PR, then deploy as in §7.
 
-- The VPS needs no GitHub credential beyond the read-only deploy key.
+- The VPS needs no GitHub credential while the repository is public.
 - Never run `refresh` on the server: it rewrites tracked files in
   `web/public/data/` and the server would diverge from git.
 - Roll back a bad refresh by reverting the data PR on GitHub, then §7.
@@ -313,6 +328,30 @@ Until session 22c is merged, run `check` and `refresh` on your own machine,
 commit the result to a branch and open a PR by hand. See
 `docs/data-updates.md`.
 
+## 9. Maintenance
+
+- **Caddy security updates.** `apt upgrade` updates only the packaged binary
+  (`/usr/bin/caddy.default`); the custom one is **not** updated. Watch
+  Caddy's releases, and at least monthly rebuild with step 1b, then:
+
+  ```bash
+  sudo mv /home/vliegvuil/caddy /usr/bin/caddy.custom
+  sudo chown root:root /usr/bin/caddy.custom && sudo chmod 755 /usr/bin/caddy.custom
+  sudo caddy validate --config /etc/caddy/Caddyfile
+  sudo systemctl restart caddy
+  caddy version
+  ```
+
+  Record the Caddy and module versions you deployed.
+- **System updates.** Unattended upgrades handle security patches. After
+  kernel updates, reboot when `/var/run/reboot-required` exists.
+- **Node and Go.** Keep them in line with CI (Node 22) and with what
+  `xcaddy` needs.
+- **State and backups.** The only state on the server is Caddy's TLS data in
+  `/var/lib/caddy`, which Caddy recreates on its own. Everything else can be
+  rebuilt from git, so the server is disposable: if it breaks, reinstall and
+  follow this guide from the top.
+
 ## Troubleshooting
 
 ```bash
@@ -329,4 +368,8 @@ curl -sS https://vliegvuil.nl/api/point/52.37/4.9/5 | head -c 200
 
 If `caddy validate` reports an unknown directive (`rate_limit`, `cache`),
 you are running the standard distribution instead of the custom binary from
-step 1.
+step 1: check `update-alternatives --display caddy`.
+
+If the certificate is not issued, check that the DNS record points at this
+server and that ports 80 and 443 are open in both the server firewall and
+any provider firewall.
