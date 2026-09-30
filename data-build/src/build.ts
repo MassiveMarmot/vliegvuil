@@ -16,6 +16,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildAirports, airportsToJson } from './airports';
 import { buildAircraft, aircraftToJson } from './aircraft';
+import { endWfsToRawContours, buildNoiseGeoJson, noiseGeoJsonToJson } from './noise';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(HERE, '..', '..');
@@ -28,6 +29,11 @@ const AIRPORTS_URL =
   'https://raw.githubusercontent.com/davidmegginson/ourairports-data/main/airports.csv';
 const AIRCRAFT_URL =
   'https://github.com/wiedehopf/tar1090-db/raw/refs/heads/csv/aircraft.csv.gz';
+/** EU END 2021 Schiphol Lden contours (data.overheid.nl bc7703a1-..., CC-0) */
+const NOISE_END_WFS_URL =
+  'https://haleconnect.com/ows/services/org.1251.31fc0cfb-352e-4e97-8311-eab4fcd6c36b_wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=gpkg%3ANoiseContours_majorAirportsIncludingAgglomeration_Lden&OUTPUTFORMAT=application%2Fjson';
+const NOISE_SOURCE_NAME = 'RIVM/CVGG — EU END 2021 noise contours (major airports), via data.overheid.nl';
+const NOISE_LICENSE = 'CC0-1.0';
 
 interface Source {
   readonly id: string;
@@ -142,25 +148,54 @@ export async function runBuild(noCache: boolean): Promise<void> {
   const aircraftJson = aircraftToJson(aircraftResult.aircraft);
   process.stdout.write(`aircraft: ${aircraftResult.aircraft.length} entries\n`);
 
-  // 3. Size guard (AGENTS.md: commit only small generated files, < ~2 MB)
+  // 3. Noise contours (session 22)
+  process.stdout.write('\n-- noise (EU END 2021 Schiphol Lden contours, CC-0) --\n');
+  const noiseWfs = await fetchCached(
+    NOISE_END_WFS_URL,
+    join(CACHE_DIR, 'noise-end-2021-lden.json'),
+    false,
+    noCache,
+  );
+  const noiseWfsJson = JSON.parse(noiseWfs) as Parameters<typeof endWfsToRawContours>[0];
+  const { contours: rawContours, warnings: endWarnings } = endWfsToRawContours(
+    noiseWfsJson,
+    NOISE_SOURCE_NAME,
+    NOISE_LICENSE,
+    2021,
+    'Schiphol',
+  );
+  for (const warning of endWarnings) {
+    process.stdout.write(`warning: ${warning}\n`);
+  }
+  const noiseResult = buildNoiseGeoJson(rawContours);
+  for (const warning of noiseResult.warnings) {
+    process.stdout.write(`warning: ${warning}\n`);
+  }
+  const noiseJson = noiseGeoJsonToJson(noiseResult.features);
+  process.stdout.write(`noise: ${noiseResult.features.length} contours\n`);
+
+  // 4. Size guard (AGENTS.md: commit only small generated files, < ~2 MB)
   const airportsBytes = Buffer.byteLength(airportsJson);
   const aircraftBytes = Buffer.byteLength(aircraftJson);
+  const noiseBytes = Buffer.byteLength(noiseJson);
   process.stdout.write(
-    `\nsizes: airports.json ${airportsBytes} B, aircraft.json ${aircraftBytes} B\n`,
+    `\nsizes: airports.json ${airportsBytes} B, aircraft.json ${aircraftBytes} B, noise-contours.geojson ${noiseBytes} B\n`,
   );
-  if (airportsBytes + aircraftBytes > 2 * 1024 * 1024) {
-    throw new Error('combined output exceeds the ~2 MB commit limit (AGENTS.md)');
+  if (Math.max(airportsBytes, aircraftBytes, noiseBytes) > 2 * 1024 * 1024) {
+    throw new Error('an output file exceeds the ~2 MB commit limit (AGENTS.md)');
   }
 
-  // 4. Atomic writes
+  // 5. Atomic writes
   await mkdir(OUT_DIR, { recursive: true });
   await writeFileAtomic(join(OUT_DIR, 'airports.json'), airportsJson);
   await writeFileAtomic(join(OUT_DIR, 'aircraft.json'), aircraftJson);
+  await writeFileAtomic(join(REPO_ROOT, 'web', 'public', 'noise-contours.geojson'), noiseJson);
   process.stdout.write(`wrote ${join(OUT_DIR, 'airports.json')}\n`);
   process.stdout.write(`wrote ${join(OUT_DIR, 'aircraft.json')}\n`);
+  process.stdout.write(`wrote ${join(REPO_ROOT, 'web', 'public', 'noise-contours.geojson')}\n`);
 
-  // 5. sources.json lastUpdated
-  await updateSourcesLastUpdated(['ourairports', 'tar1090-db']);
+  // 6. sources.json lastUpdated
+  await updateSourcesLastUpdated(['ourairports', 'tar1090-db', 'rivm-end-2021-noise']);
   process.stdout.write(`updated lastUpdated in sources.json (${date})\n`);
 
   process.stdout.write('\ndone.\n');

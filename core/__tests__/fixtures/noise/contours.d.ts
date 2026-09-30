@@ -1,8 +1,10 @@
-import type { NoiseContours, NoiseBand } from '../../../src/noise/types';
+import type { NoiseContours, NoiseKind } from '../../../src/noise/types';
 export interface TestNoiseContour {
     airport: string;
     year: number;
-    band: NoiseBand;
+    bandLowerDb: number;
+    metric: string;
+    kind: NoiseKind;
     coordinates: number[][][] | number[][][][];
     geometryType: 'Polygon' | 'MultiPolygon';
     properties: {
@@ -78,4 +80,3 @@ export declare const TEST_POINTS: {
         y: number;
     };
 };
-//# sourceMappingURL=contours.d.ts.map
