@@ -18,6 +18,8 @@ Read docs/SPEC.md and docs/BUILD.md before every task, then the session file nam
 - Test fixtures for external APIs must come from a real response (fetch once, strip anything personal, commit it). Never invent a response shape from memory.
 - Any config you write must be run through its own validator (`caddy validate`, `tsc`, `vite build`) and the command plus its output must be in the PR description. If you cannot run it, say so; do not claim it works.
 - Code licence is MPL-2.0. Data licences come only from `sources.json`; do not edit a licence without citing the official page you read.
+- GitHub workflows: only GitHub-owned actions (`actions/*`) plus the already used `pnpm/action-setup`; any other third-party action needs approval in the PR. Pin every action to a full commit SHA with the version in a comment. Set top-level `permissions: contents: read` and grant write access per job only where needed. Never use `pull_request_target`. Never interpolate untrusted or upstream data (`${{ }}` of inputs, dataset titles, versions) into `run:` scripts or PR/issue bodies: pass it through environment variables or files. Scheduled workflows never deploy and use no secret other than `GITHUB_TOKEN`.
+- Data refreshes reach the site only through a reviewed pull request. Never run `refresh` on the server.
 - Never hard-code a filesystem path from your sandbox (`/workspace/...`) or a personal GitHub username in any file.
 
 ## Layout

@@ -1,4 +1,4 @@
-# Data updates (session 22b)
+# Data updates (sessions 22b and 22c)
 
 How the site's snapshot datasets stay current: `check` detects upstream
 changes, `refresh` applies them safely, the attribution page shows each
@@ -80,20 +80,32 @@ Validation gates (all must pass or the old data stays, exit non-zero):
 
 ## Rolling back
 
-Before every swap the current file is copied to `data-build/previous/`
+Rolling back a merged refresh: revert the data pull request on GitHub, then
+pull and build on the VPS (`docs/deploy.md` §7). For local runs, before
+every swap the current file is copied to `data-build/previous/`
 (`airports.json`, `aircraft.json`, `noise-contours.geojson`). To roll back,
 copy the file from `data-build/previous/` back into
 `web/public/data/` (or `web/public/` for the noise file), rebuild
 (`pnpm --filter @vliegvuil/web run build`) and reload Caddy's file root.
 
-## Scheduling (VPS)
+## Scheduling (GitHub Actions, session 22c)
 
-A monthly systemd timer runs `check` then `refresh all-auto`; see
-`deploy/vliegvuil-data-refresh.timer` and the two service units, and the
-setup steps in `docs/deploy.md`. Failures are visible via
-`journalctl -u vliegvuil-data-check.service` and
-`journalctl -u vliegvuil-data-refresh.service`. There is deliberately no
-GitHub Actions workflow: SPEC §4 stays "lint, tests and typecheck only".
+Checks and refreshes run on GitHub's runners, not on the VPS (SPEC §4):
+
+- **Check** (weekly): runs `check` and opens or updates a single
+  "Data updates available" issue; closes it when everything is up to date.
+- **Refresh** (monthly, plus manual dispatch with a source id): runs
+  `refresh`, then opens a pull request with the changed files in
+  `web/public/data/` and `sources.json`. No change means no PR. Manual
+  (noise) sources only run when named in a manual dispatch.
+- The workflows only open issues and pull requests. Nothing deploys from
+  GitHub; you merge and then deploy on the VPS (`docs/deploy.md` §7).
+
+Until session 22c is merged, run the commands above on your own machine and
+open the PR by hand. GitHub disables scheduled workflows in a public
+repository after 60 days without repository activity (GitHub docs); merging
+the monthly data PRs counts as activity, but if you stop, re-enable the
+workflows in the Actions tab.
 
 ## When a manual source shows `update-available`
 

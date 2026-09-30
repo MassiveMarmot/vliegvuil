@@ -2,7 +2,7 @@
 
 ## Overview
 
-VliegVuil.nl runs on a single Hetzner VPS. There is no Cloudflare or other
+VliegVuil.nl runs on a single OVHcloud VPS (2 vCPU, 4 GB RAM, 40 GB storage). There is no Cloudflare or other
 proxy in front: the browser connects directly to Caddy, which serves the
 static app and reverse-proxies the ADS-B API on the **same origin**
 (`/api/*` → `https://api.adsb.lol/v2/*`). Because the API is same-origin,
@@ -19,11 +19,13 @@ CORS is not needed and no CORS headers are sent.
 ```
 
 Deployment model: git pull from GitHub (read-only deploy key), then build on
-the server. No Docker, no CD pipeline.
+the server, by hand. No Docker, no CD pipeline, nothing deploys from GitHub.
+Data refreshes arrive as reviewed pull requests (see §8); the server never
+runs them.
 
 ## Prerequisites
 
-- Hetzner VPS (Ubuntu 22.04 LTS or newer) with ports 80/443 open
+- VPS (Debian stable or Ubuntu LTS) with ports 80/443 open, SSH by key only
 - Domain `vliegvuil.nl` with an A record pointing at the server IP
 - Go toolchain (for `xcaddy`; any currently supported Go version)
 - Node.js and pnpm (for building the web app)
@@ -143,7 +145,7 @@ zone leaves generous headroom while capping abuse.
 
 ```bash
 cd /srv/vliegvuil
-sudo -u vliegvuil git pull
+sudo -u vliegvuil git pull --ff-only
 pnpm install --frozen-lockfile
 pnpm --filter web build
 sudo caddy validate --config /etc/caddy/Caddyfile
@@ -153,39 +155,38 @@ sudo systemctl reload caddy
 Reload (not restart) keeps the rate-limit state and picks up the new build
 without dropping connections.
 
-## 8. Data freshness timer (session 22b)
+This is also the whole deploy after you merge a data refresh PR. Keep the
+server's working tree clean (`git status` should show nothing): if it is
+not, `git pull --ff-only` fails, which is the signal that something edited
+tracked files on the server.
 
-A monthly systemd timer runs the data `check` and then
-`refresh all-auto` (airports + aircraft only; noise sources are manual).
-Unit files live in `deploy/`:
+## 8. Data updates (option C)
 
-- `vliegvuil-data-check.service` — runs `pnpm run check`, writes
-  `data-build/status/data-status.json`
-- `vliegvuil-data-refresh.service` — runs `pnpm run refresh -- all-auto`
-  and rebuilds the web app so `dist/` serves the new data
-- `vliegvuil-data-refresh.timer` — monthly, 1st of the month 04:00,
-  `Persistent=true`
+The server runs **no data jobs**. Data freshness is handled by GitHub Actions
+workflows (session 22c): a scheduled check opens or updates one issue when
+upstream datasets changed, and a scheduled or manually dispatched refresh
+opens a pull request with the changed snapshots and `sources.json`. You review
+and merge the PR, then deploy as in §7.
 
-Install (verified with `systemd-analyze verify` against these files):
+- The VPS needs no GitHub credential beyond the read-only deploy key.
+- Never run `refresh` on the server: it rewrites tracked files in
+  `web/public/data/` and the server would diverge from git.
+- Roll back a bad refresh by reverting the data PR on GitHub, then §7.
+
+If you installed the retired systemd timer from an earlier version of this
+guide, remove it:
 
 ```bash
-sudo cp deploy/vliegvuil-data-check.service \
-        deploy/vliegvuil-data-refresh.service \
-        deploy/vliegvuil-data-refresh.timer /etc/systemd/system/
+sudo systemctl disable --now vliegvuil-data-refresh.timer
+sudo rm -f /etc/systemd/system/vliegvuil-data-check.service \
+           /etc/systemd/system/vliegvuil-data-refresh.service \
+           /etc/systemd/system/vliegvuil-data-refresh.timer
 sudo systemctl daemon-reload
-sudo systemctl enable --now vliegvuil-data-refresh.timer
 ```
 
-Failures land in the journal:
-
-```bash
-journalctl -u vliegvuil-data-check.service
-journalctl -u vliegvuil-data-refresh.service
-cat /srv/vliegvuil/data-build/status/data-status.json
-```
-
-See `docs/data-updates.md` for how checks and refreshes behave, and for
-rolling back a bad refresh from `data-build/previous/`.
+Until session 22c is merged, run `check` and `refresh` on your own machine,
+commit the result to a branch and open a PR by hand. See
+`docs/data-updates.md`.
 
 ## Troubleshooting
 

@@ -55,7 +55,8 @@ One session = one PR = one merge. Start each new session from updated `main`. If
 | 20 | **Tooling cleanup.** Delete `web/Dockerfile` (deployment is git pull + build, per spec). CI: pin pnpm via `packageManager` (pnpm/action-setup or corepack), add `pnpm build`, sources validator and Caddyfile validation. Fix the core `build` script to use the tsconfig (`tsc -p`). Align ESLint to one major version across the repo, enable `eslint-plugin-react-hooks`. Set `engines.node` to what the toolchain needs. | CI green, lint has no version warnings |
 | 21 | **Data build: runner + airports + aircraft DB.** Add a CLI entry (`pnpm --filter @vliegvuil/data-build run build`) that downloads (from URLs in `sources.json`), transforms and writes `web/public/data/airports.json` and an aircraft snapshot, updates `lastUpdated` in `sources.json`, swaps output atomically. Cache downloads in `data-build/cache/`. Add the hand-maintained airport status overlay (commercial / military-shared / planned; Lelystad = planned). | Runs end-to-end from a clean checkout; outputs < 2 MB |
 | 22 | **Data build: noise contours.** *Only after my human checkpoint below.* Build `web/public/noise-contours.geojson` from the verified sources with Eindhoven as civil Lden labelled "civil traffic only". PMTiles generation stays a documented VPS step. | Known coordinates inside/outside contours return the expected band in a test against the built file |
-| 22b | **Data freshness**: upstream check, safe refresh, data-age display. Details: `docs/sessions/22b-data-freshness.md` | `check` reports correct status from recorded real responses; a bad refresh leaves old data untouched (test); attribution page shows dataset age in NL and EN |
+| 22b | **Data freshness**: upstream check, safe refresh, data-age display. Details: `docs/sessions/22b-data-freshness.md` (scheduling and notification superseded by 22c) | `check` reports correct status from recorded real responses; a bad refresh leaves old data untouched (test); attribution page shows dataset age in NL and EN |
+| 22c | **Data workflows (GitHub Actions)**: scheduled check opens or updates one issue; scheduled and manual refresh opens a PR; VPS data timers retired; CI hardened. Details: `docs/sessions/22c-data-workflows.md` | `actionlint` clean; a `dry_run` dispatch produces a correct report; PR/issue body builders tested; `deploy/` timers removed; docs updated |
 | 23 | **Airports layer + snapshot enrichment.** Airport markers with name and status flag popup (needs the glyph decision from session 17 for labels). Use the aircraft snapshot as fallback for registration/type/operator when the live feed lacks them. | Popup and fallback covered by tests |
 | 24 | **PWA, fonts, bundle.** Self-host Space Grotesk (woff2, OFL). Manifest with 192/512 px PNG and maskable icons. Service worker: app shell only; exclude `/api` and tile requests from caching and from the navigation fallback. Lazy-load MapLibre to cut the 1 MB main chunk. | Lighthouse-style check of the manifest; no `/api` in SW precache |
 | 25 | **UI shell**: header, menu, About page, path routes with language prefix. Details: `docs/sessions/25-ui-shell-and-seo.md` | Keyboard-only and screen-reader checklist passes; axe clean; all locale files have identical key sets |
@@ -83,7 +84,7 @@ For data sessions add: "Fetch and read each official source page and licence tex
 
 **Every session**
 - Review each PR: new dependencies, CSP, anything that adds a network request.
-- Large data outputs (PMTiles) and all deployment happen on your Hetzner VPS, not in the sandbox.
+- Large data outputs (PMTiles) and all deployment happen on your OVHcloud VPS, not in the sandbox.
 - Re-read noise badge and legend wording for factual tone.
 
 **Before specific sessions**
@@ -91,11 +92,12 @@ For data sessions add: "Fetch and read each official source page and licence tex
 - **Before 17:** decide self-hosted glyphs vs. no map labels.
 - **Before 19:** accept that the proxy needs a custom Caddy build (two modules), or say if you'd rather use a different approach.
 - **Before 21/22:** verify on the official pages each source's current URL and licence: tar1090-db (`sources.json` says ODC-By-1.0 via Mictronics; re-check), OurAirports, the Schiphol dataset and year, and the regional airport noise data. Ask RIVM/CLO for vector data behind CLO indicator 0588 (2018 and 2024), which is the only source found for Eindhoven civil Lden.
-- **Before 22b:** approve or reject the weekly GitHub Actions data check (deviates from spec §4); confirm `auto` vs `manual` per source; review the `User-Agent` string (project repo URL, no personal contact).
+- **Before 22b:** confirm `auto` vs `manual` per source; review the `User-Agent` string (project repo URL, no personal contact).
+- **Before 22c:** set up GitHub: a ruleset or branch protection on `main` (PRs required, required CI checks, applies to admins); default workflow permissions read-only; enable "Allow GitHub Actions to create and approve pull requests" (check the exact setting name in GitHub's docs); restrict allowed actions; require approval for workflows from outside contributors. Expect to click "Approve and run workflows" on bot PRs. After you merge a data PR, deploy by hand (`docs/deploy.md` §7). If GitHub disables the scheduled workflows after 60 days without repository activity, re-enable them in the Actions tab.
 - **Around 25:** confirm the GitHub repo and issues URLs the agent derives from the git remote; review the Dutch About text and privacy statements; set `blueskyUrl` in `site.ts` once the account exists; test with keyboard only and a screen reader (VoiceOver or NVDA).
 - **After 27:** deploy on the VPS yourself, open the site with browser dev tools, and confirm the only requests are your own origin and PDOK; compare against `privacy.md`; check the live feed with real aircraft.
 
-**Decided**: licence MPL-2.0; Eindhoven civil Lden; light/dark theme deferred to a later version.
+**Decided**: licence MPL-2.0; Eindhoven civil Lden; light/dark theme deferred to a later version; data pipeline = option C (GitHub Actions checks and refreshes and opens PRs, the VPS only pulls, builds and serves, nothing deploys from GitHub); VPS = OVHcloud, 2 vCPU, 4 GB RAM, 40 GB.
 
 ## 7. Sources checked
 
