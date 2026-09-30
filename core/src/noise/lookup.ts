@@ -16,17 +16,18 @@ export function lookupNoiseBand(
   contours: NoiseContours,
 ): NoiseLookupResult | null {
   // Sort contours by band in descending order to find highest band first
-  const sortedContours = [...contours.contours].sort((a, b) => b.band - a.band);
-
+  const sortedContours = [...contours.contours].sort((a, b) => b.bandLowerDb - a.bandLowerDb);
   for (const contour of sortedContours) {
     const geometry = contour.geometry;
-    
+
     if (geometry.type === 'Polygon') {
       const coordinates = geometry.coordinates[0];
       if (coordinates && pointInPolygon(point, { coordinates })) {
         return {
           airport: contour.airport,
-          band: contour.band,
+          bandLowerDb: contour.bandLowerDb,
+          metric: contour.metric,
+          kind: contour.kind,
           year: contour.year,
           inside: true,
         };
@@ -36,14 +37,15 @@ export function lookupNoiseBand(
       if (coordinates && pointInMultiPolygon(point, coordinates)) {
         return {
           airport: contour.airport,
-          band: contour.band,
+          bandLowerDb: contour.bandLowerDb,
+          metric: contour.metric,
+          kind: contour.kind,
           year: contour.year,
           inside: true,
         };
       }
     }
   }
-
   return null;
 }
 
@@ -55,10 +57,9 @@ export function getNoiseBadgeText(
   contours: NoiseContours,
 ): string | null {
   const result = lookupNoiseBand(point, contours);
-  
+
   if (!result) {
     return null;
   }
-
-  return `Inside the >=${result.band} dB Lden contour of ${result.airport}, ${result.year}`;
+  return `Inside the >=${result.bandLowerDb} dB ${result.metric} contour of ${result.airport}, ${result.year}`;
 }

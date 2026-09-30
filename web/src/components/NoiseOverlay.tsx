@@ -2,46 +2,50 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // Noise overlay UI: toggle, legend, and contour-membership badge.
-// Spec §2: bands at 48 / 56 / 70 dB Lden, warm coral-to-red gradient
-// (colour-blind-safe) with a pattern fallback, legend shows data year and
-// metric per airport. Badge reads "Inside the ≥[band] dB Lden contour of
-// [airport], [year]" (annual average, not live noise).
+// Bands are per-airport lower bounds in dB Lden (spec §10): the EU END
+// 2021 Schiphol set uses 5 dB bands (55–75, "actual traffic 2021"), while
+// airport-decree contours use 48/56/70 ("permitted use"). Legend shows
+// year, metric and kind per airport. Badge reads "Inside the ≥[band] dB
+// [metric] contour of [airport], [year]" with an annual-average caveat.
+
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { lookupNoiseBand } from '@vliegvuil/core';
-import type { NoiseBand, NoiseContours } from '@vliegvuil/core';
-import { NOISE_BAND_COLORS, NOISE_BAND_PATTERNS } from '../noiseStyle';
+import type { NoiseContours } from '@vliegvuil/core';
+import { noiseBandColor, noiseBandPattern } from '../noiseStyle';
 
 export interface NoiseLegendEntry {
   airport: string;
-  band: NoiseBand;
+  bandLowerDb: number;
   year: number;
   metric: string;
+  kind: 'actual' | 'permitted';
   source: string;
   license: string;
   caveat?: string;
 }
 
-/** Extract legend entries (one per airport/band/year/metric combination) */
+/** Extract legend entries (one per airport/band/year/kind combination) */
 export function buildLegendEntries(contours: NoiseContours): NoiseLegendEntry[] {
   const seen = new Set<string>();
   const entries: NoiseLegendEntry[] = [];
   for (const contour of contours.contours) {
-    const key = `${contour.airport}|${contour.band}|${contour.year}|${contour.properties.date}`;
+    const key = `${contour.airport}|${contour.bandLowerDb}|${contour.year}|${contour.kind}|${contour.properties.date}`;
     if (seen.has(key)) continue;
     seen.add(key);
     entries.push({
       airport: contour.airport,
-      band: contour.band,
+      bandLowerDb: contour.bandLowerDb,
       year: contour.year,
-      metric: 'Lden',
+      metric: contour.metric,
+      kind: contour.kind,
       source: contour.properties.source,
       license: contour.properties.license,
       caveat: contour.properties.caveat,
     });
   }
   return entries.sort((a, b): number =>
-    a.airport.localeCompare(b.airport) || a.band - b.band,
+    a.airport.localeCompare(b.airport) || a.bandLowerDb - b.bandLowerDb,
   );
 }
 
@@ -55,8 +59,9 @@ export interface NoiseOverlayProps {
 
 /**
  * Noise overlay controls: a toggle button (aria-pressed, announced) and a
- * legend listing every airport's bands with year and metric, each swatch
- * encoded in both colour (coral-to-red) and pattern (colour-independent).
+ * legend listing every airport's bands with year, metric and kind, each
+ * swatch encoded in both colour (coral-to-red ramp) and pattern
+ * (colour-independent).
  */
 export function NoiseOverlay({ enabled, onToggle, contours }: NoiseOverlayProps): React.ReactElement | null {
   const { t } = useTranslation();
@@ -64,13 +69,10 @@ export function NoiseOverlay({ enabled, onToggle, contours }: NoiseOverlayProps)
     (): NoiseLegendEntry[] => (contours ? buildLegendEntries(contours) : []),
     [contours],
   );
-
   if (!contours) return null;
-
   const handleToggle = (): void => {
     onToggle(!enabled);
   };
-
   return (
     <div className="noise-overlay" data-testid="noise-overlay">
       <button
@@ -82,7 +84,6 @@ export function NoiseOverlay({ enabled, onToggle, contours }: NoiseOverlayProps)
       >
         {enabled ? t('map.hideNoise', 'Hide noise contours') : t('map.toggleNoise', 'Show noise contours')}
       </button>
-
       {enabled && (
         <div
           className="noise-legend"
@@ -94,20 +95,23 @@ export function NoiseOverlay({ enabled, onToggle, contours }: NoiseOverlayProps)
           <p className="noise-legend-metric">{t('noise.metric', 'dB Lden (annual average)')}</p>
           <ul className="noise-legend-list">
             {entries.map((entry): React.ReactElement => (
-              <li key={`${entry.airport}-${entry.band}`} className="noise-legend-item">
+              <li key={`${entry.airport}-${entry.bandLowerDb}`} className="noise-legend-item">
                 <span
                   className="noise-swatch"
-                  data-testid={`noise-swatch-${entry.band}`}
+                  data-testid={`noise-swatch-${entry.bandLowerDb}`}
                   style={{
-                    backgroundColor: NOISE_BAND_COLORS[entry.band],
-                    backgroundImage: NOISE_BAND_PATTERNS[entry.band],
+                    backgroundColor: noiseBandColor(entry.bandLowerDb),
+                    backgroundImage: noiseBandPattern(entry.bandLowerDb),
                   }}
                   aria-hidden="true"
                 />
                 <span className="noise-legend-label">
-                  {t('noise.bandLabel', '≥{{band}} dB {{metric}}', { band: entry.band, metric: entry.metric })}
+                  {t('noise.bandLabel', '≥{{band}} dB {{metric}}', { band: entry.bandLowerDb, metric: entry.metric })}
                   {' — '}
-                  {entry.airport} ({entry.year})
+                  {entry.airport} ({entry.year}
+                  {entry.kind === 'permitted'
+                    ? `, ${t('noise.kindPermitted', 'permitted use')}`
+                    : `, ${t('noise.kindActual', 'actual traffic')}`})
                 </span>
                 {entry.caveat && (
                   <span className="noise-legend-caveat">{entry.caveat}</span>
@@ -138,7 +142,7 @@ export interface NoiseBadgeProps {
 
 /**
  * Contour-membership badge for the telemetry panel. Reads "Inside the
- * ≥[band] dB Lden contour of [airport], [year]" with an annual-average
+ * ≥[band] dB [metric] contour of [airport], [year]" with an annual-average
  * caveat (spec §2, §10: never implies live noise).
  */
 export function NoiseBadge({ lat, lon, contours }: NoiseBadgeProps): React.ReactElement | null {
@@ -148,8 +152,9 @@ export function NoiseBadge({ lat, lon, contours }: NoiseBadgeProps): React.React
   if (!result) return null;
   return (
     <p className="noise-badge" role="status" data-testid="noise-badge">
-      {t('noise.badge', 'Inside the ≥{{band}} dB Lden contour of {{airport}}, {{year}}', {
-        band: result.band,
+      {t('noise.badge', 'Inside the ≥{{band}} dB {{metric}} contour of {{airport}}, {{year}}', {
+        band: result.bandLowerDb,
+        metric: result.metric,
         airport: result.airport,
         year: result.year,
       })}

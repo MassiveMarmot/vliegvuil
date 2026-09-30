@@ -1,7 +1,7 @@
 // Noise contour test fixtures
 // Simplified GeoJSON polygons for testing point-in-polygon noise lookup
 
-import type { NoiseContour, NoiseContours, NoiseBand } from '../../../src/noise/types';
+import type { NoiseContour, NoiseContours, NoiseKind } from '../../../src/noise/types';
 
 // Simplified Schiphol noise contours (48, 56, 70 dB Lden)
 // These are simplified rectangles representing the actual contour areas
@@ -98,7 +98,9 @@ const MULTI_POLYGON_CONTOUR: number[][][][] = [
 export interface TestNoiseContour {
   airport: string;
   year: number;
-  band: NoiseBand;
+  bandLowerDb: number;
+  metric: string;
+  kind: NoiseKind;
   coordinates: number[][][] | number[][][][];
   geometryType: 'Polygon' | 'MultiPolygon';
   properties: {
@@ -113,7 +115,9 @@ export const SCHIPHOL_CONTOURS: TestNoiseContour[] = [
   {
     airport: 'Schiphol',
     year: 2024,
-    band: 48,
+    bandLowerDb: 55,
+    metric: 'Lden',
+    kind: 'actual',
     coordinates: SCHIPHOL_48DB,
     geometryType: 'Polygon',
     properties: {
@@ -125,7 +129,9 @@ export const SCHIPHOL_CONTOURS: TestNoiseContour[] = [
   {
     airport: 'Schiphol',
     year: 2024,
-    band: 56,
+    bandLowerDb: 60,
+    metric: 'Lden',
+    kind: 'actual',
     coordinates: SCHIPHOL_56DB,
     geometryType: 'Polygon',
     properties: {
@@ -137,7 +143,9 @@ export const SCHIPHOL_CONTOURS: TestNoiseContour[] = [
   {
     airport: 'Schiphol',
     year: 2024,
-    band: 70,
+    bandLowerDb: 70,
+    metric: 'Lden',
+    kind: 'actual',
     coordinates: SCHIPHOL_70DB,
     geometryType: 'Polygon',
     properties: {
@@ -153,7 +161,9 @@ export const ROTTERDAM_CONTOURS: TestNoiseContour[] = [
   {
     airport: 'Rotterdam The Hague',
     year: 2024,
-    band: 48,
+    bandLowerDb: 55,
+    metric: 'Lden',
+    kind: 'actual',
     coordinates: ROTTERDAM_48DB,
     geometryType: 'Polygon',
     properties: {
@@ -165,7 +175,9 @@ export const ROTTERDAM_CONTOURS: TestNoiseContour[] = [
   {
     airport: 'Rotterdam The Hague',
     year: 2024,
-    band: 56,
+    bandLowerDb: 60,
+    metric: 'Lden',
+    kind: 'actual',
     coordinates: ROTTERDAM_56DB,
     geometryType: 'Polygon',
     properties: {
@@ -181,7 +193,9 @@ export const EINDHOVEN_CONTOURS: TestNoiseContour[] = [
   {
     airport: 'Eindhoven',
     year: 2024,
-    band: 48,
+    bandLowerDb: 56,
+    metric: 'Lden',
+    kind: 'permitted',
     coordinates: EINDHOVEN_48DB,
     geometryType: 'Polygon',
     properties: {
@@ -196,7 +210,9 @@ export const EINDHOVEN_CONTOURS: TestNoiseContour[] = [
 export const MULTI_POLYGON_TEST_CONTOUR: TestNoiseContour = {
   airport: 'Test Airport',
   year: 2024,
-  band: 56,
+  bandLowerDb: 60,
+  metric: 'Lden',
+  kind: 'actual',
   coordinates: MULTI_POLYGON_CONTOUR,
   geometryType: 'MultiPolygon',
   properties: {
@@ -212,7 +228,9 @@ function createNoiseContour(testContour: TestNoiseContour): NoiseContour {
     return {
       airport: testContour.airport,
       year: testContour.year,
-      band: testContour.band,
+      bandLowerDb: testContour.bandLowerDb,
+      metric: testContour.metric,
+      kind: testContour.kind,
       geometry: {
         type: 'Polygon',
         coordinates: testContour.coordinates as number[][][],
@@ -223,7 +241,9 @@ function createNoiseContour(testContour: TestNoiseContour): NoiseContour {
     return {
       airport: testContour.airport,
       year: testContour.year,
-      band: testContour.band,
+      bandLowerDb: testContour.bandLowerDb,
+      metric: testContour.metric,
+      kind: testContour.kind,
       geometry: {
         type: 'MultiPolygon',
         coordinates: testContour.coordinates as number[][][][],

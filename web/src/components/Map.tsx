@@ -8,7 +8,7 @@ import maplibregl, { SymbolLayerSpecification, MapLayerMouseEvent } from 'maplib
 import type { DisplayAircraft } from '../types';
 import { useMap } from '../hooks';
 import { DEFAULT_MAP_CONFIG, PDOK_BRT_STYLE } from '../types';
-import { NOISE_BAND_COLORS, NOISE_FILL_OPACITY } from '../noiseStyle';
+import { NOISE_FILL_OPACITY, noiseFillExpression } from '../noiseStyle';
 import {
   createAirplaneIcon,
   registerAircraftIcons,
@@ -167,23 +167,9 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
           source: NOISE_SOURCE_ID,
           layout: { visibility: noiseEnabled ? 'visible' : 'none' },
           paint: {
-            'fill-color': [
-              'match',
-              ['get', 'band'],
-              48, NOISE_BAND_COLORS[48],
-              56, NOISE_BAND_COLORS[56],
-              70, NOISE_BAND_COLORS[70],
-              '#cccccc',
-            ],
+            'fill-color': noiseFillExpression(),
             'fill-opacity': NOISE_FILL_OPACITY,
-            'fill-outline-color': [
-              'match',
-              ['get', 'band'],
-              48, NOISE_BAND_COLORS[56],
-              56, NOISE_BAND_COLORS[70],
-              70, '#7a0c16',
-              '#999999',
-            ],
+            'fill-outline-color': noiseFillExpression(),
           },
         },
         AIRCRAFT_LAYER_ID,

@@ -10,7 +10,7 @@ Live positions	adsb.lol (primary), behind a PositionProvider interface. Fallback
 Aircraft type/registration	tar1090-db or the OpenSky aircraft CSV	Build-time snapshot, refreshed monthly
 Country of registration	Static ICAO24 address-block table	Build-time
 Airports	OurAirports, trimmed to NL and nearby, plus a hand-maintained status overlay (commercial / military-shared / planned)	Build-time snapshot
-Aviation noise	RIVM/Atlas Leefomgeving (Schiphol), CLO/NLR regional contours 2018 & 2024 (Rotterdam, Eindhoven, Maastricht, Groningen Eelde), via PDOK	Build-time: simplify to vector tiles/PMTiles and small GeoJSON for point-in-polygon
+Aviation noise	Schiphol: EU END 2021 contours (RIVM/CVGG via data.overheid.nl, CC-0), 5 dB Lden bands 55–75, "actual traffic 2021 (EU END)". Regional airports (incl. Eindhoven civil Lden): CLO/NLR 2018 & 2024 contours exist as maps only; vector data pending a maintainer request to RIVM/NLR	Build-time: simplify to small GeoJSON for point-in-polygon; PMTiles on the VPS
 Basemap	PDOK BRT Achtergrondkaart (default)	Behind a config URL. PMTiles on the VPS is the drop-in replacement later
 
 All snapshots are versioned in the repo or release artifacts, with source, license and date recorded in a machine-readable sources.json.
@@ -18,8 +18,8 @@ All snapshots are versioned in the repo or release artifacts, with source, licen
 2. v0 features
 Full-screen map with aircraft drawn as a MapLibre symbol layer (not DOM markers), rotated by heading.
 Smooth movement by dead reckoning (velocity and heading) between 5s updates.
-Noise overlay (toggle): bands at 48 / 56 / 70 dB Lden, warm coral-to-red gradient (colour-blind-safe, pattern-fill fallback), legend shows data year and metric per airport.
-Telemetry panel: callsign, registration, type, operator, altitude, speed, heading, vertical rate, squawk, data age. Noise badge reads "Inside the ≥[band] dB Lden contour of [airport], [year]" (annual average, not live noise).
+Noise overlay (toggle): per-airport band sets expressed as band lower bounds (dB) with year, metric and kind ("actual" = calculated from real traffic in a reference year; "permitted" = planning contour under an airport decree, maximum permitted use). Schiphol currently ships the EU END 2021 set: 55/60/65/70/75 dB Lden, labelled "actual traffic 2021 (EU END)". Regional decree contours, once available as vectors, use 48/56/70 dB Lden labelled "permitted use". Warm coral-to-red gradient (colour-blind-safe, pattern-fill fallback), legend shows data year, metric and kind per airport.
+Telemetry panel: callsign, registration, type, operator, altitude, speed, heading, vertical rate, squawk, data age. Noise badge reads "Inside the ≥[bandLowerDb] dB [metric] contour of [airport], [year]" plus the contour kind (actual traffic / permitted use), with the annual-average caveat.
 Search: callsign, registration or ICAO24.
 Airport labels from OurAirports, with a status flag (commercial / military-shared / planned) shown in the popup.
 Aircraft list view (sortable table) as the keyboard/screen-reader alternative to the map.
@@ -108,8 +108,8 @@ AGPL/EUPL suggestion flagged against future App Store distribution.
 OpenSky as sole source (rate limits, non-commercial terms) → demoted to fallback.
 CAMS, CORINE, NUTS, "Open CORSIA," bird-strike/GBIF and contrail claims → replaced or removed.
 Offline PWA claim → limited to app shell only.
-Single noise legend (55–75 dB in 5-unit bands) didn't match the regional 48/56/70 dB data → unified legend.
-Eindhoven's military Ke-based contours vs. civil Lden data → labelled "civil traffic only," source TBD.
+Single noise legend (55–75 dB in 5-unit bands) didn't match the regional 48/56/70 dB data → unified legend as per-airport band sets with kind labels (actual / permitted).
+Eindhoven's military Ke-based contours vs. civil Lden data → labelled "civil traffic only," source TBD; regional vector data pending maintainer request to RIVM/NLR (session 22: CLO 0588 publishes maps only).
 Rotterdam/Groningen/Maastricht lack an airport decree → noted in layer info text.
 Lelystad has no commercial contour yet → status: planned flag, no noise layer until operational.
 CO₂-estimate layer duplicated between v0-adjacent and v1 lists in an earlier draft → confirmed single entry in §8 only.
@@ -119,4 +119,4 @@ License (MPL-2.0 vs. EUPL-1.2 vs. dual)
 Final provider terms check (adsb.lol caching/proxying; Climate TRACE aviation-sector granularity for NL)
 PDOK style compatibility with MapLibre (verify) vs. going straight to PMTiles
 Which Eindhoven contour set to use (military Ke vs. civil Lden)
-Whether Schiphol's Atlas layer offers finer noise bands than the regional 48/56/70 dB set
+Whether Schiphol's Atlas layer offers finer noise bands than the regional 48/56/70 dB set — RESOLVED (session 22): the open vector source is the EU END 2021 set with 5 dB bands (55–75); Schiphol's Atlas WMS raster offers no download, and CLO/NLR regional contours are published as maps only.

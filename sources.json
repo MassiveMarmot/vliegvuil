@@ -46,15 +46,15 @@
       "notes": "Licence overview at https://www.pdok.nl/open-data. TODO: verify current PDOK tile URL"
     },
     {
-      "id": "rivm-atlas-schiphol",
-      "name": "RIVM / Atlas Leefomgeving — Schiphol noise contours",
-      "url": "https://atlasleefomgeving.nl/",
-      "license": "Open data (no explicit licence statement; distributed via Nationaal Georegister / data.overheid.nl, typically CC-BY 4.0)",
-      "licenseUrl": "https://www.atlasleefomgeving.nl/veelgestelde-vragen",
-      "dataType": "Schiphol Lden noise contours (48/56/70 dB)",
-      "updateFrequency": "per study year",
-      "lastUpdated": "2026-09-29",
-      "notes": "Schiphol Lden contours as shown in Atlas Leefomgeving 'Geluid in Nederland'. Atlas FAQ: all maps are public and may be used freely; datasets distributed via Nationaal Georegister / data.overheid.nl (Dutch government open data, typically CC-BY 4.0). TODO: verify exact dataset year before use."
+      "id": "rivm-end-2021-noise",
+      "name": "RIVM/CVGG — EU END 2021 noise contours (major airports)",
+      "url": "https://data.overheid.nl/dataset/bc7703a1-9323-4e4f-9ce7-246ace877b59",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "dataType": "Schiphol Lden noise contours, 5 dB bands 55-75 (actual traffic 2021, EU END)",
+      "updateFrequency": "per END reporting round (~5-yearly)",
+      "lastUpdated": "2026-09-30",
+      "notes": "Verified 2026-09-30: data.overheid.nl dataset bc7703a1-9323-4e4f-9ce7-246ace877b59 (“Geluidbelastingkaart hoofd luchthavens, Lden en Lnight, 2021 (INSPIRE)”), licence CC-0 1.0. WFS feature type gpkg:NoiseContours_majorAirportsIncludingAgglomeration_Lden (haleconnect). Categories Lden5559/Lden6064/Lden6569/Lden7074/LdenGreaterThan75 are mapped to band lower bounds 55/60/65/70/75, kind “actual”. Schiphol only in this build. The Atlas Leefomgeving “Geluid van vliegverkeer” WMS rasters are NOT used (raster, no polygons). Agglomeration-cut regional contours NOT used (cut at agglomeration boundaries, would mislead)."
     },
     {
       "id": "clo-nlr-regional",
@@ -65,7 +65,7 @@
       "dataType": "Lden contours for Rotterdam, Eindhoven, Maastricht, Groningen Eelde",
       "updateFrequency": "2018 & 2024 studies",
       "lastUpdated": "2026-09-29",
-      "notes": "CC-BY applies to CLO content unless stated otherwise (clo.nl copyright page). Eindhoven: civil Lden contours chosen (decision made); label 'civil traffic only' per spec §10. Rotterdam/Groningen/Maastricht lack an airport decree — note in layer info text."
+      "notes": "CC-BY applies to CLO content unless stated otherwise (clo.nl copyright page: figures may be reused freely with attribution, under the creative commons licence; photos are excluded). CLO indicator 0588 (v04, 2026-08-31) publishes 48/56/70 dB(A) Lden contours 2018 & 2024 for Eindhoven/Rotterdam/Maastricht/Groningen as MAP IMAGES ONLY; the data.pbl.nl infographic embeds (0588_001k/002k/004k/005k_clo_04_nl) offer bitmap and PDF downloads only. TODO: maintainer requests vector data from RIVM/NLR; not included in the build. Eindhoven: civil Lden contours chosen; label “civil traffic only” per spec §10 once vector data is available."
     }
   ]
 }

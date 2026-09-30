@@ -4,16 +4,19 @@ import {
   simplifyRing,
   pmtilesCommand,
   noiseGeoJsonToJson,
+  endWfsToRawContours,
+  END_CATEGORY_TO_BAND,
   DEFAULT_SIMPLIFY,
   type RawContour,
 } from '../src/noise';
 
 // Fixture contour: small square around a point, plus noisy precision
-const schiphol48: RawContour = {
+const schiphol55: RawContour = {
   airport: 'EHAM',
-  year: 2024,
-  band: 48,
+  year: 2021,
+  bandLowerDb: 55,
   metric: 'Lden',
+  kind: 'actual',
   geometry: {
     type: 'Polygon',
     coordinates: [
@@ -26,15 +29,16 @@ const schiphol48: RawContour = {
       ],
     ],
   },
-  source: 'RIVM/Atlas Leefomgeving (TODO: verify)',
-  license: 'TODO: verify',
+  source: 'RIVM/CVGG — EU END 2021 noise contours',
+  license: 'CC0-1.0',
 };
 
 const eindhoven56: RawContour = {
   airport: 'EHEH',
   year: 2024,
-  band: 56,
+  bandLowerDb: 56,
   metric: 'Lden',
+  kind: 'permitted',
   geometry: {
     type: 'MultiPolygon',
     coordinates: [
@@ -49,8 +53,8 @@ const eindhoven56: RawContour = {
       ],
     ],
   },
-  source: 'CLO/NLR (TODO: verify)',
-  license: 'TODO: verify',
+  source: 'CLO/NLR',
+  license: 'CC-BY-4.0',
   caveat: 'civil traffic only',
 };
 
@@ -87,18 +91,60 @@ describe('simplifyRing', (): void => {
   });
 });
 
+describe('END_CATEGORY_TO_BAND', (): void => {
+  it('maps the verified END 2021 categories to band lower bounds', (): void => {
+    expect(END_CATEGORY_TO_BAND).toEqual({
+      Lden5559: 55,
+      Lden6064: 60,
+      Lden6569: 65,
+      Lden7074: 70,
+      LdenGreaterThan75: 75,
+    });
+  });
+});
+
+describe('endWfsToRawContours', (): void => {
+  it('converts real-shaped END WFS features into raw contours', (): void => {
+    const fc = {
+      features: [
+        {
+          properties: { gml_id: 'FEATURE_a', category: 'Lden5559', source: 'majorAirportsIncludingAgglomeration', id: 1 },
+          geometry: { type: 'Polygon', coordinates: [[[4.7, 52.25], [4.9, 52.25], [4.9, 52.4], [4.7, 52.4], [4.7, 52.25]]] },
+        },
+      ],
+    };
+    const { contours, warnings } = endWfsToRawContours(fc, 'src', 'CC0-1.0', 2021, 'Schiphol');
+    expect(warnings).toEqual([]);
+    expect(contours).toHaveLength(1);
+    expect(contours[0]?.bandLowerDb).toBe(55);
+    expect(contours[0]?.kind).toBe('actual');
+    expect(contours[0]?.airport).toBe('Schiphol');
+  });
+
+  it('warns and skips unknown categories instead of guessing', (): void => {
+    const fc = {
+      features: [
+        { properties: { category: 'Lden4047' }, geometry: { type: 'Polygon', coordinates: [[[0, 0], [1, 0], [1, 1], [0, 0]]] } },
+      ],
+    };
+    const { contours, warnings } = endWfsToRawContours(fc, 'src', 'CC0-1.0', 2021, 'Schiphol');
+    expect(contours).toHaveLength(0);
+    expect(warnings[0]).toContain('Unknown END category');
+  });
+});
+
 describe('buildNoiseGeoJson', (): void => {
   it('converts polygons with rounded coordinates and properties', (): void => {
-    const { features, warnings } = buildNoiseGeoJson([schiphol48]);
+    const { features, warnings } = buildNoiseGeoJson([schiphol55]);
     expect(warnings).toEqual([]);
     expect(features).toHaveLength(1);
-
     const feature = features[0];
     expect(feature.type).toBe('Feature');
     expect(feature.properties.airport).toBe('EHAM');
-    expect(feature.properties.band).toBe(48);
-    expect(feature.properties.year).toBe(2024);
+    expect(feature.properties.bandLowerDb).toBe(55);
+    expect(feature.properties.year).toBe(2021);
     expect(feature.properties.metric).toBe('Lden');
+    expect(feature.properties.kind).toBe('actual');
     expect(feature.geometry.type).toBe('Polygon');
   });
 
@@ -107,19 +153,19 @@ describe('buildNoiseGeoJson', (): void => {
     expect(features[0]?.properties.caveat).toBe('civil traffic only');
   });
 
-  it('rejects unsupported band levels with a warning', (): void => {
+  it('rejects out-of-range band lower bounds with a warning', (): void => {
     const bad: RawContour = {
-      ...schiphol48,
-      band: 55 as unknown as 48,
+      ...schiphol55,
+      bandLowerDb: 12,
     };
     const { features, warnings } = buildNoiseGeoJson([bad]);
     expect(features).toHaveLength(0);
-    expect(warnings[0]).toContain('Unsupported band');
+    expect(warnings[0]).toContain('Unsupported band lower bound');
   });
 
   it('drops rings that simplify below the minimum point count', (): void => {
     const tiny: RawContour = {
-      ...schiphol48,
+      ...schiphol55,
       geometry: {
         type: 'Polygon',
         coordinates: [
@@ -138,21 +184,17 @@ describe('buildNoiseGeoJson', (): void => {
 
 describe('pmtilesCommand', (): void => {
   it('returns the documented tippecanoe command', (): void => {
-    const cmd = pmtilesCommand('noise-contours.geojson', 'noise-contours.pmtiles');
-    expect(cmd).toContain('tippecanoe');
-    expect(cmd).toContain('noise-contours.pmtiles');
-    expect(cmd).toContain('--layer=noise');
+    expect(pmtilesCommand('noise-contours.geojson', 'noise-contours.pmtiles')).toBe(
+      'tippecanoe -o noise-contours.pmtiles --no-tile-size-limit --minimum-zoom=8 --maximum-zoom=14 --layer=noise noise-contours.geojson',
+    );
   });
 });
 
 describe('noiseGeoJsonToJson', (): void => {
-  it('serialises to a valid FeatureCollection', (): void => {
-    const { features } = buildNoiseGeoJson([schiphol48, eindhoven56]);
-    const parsed = JSON.parse(noiseGeoJsonToJson(features)) as {
-      type: string;
-      features: unknown[];
-    };
-    expect(parsed.type).toBe('FeatureCollection');
-    expect(parsed.features).toHaveLength(2);
+  it('serialises a FeatureCollection', (): void => {
+    const { features } = buildNoiseGeoJson([schiphol55]);
+    const json = JSON.parse(noiseGeoJsonToJson(features));
+    expect(json.type).toBe('FeatureCollection');
+    expect(json.features).toHaveLength(1);
   });
 });

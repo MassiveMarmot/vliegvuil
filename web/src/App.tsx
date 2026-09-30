@@ -27,7 +27,9 @@ function noiseContoursToGeoJson(contours: NoiseContours): NoiseGeoJson {
       geometry: c.geometry,
       properties: {
         airport: c.airport,
-        band: c.band,
+        bandLowerDb: c.bandLowerDb,
+        metric: c.metric,
+        kind: c.kind,
         year: c.year,
         source: c.properties.source,
         license: c.properties.license,
@@ -152,15 +154,22 @@ function App(): React.ReactElement {
           }))
           .map((f): NoiseContours['contours'][number] | null => {
             const p = f.properties;
-            const band = p['band'];
+            const bandLowerDb = p['bandLowerDb'];
             const airport = p['airport'];
             const year = p['year'];
-            if (typeof band !== 'number' || typeof airport !== 'string' || typeof year !== 'number') return null;
-            if (band !== 48 && band !== 56 && band !== 70) return null;
+            const metric = p['metric'];
+            const kind = p['kind'];
+            if (
+              typeof bandLowerDb !== 'number' || typeof airport !== 'string' ||
+              typeof year !== 'number' || typeof metric !== 'string'
+            ) return null;
+            if (kind !== 'actual' && kind !== 'permitted') return null;
             return {
               airport,
               year,
-              band,
+              bandLowerDb,
+              metric,
+              kind,
               geometry: f.geometry as NoiseContours['contours'][number]['geometry'],
               properties: {
                 source: typeof p['source'] === 'string' ? p['source'] : '',
