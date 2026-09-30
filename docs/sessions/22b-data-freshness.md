@@ -1,5 +1,7 @@
 # Session 22b: Data freshness (check, refresh, show data age)
 
+**Status: merged. The scheduling and notification parts (section 4 and the related human decisions) are superseded by session 22c (`docs/sessions/22c-data-workflows.md`): checks and refreshes now run in GitHub Actions and open issues and PRs; the VPS runs no data jobs.**
+
 Row in `docs/BUILD.md` section 4. Needs sessions 21 and 22 merged, so `sources.json` lists the real sources.
 
 **Goal:** the site's datasets stay current without anyone remembering to check. Three parts: (1) detect that upstream has changed, (2) refresh safely, (3) tell visitors how old each dataset is.
@@ -43,9 +45,7 @@ Suggested defaults (agent must confirm each against the source): aircraft DB and
 
 ### 4. Notification and scheduling
 
-- **VPS:** a monthly systemd timer runs `check`, then `refresh all-auto`, per spec §4. Document the unit files in `docs/deploy.md`. Failures write to the journal.
-- **Notification, recommended:** a scheduled GitHub Actions workflow (weekly) that runs **only `check`**, and opens or updates a single issue titled "Data updates available" with the report. It reads public URLs, has no secrets and does no build or deploy. **This deviates from spec §4 ("GitHub Actions: lint, tests and typecheck only"), so update the spec in the same PR if you approve it.** Note: GitHub may disable scheduled workflows in public repos after a long period without repo activity; document that and how to re-enable it (agent to verify against GitHub docs).
-- Alternative if you reject the workflow: `check` writes `data-status.json` on the VPS and you look at it yourself.
+Superseded by session 22c. Original plan (monthly VPS systemd timer, optional weekly GitHub Actions check) replaced by option C: Actions checks and refreshes, the VPS only pulls, builds and serves.
 
 ### 5. Show data age to visitors
 
@@ -87,8 +87,7 @@ Run lint, typecheck, tests and build, and open a pull request with the results.
 
 ## Human decisions and checkpoints
 
-- **Approve or reject the weekly GitHub Actions check** (spec deviation). If rejected, use the VPS-only status file.
-- Confirm `auto` versus `manual` per source. I'd keep noise data manual.
+- **Decided:** the GitHub Actions data workflows are approved (option C); see session 22c.
+- Confirm `auto` versus `manual` per source. Keep noise data manual.
 - Review the `User-Agent` string: it should identify the project by its repo URL, not your real name or email.
-- Set up the systemd timer on the VPS yourself and verify one full run by hand (`check`, then `refresh`, then look at the site).
 - When a `manual` source shows `update-available`, review the new release's licence, band structure and year before running `refresh` on it.

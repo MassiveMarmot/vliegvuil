@@ -44,14 +44,14 @@ Repo layout:
 /data-build: scripts producing snapshots and tiles.
 /locales, /docs, AGENTS.md.
 
-Hosting (one Hetzner VPS, EU):
+Hosting (one OVHcloud VPS, EU; 2 vCPU, 4 GB RAM, 40 GB storage):
 
 Caddy serves the static app and reverse-proxies the ADS-B API with a ~5s micro-cache for the NL bounding box (roughly lat 50.5–54, lon 2.5–7.5, with a North Sea buffer for approaches).
 No access logs. No client IP or headers forwarded upstream. In-memory per-IP rate limiting.
 CORS configured for the web origin and future Capacitor origins.
-Data builds: monthly cron or systemd timer runs /data-build, atomic swap of output.
-Deploy: git pull from GitHub (read-only deploy key), then build.
-GitHub Actions: lint, tests and typecheck only — no build/deploy jobs.
+Data builds: scheduled GitHub Actions workflows run the /data-build check (weekly, opens or updates one issue) and refresh (monthly, plus manual dispatch; opens a pull request with the changed snapshots and sources.json). Validation gates and an atomic swap apply inside the workflow. Noise sources refresh only on manual dispatch after human review. The VPS runs no data jobs.
+Deploy: git pull from GitHub (read-only deploy key), then build, run by hand on the VPS after merging. Nothing deploys from GitHub.
+GitHub Actions: CI (lint, typecheck, tests, build, validators) on pushes and pull requests, plus the scheduled data check and refresh workflows, which only open issues and pull requests. No deploy jobs, no secrets other than GITHUB_TOKEN, no third-party actions beyond pnpm/action-setup, actions pinned to commit SHAs, minimal per-job permissions.
 Debian stable, unattended-upgrades, SSH keys only.
 
 Future native apps: Capacitor wraps the same web build.
@@ -114,6 +114,8 @@ Rotterdam/Groningen/Maastricht lack an airport decree → noted in layer info te
 Lelystad has no commercial contour yet → status: planned flag, no noise layer until operational.
 CO₂-estimate layer duplicated between v0-adjacent and v1 lists in an earlier draft → confirmed single entry in §8 only.
 Whimsical design risk (trivialising noise/pollution data) → boundary set: whimsy in chrome only, data stays factual (§3).
+GitHub Actions scope widened from "lint, tests and typecheck only" to include scheduled data check/refresh that only opens issues and pull requests (option C): the repository is public, the VPS (4 GB) builds comfortably, and there was no other notification or data-history path. Nothing deploys from GitHub.
+
 11. Open decisions
 License — RESOLVED: MPL-2.0.
 Final provider terms check: adsb.lol data licence is ODbL 1.0 (per adsb.lol docs); still to confirm caching/proxying and donation-funded use, and that an API key (obtainable by feeding) is not required later; Climate TRACE aviation-sector granularity for NL
