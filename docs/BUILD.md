@@ -1,6 +1,6 @@
 # VliegVuil.nl: Build Instructions for Vibe Code Web
 
-Replaces the CLI-based version. Spec source of truth: `OpenFlightRadar_v0_Build.txt`, saved in the repo as `docs/SPEC.md`.
+Replaces the CLI-based version. Spec source of truth: `docs/SPEC.md`. Longer session details live in `docs/sessions/`.
 
 ## 1. How Vibe Code Web works (what shapes this plan)
 
@@ -16,36 +16,16 @@ Per Mistral's docs (docs.mistral.ai/vibe/code/vibe-code-web):
 ## 2. One-time setup (you)
 
 1. Create a GitHub repo `vliegvuil` (private until you're ready to publish).
-2. Commit to `main`: `docs/SPEC.md` (your spec, with the rename below), `AGENTS.md` (section 3), and this file as `docs/BUILD.md`.
+2. Commit to `main`: `docs/SPEC.md` (your spec), `AGENTS.md` (repo root, authoritative), this file as `docs/BUILD.md`, and the per-session detail files in `docs/sessions/`.
 3. In Vibe (Code tab): install the **Mistral GitHub App**, grant it only this repo, create a project.
 4. In GitHub: enable branch protection on `main` (PRs required). You merge; the agent never does.
 5. Never put real credentials in the repo. The sandbox is like a CI job.
 
-Rename deltas for `docs/SPEC.md`: OpenFlightRadar/OpenFlightTrack → **VliegVuil.nl**; slug `vliegvuil`; packages `@vliegvuil/{core,web,data-build}`. The name is cheeky, so the spec's tone rule stands: whimsy in UI chrome only, data layers factual.
+Naming: **VliegVuil.nl**; slug `vliegvuil`; packages `@vliegvuil/{core,web,data-build}`. The name is cheeky, so the spec's tone rule stands: whimsy in UI chrome only, data layers factual.
 
-## 3. AGENTS.md (commit to repo root)
+## 3. AGENTS.md
 
-```markdown
-# AGENTS.md: VliegVuil.nl
-
-Read docs/SPEC.md and docs/BUILD.md before every task. If code and spec disagree, or the task is ambiguous, ask instead of guessing.
-
-## Rules
-- TypeScript strict (`strict`, `noUncheckedIndexedAccess`). No `any`, no `@ts-ignore`.
-- /core is pure TS: no DOM, no React. Providers sit behind interfaces.
-- Every module ships with Vitest tests. Before finishing run `pnpm lint && pnpm typecheck && pnpm test`, and report the results in the PR description.
-- All UI strings via i18next (`/locales/nl.json`, `/locales/en.json`). No hard-coded text.
-- Privacy: no analytics, no third-party scripts/fonts, no IP logging, strict CSP. Only third-party request: PDOK tiles.
-- Every data layer shows source, date, licence (from `sources.json`). No medical claims; no causal claims about airports unless an official study is cited.
-- New dependency: state name, licence, reason in the PR. Prefer MIT/Apache/BSD/MPL.
-- Do not invent URLs, licences or API fields. If you cannot verify one by fetching the official page, leave a TODO with the link to check.
-- One task per session, one branch/PR per task, PR description lists: what changed, what was verified, what was not.
-- Do not merge, deploy, or touch anything outside this repo. Commit only small generated files (< ~2 MB); larger outputs are built by the maintainer.
-- Accessibility: semantic landmarks, managed focus (not a trap) on the telemetry panel, prefers-reduced-motion, colour-independent legends.
-
-## Layout
-/core  /web  /data-build  /locales  /docs  AGENTS.md
-```
+`AGENTS.md` in the repo root is authoritative. It is no longer duplicated here, so it cannot go stale.
 
 ## 4. Session plan
 
@@ -75,14 +55,13 @@ One session = one PR = one merge. Start each new session from updated `main`. If
 | 20 | **Tooling cleanup.** Delete `web/Dockerfile` (deployment is git pull + build, per spec). CI: pin pnpm via `packageManager` (pnpm/action-setup or corepack), add `pnpm build`, sources validator and Caddyfile validation. Fix the core `build` script to use the tsconfig (`tsc -p`). Align ESLint to one major version across the repo, enable `eslint-plugin-react-hooks`. Set `engines.node` to what the toolchain needs. | CI green, lint has no version warnings |
 | 21 | **Data build: runner + airports + aircraft DB.** Add a CLI entry (`pnpm --filter @vliegvuil/data-build run build`) that downloads (from URLs in `sources.json`), transforms and writes `web/public/data/airports.json` and an aircraft snapshot, updates `lastUpdated` in `sources.json`, swaps output atomically. Cache downloads in `data-build/cache/`. Add the hand-maintained airport status overlay (commercial / military-shared / planned; Lelystad = planned). | Runs end-to-end from a clean checkout; outputs < 2 MB |
 | 22 | **Data build: noise contours.** *Only after my human checkpoint below.* Build `web/public/noise-contours.geojson` from the verified sources with Eindhoven as civil Lden labelled "civil traffic only". PMTiles generation stays a documented VPS step. | Known coordinates inside/outside contours return the expected band in a test against the built file |
-| 22b | **Data freshness**: upstream check, safe refresh, data-age display | `check` reports correct status from recorded real responses; a bad refresh leaves old data untouched (test); attribution page shows dataset age in NL and EN |
+| 22b | **Data freshness**: upstream check, safe refresh, data-age display. Details: `docs/sessions/22b-data-freshness.md` | `check` reports correct status from recorded real responses; a bad refresh leaves old data untouched (test); attribution page shows dataset age in NL and EN |
 | 23 | **Airports layer + snapshot enrichment.** Airport markers with name and status flag popup (needs the glyph decision from session 17 for labels). Use the aircraft snapshot as fallback for registration/type/operator when the live feed lacks them. | Popup and fallback covered by tests |
 | 24 | **PWA, fonts, bundle.** Self-host Space Grotesk (woff2, OFL). Manifest with 192/512 px PNG and maskable icons. Service worker: app shell only; exclude `/api` and tile requests from caching and from the navigation fallback. Lazy-load MapLibre to cut the 1 MB main chunk. | Lighthouse-style check of the manifest; no `/api` in SW precache |
-| 25 | **Styling and a11y pass.** Move inline styles out of `App.tsx` into CSS; semantic landmarks (`main`, `aside`, `section`); playful-minimal look per spec §3 in the chrome only; panel slide/pop motion with `prefers-reduced-motion` off-switch; add axe-core checks (jest-axe) for the main views if not already present. | No serious axe violations |
-| 26 | **Docs and release prep.** Update README, `architecture.md`, `privacy.md`, `deploy.md` to match reality; refresh screenshots from the real app; add CHANGELOG and a release checklist. | Docs contain no statement the code does not do |
-| 25 | **UI shell**: header, menu, About page (details below) | Keyboard-only and screen-reader checklist passes; axe clean; NL and EN key sets identical |
-
-
+| 25 | **UI shell**: header, menu, About page, path routes with language prefix. Details: `docs/sessions/25-ui-shell-and-seo.md` | Keyboard-only and screen-reader checklist passes; axe clean; all locale files have identical key sets |
+| 25b | **SEO foundations**: static per-language pages, hreflang, canonical, sitemap, robots, social previews, root redirect. Details: `docs/sessions/25-ui-shell-and-seo.md` | Built `dist/` has correct head tags per page (test); `caddy validate` output in PR |
+| 26 | **Styling and a11y pass.** Move remaining inline styles into CSS (header and menu come from session 25); semantic landmarks (`main`, `aside`, `section`); playful-minimal look per spec §3 in the chrome only; panel slide/pop motion with `prefers-reduced-motion` off-switch; add axe-core checks (jest-axe) for the main views if not already present. | No serious axe violations |
+| 27 | **Docs and release prep.** Update README, `architecture.md`, `privacy.md`, `deploy.md` to match reality; refresh screenshots from the real app; add CHANGELOG and a release checklist. | Docs contain no statement the code does not do |
 
 Free plan is 2 sessions/day, so expect this to take ~a week; paid allows far more.
 
@@ -92,26 +71,31 @@ Paste into a new session, filling in the bracketed parts:
 
 ```
 Read AGENTS.md, docs/SPEC.md and docs/BUILD.md. Task: session [N], "[title]" from
-docs/BUILD.md section 4. Scope is only that row; do not start other sessions.
-If anything in the spec is ambiguous, ask me before coding. Implement, run
-lint, typecheck and tests, then open a pull request against main with the
-results and anything you could not verify.
+docs/BUILD.md section 4[, details in docs/sessions/[file].md]. Scope is only that
+row; do not start other sessions. If anything in the spec is ambiguous, ask me
+before coding. Implement, run lint, typecheck and tests, then open a pull request
+against main with the results and anything you could not verify.
 ```
 
 For data sessions add: "Fetch and read each official source page and licence text before writing code. Do not guess endpoints or licences."
 
 ## 6. Human checkpoints
 
-- **Before session 8/9:** verify each source URL and licence yourself (adsb.lol terms, OurAirports, tar1090-db, RIVM/CLO/PDOK noise data). Decide Eindhoven civil Lden vs military Ke, and check whether Schiphol has finer bands than 48/56/70 dB.
-- Open decisions in spec §11: licence (MPL-2.0 / EUPL-1.2 / dual), PDOK style vs MapLibre.
+**Every session**
 - Review each PR: new dependencies, CSP, anything that adds a network request.
 - Large data outputs (PMTiles) and all deployment happen on your Hetzner VPS, not in the sandbox.
-- - **Before 13:** give the agent the copyright holder name and year for the MPL-2.0 header.
+- Re-read noise badge and legend wording for factual tone.
+
+**Before specific sessions**
+- **Before 13:** give the agent the copyright holder handle (pseudonym) and year for the MPL-2.0 header. Set a pseudonymous git author name and no-reply email before branches are merged.
 - **Before 17:** decide self-hosted glyphs vs. no map labels.
 - **Before 19:** accept that the proxy needs a custom Caddy build (two modules), or say if you'd rather use a different approach.
-- **Before 21/22:** verify yourself, on the official pages, each source's current URL and licence: tar1090-db (the current `sources.json` says ODC-By-1.0 via Mictronics; re-check), OurAirports, the Schiphol dataset and its year (currently "typically CC-BY", unverified), the CLO/NLR regional datasets, and whether Schiphol offers finer bands than 48/56/70 dB.
-- **After 26:** deploy on the VPS yourself, open the site with browser dev tools, and confirm the only requests are your own origin and PDOK; compare against `privacy.md`; check the live feed with real aircraft.
-- Re-read noise badge and legend wording for factual tone.
+- **Before 21/22:** verify on the official pages each source's current URL and licence: tar1090-db (`sources.json` says ODC-By-1.0 via Mictronics; re-check), OurAirports, the Schiphol dataset and year, and the regional airport noise data. Ask RIVM/CLO for vector data behind CLO indicator 0588 (2018 and 2024), which is the only source found for Eindhoven civil Lden.
+- **Before 22b:** approve or reject the weekly GitHub Actions data check (deviates from spec §4); confirm `auto` vs `manual` per source; review the `User-Agent` string (project repo URL, no personal contact).
+- **Around 25:** confirm the GitHub repo and issues URLs the agent derives from the git remote; review the Dutch About text and privacy statements; set `blueskyUrl` in `site.ts` once the account exists; test with keyboard only and a screen reader (VoiceOver or NVDA).
+- **After 27:** deploy on the VPS yourself, open the site with browser dev tools, and confirm the only requests are your own origin and PDOK; compare against `privacy.md`; check the live feed with real aircraft.
+
+**Decided**: licence MPL-2.0; Eindhoven civil Lden; light/dark theme deferred to a later version.
 
 ## 7. Sources checked
 

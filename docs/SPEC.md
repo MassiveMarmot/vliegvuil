@@ -1,4 +1,4 @@
-OpenFlightRadar: v0 Build Spec (Netherlands MVP)
+VliegVuil.nl: v0 Build Spec (Netherlands MVP)
 0. Goals and constraints
 Scope: live aircraft over the Netherlands, with aviation noise/environmental context. Web first, native apps later.
 Principles: FOSS, privacy-first, non-commercial, low maintenance, rebuildable from the repo.
@@ -71,7 +71,7 @@ Telemetry panel: managed focus (moves in on select, returns on close, Esc to clo
 ARIA live announcements for selection and layer toggles, accessible list view, visible focus states, colour-independent legends, prefers-reduced-motion respected.
 i18n via /locales/{nl,en}.json, all strings externalised from day one.
 7. Licensing and funding
-License: open decision. AGPL/GPL-style licenses are awkward for App Store distribution. For client/core, prefer MPL-2.0 or EUPL-1.2, or plan to dual-license as copyright holder. Not legal advice. AI-generated code can have unclear copyright status, so keep contributor terms simple.
+License: MPL-2.0 for all code (decided). AGPL/GPL-style licenses are awkward for App Store distribution; as sole copyright holder (under a pseudonym) the project can still relicense or dual-license later. Not legal advice. AI-generated code can have unclear copyright status, so keep contributor terms simple (DCO sign-off, no contributor agreement).
 Data licenses (ODbL, CC-BY, CC0, CC BY-SA, etc.) listed on the attribution page.
 Funding: NLnet/NGI Zero (EU, FOSS/privacy-focused) is a natural fit — verify the current call. Donations via Liberapay or Open Collective Europe. Confirm the ADS-B provider's terms accept a donation-funded, non-commercial project.
 8. Deferred to v1+
@@ -110,13 +110,13 @@ CAMS, CORINE, NUTS, "Open CORSIA," bird-strike/GBIF and contrail claims → repl
 Offline PWA claim → limited to app shell only.
 Single noise legend (55–75 dB in 5-unit bands) didn't match the regional 48/56/70 dB data → unified legend as per-airport band sets with kind labels (actual / permitted).
 Eindhoven's military Ke-based contours vs. civil Lden data → labelled "civil traffic only," source TBD; regional vector data pending maintainer request to RIVM/NLR (session 22: CLO 0588 publishes maps only).
-Rotterdam/Groningen/Maastricht lack an airport decree → noted in layer info text.
+Rotterdam/Groningen/Maastricht lack an airport decree → noted in layer info text. TO VERIFY: CLO indicator 0588 says every regional airport must have an airport decree (luchthavenbesluit) or a transitional conversion decree; check each airport's current status before repeating this in the layer text.
 Lelystad has no commercial contour yet → status: planned flag, no noise layer until operational.
 CO₂-estimate layer duplicated between v0-adjacent and v1 lists in an earlier draft → confirmed single entry in §8 only.
 Whimsical design risk (trivialising noise/pollution data) → boundary set: whimsy in chrome only, data stays factual (§3).
 11. Open decisions
-License (MPL-2.0 vs. EUPL-1.2 vs. dual)
-Final provider terms check (adsb.lol caching/proxying; Climate TRACE aviation-sector granularity for NL)
+License — RESOLVED: MPL-2.0.
+Final provider terms check: adsb.lol data licence is ODbL 1.0 (per adsb.lol docs); still to confirm caching/proxying and donation-funded use, and that an API key (obtainable by feeding) is not required later; Climate TRACE aviation-sector granularity for NL
 PDOK style compatibility with MapLibre (verify) vs. going straight to PMTiles
-Which Eindhoven contour set to use (military Ke vs. civil Lden)
+Which Eindhoven contour set to use — RESOLVED: civil Lden, labelled "civil traffic only"; the vector source is still pending (CLO 0588 maps only; see §10).
 Whether Schiphol's Atlas layer offers finer noise bands than the regional 48/56/70 dB set — RESOLVED (session 22): the open vector source is the EU END 2021 set with 5 dB bands (55–75); Schiphol's Atlas WMS raster offers no download, and CLO/NLR regional contours are published as maps only.
