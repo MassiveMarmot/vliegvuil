@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 240" role="img" aria-label="VliegVuil logo sketch 5: airline livery style">
+  <!-- Theme: airline livery — tail fin with warm coral-to-red cheatline sweep, rounded plane glyph -->
+  <rect width="640" height="240" fill="#ffffff"/>
+
+  <!-- tail fin in livery gradient -->
+  <defs>
+    <linearGradient id="livery5" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#FBC4A0"/>
+      <stop offset="50%" stop-color="#F4796B"/>
+      <stop offset="100%" stop-color="#C42E2E"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(112,120)">
+    <!-- tail fin shape -->
+    <path d="M-14,92 L-14,-52 C-14,-86 8,-102 44,-102 C24,-70 16,-30 16,10 L16,92 Z"
+          fill="url(#livery5)"/>
+    <!-- livery cheatline sweep across the fin -->
+    <path d="M-14,30 C20,14 44,10 78,14" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round"/>
+    <path d="M-14,46 C22,32 50,28 84,32" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.7"/>
+    <!-- small rounded plane glyph climbing alongside the fin -->
+    <g transform="translate(74,-58) rotate(38)">
+      <path d="M0,-26 C7,-26 10,-20 10,-11 L10,6 L27,16 L27,24 L8,19 L7,30 L14,35 L14,40 L0,37 L-14,40 L-14,35 L-7,30 L-8,19 L-27,24 L-27,16 L-10,6 L-10,-11 C-10,-20 -7,-26 0,-26 Z"
+            fill="#2B2B2B"/>
+    </g>
+  </g>
+
+  <!-- wordmark in airline style: spaced capitals -->
+  <text x="250" y="126" font-family="system-ui, sans-serif" font-size="44" font-weight="700" letter-spacing="6" fill="#2B2B2B">VLIEGVUIL</text>
+  <rect x="252" y="140" width="270" height="6" fill="url(#livery5)"/>
+  <text x="252" y="170" font-family="system-ui, sans-serif" font-size="15" letter-spacing="2" fill="#6B6B6B">ONDER DE VLUCHTROUTE</text>
+</svg>

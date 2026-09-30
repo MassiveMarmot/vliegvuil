@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 240" role="img" aria-label="VliegVuil logo sketch 2: plane over noise bands">
+  <!-- Theme: warm noise bands sweeping under a rounded plane, contour-badge mark -->
+  <rect width="640" height="240" fill="#ffffff"/>
+
+  <!-- stacked noise bands (echo of Lden contours) -->
+  <g>
+    <rect x="52" y="70"  width="136" height="18" rx="9" fill="#C42E2E"/>
+    <rect x="44" y="96"  width="152" height="18" rx="9" fill="#E85A4F"/>
+    <rect x="36" y="122" width="168" height="18" rx="9" fill="#F4796B"/>
+    <rect x="28" y="148" width="184" height="18" rx="9" fill="#FBC4A0"/>
+  </g>
+
+  <!-- rounded plane glyph rising above the bands -->
+  <g transform="translate(120,52) rotate(-18)">
+    <path d="M0,-34 C9,-34 14,-26 14,-15 L14,8 L38,22 L38,32 L12,25 L10,40 L19,47 L19,54 L0,49 L-19,54 L-19,47 L-10,40 L-12,25 L-38,32 L-38,22 L-14,8 L-14,-15 C-14,-26 -9,-34 0,-34 Z"
+          fill="#2B2B2B"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="260" y="138" font-family="system-ui, sans-serif" font-size="56" font-weight="700" fill="#2B2B2B">Vlieg<tspan fill="#C42E2E">Vuil</tspan></text>
+  <text x="262" y="168" font-family="system-ui, sans-serif" font-size="16" fill="#6B6B6B">live vluchtdata &amp; geluidscontouren</text>
+</svg>

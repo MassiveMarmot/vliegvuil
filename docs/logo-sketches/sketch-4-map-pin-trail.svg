@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 240" role="img" aria-label="VliegVuil logo sketch 4: dotted flight trail into a noise contour">
+  <!-- Theme: dotted flight path (live map feel) curving into a warm contour blob (NL map hint) -->
+  <rect width="640" height="240" fill="#ffffff"/>
+
+  <!-- faint Netherlands outline hint -->
+  <path d="M40,150 C70,120 120,105 175,110 C210,113 235,95 260,100 C285,105 300,120 320,115"
+        fill="none" stroke="#EAF1F8" stroke-width="14" stroke-linecap="round"/>
+
+  <!-- warm contour blob (noise contour over the land) -->
+  <path d="M150,120 C150,86 186,66 216,70 C252,75 272,98 268,128 C264,156 232,172 202,168 C170,164 150,150 150,120 Z"
+        fill="#F4796B"/>
+  <path d="M172,120 C172,98 196,84 216,87 C240,91 252,106 249,126 C246,146 226,156 206,153 C186,150 172,140 172,120 Z"
+        fill="#C42E2E" fill-opacity="0.6"/>
+
+  <!-- dotted flight trail ending in the contour -->
+  <path d="M50,180 C90,180 120,150 160,132 C190,118 205,110 218,96"
+        fill="none" stroke="#2B2B2B" stroke-width="5" stroke-linecap="round" stroke-dasharray="1 14"/>
+
+  <!-- rounded plane glyph at the trail head -->
+  <g transform="translate(222,88) rotate(-40)">
+    <path d="M0,-30 C8,-30 12,-23 12,-13 L12,7 L33,19 L33,28 L10,22 L9,35 L17,41 L17,47 L0,43 L-17,47 L-17,41 L-9,35 L-10,22 L-33,28 L-33,19 L-12,7 L-12,-13 C-12,-23 -8,-30 0,-30 Z"
+          fill="#2B2B2B"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="330" y="138" font-family="system-ui, sans-serif" font-size="54" font-weight="700" fill="#2B2B2B">Vlieg<tspan fill="#C42E2E">Vuil</tspan></text>
+  <text x="332" y="166" font-family="system-ui, sans-serif" font-size="15" fill="#6B6B6B">wat vliegt er boven je?</text>
+</svg>

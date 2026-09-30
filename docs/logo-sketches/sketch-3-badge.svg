@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 240" role="img" aria-label="VliegVuil logo sketch 3: circular badge with plane over contour half">
+  <!-- Theme: app-icon style badge; half contour rings, half sky with rounded plane -->
+  <rect width="640" height="240" fill="#ffffff"/>
+
+  <!-- badge: left half contour rings (ground/noise), right half sky -->
+  <g>
+    <circle cx="120" cy="120" r="92" fill="#ffffff" stroke="#2B2B2B" stroke-width="5"/>
+    <path d="M120,28 A92,92 0 0 1 120,212 Z" fill="#EAF1F8"/>
+    <g clip-path="url(#badge3clip)">
+      <clipPath id="badge3clip"><circle cx="120" cy="120" r="89"/></clipPath>
+      <!-- contour quarter-rings bottom-left -->
+      <path d="M28,120 A92,92 0 0 0 120,212 L120,186 A66,66 0 0 1 54,120 Z" fill="#FBC4A0"/>
+      <path d="M54,120 A66,66 0 0 0 120,186 L120,158 A38,38 0 0 1 82,120 Z" fill="#F4796B"/>
+      <path d="M82,120 A38,38 0 0 0 120,158 L120,120 Z" fill="#C42E2E"/>
+    </g>
+    <!-- plane crossing the boundary -->
+    <g transform="translate(120,110) rotate(-12)">
+      <path d="M0,-34 C9,-34 14,-26 14,-15 L14,8 L38,22 L38,32 L12,25 L10,40 L19,47 L19,54 L0,49 L-19,54 L-19,47 L-10,40 L-12,25 L-38,32 L-38,22 L-14,8 L-14,-15 C-14,-26 -9,-34 0,-34 Z"
+            fill="#ffffff" stroke="#2B2B2B" stroke-width="4" stroke-linejoin="round"/>
+    </g>
+  </g>
+
+  <!-- wordmark stacked -->
+  <text x="252" y="112" font-family="system-ui, sans-serif" font-size="58" font-weight="700" fill="#2B2B2B">Vlieg</text>
+  <text x="252" y="170" font-family="system-ui, sans-serif" font-size="58" font-weight="700" fill="#C42E2E">Vuil</text>
+  <text x="252" y="198" font-family="system-ui, sans-serif" font-size="14" fill="#6B6B6B">.nl</text>
+</svg>

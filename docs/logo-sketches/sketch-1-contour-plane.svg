@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 240" role="img" aria-label="VliegVuil logo sketch 1: contour plane">
+  <!-- Theme: coral-to-red noise contours (colour-blind-safe warm gradient), rounded plane glyph -->
+  <defs>
+    <radialGradient id="warm1" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#FBC4A0"/>
+      <stop offset="55%" stop-color="#F4796B"/>
+      <stop offset="100%" stop-color="#C42E2E"/>
+    </radialGradient>
+  </defs>
+  <rect width="640" height="240" fill="#ffffff"/>
+
+  <!-- concentric noise-contour rings -->
+  <circle cx="110" cy="120" r="86" fill="url(#warm1)"/>
+  <circle cx="110" cy="120" r="62" fill="#F4796B" fill-opacity="0.55"/>
+  <circle cx="110" cy="120" r="38" fill="#C42E2E" fill-opacity="0.45"/>
+
+  <!-- rounded plane glyph flying out of the contours -->
+  <g transform="translate(110,120) rotate(-35)">
+    <path d="M0,-40 C10,-40 16,-30 16,-18 L16,10 L44,26 L44,38 L14,30 L12,48 L22,56 L22,64 L0,58 L-22,64 L-22,56 L-12,48 L-14,30 L-44,38 L-44,26 L-16,10 L-16,-18 C-16,-30 -10,-40 0,-40 Z"
+          fill="#ffffff" stroke="#2B2B2B" stroke-width="4" stroke-linejoin="round"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="230" y="138" font-family="system-ui, sans-serif" font-size="56" font-weight="700" fill="#2B2B2B">Vlieg<tspan fill="#C42E2E">Vuil</tspan></text>
+  <text x="232" y="168" font-family="system-ui, sans-serif" font-size="16" fill="#6B6B6B">vliegvervuiling in beeld</text>
+</svg>
