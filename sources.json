@@ -20,7 +20,7 @@
       "licenseUrl": "https://ourairports.com/data/",
       "dataType": "Airport database (airports.csv)",
       "updateFrequency": "nightly",
-      "lastUpdated": "2026-09-29",
+      "lastUpdated": "2026-09-30",
       "notes": "Verified 2026-09-29: 'All data is released to the Public Domain.' Download from https://raw.githubusercontent.com/davidmegginson/ourairports-data/main/airports.csv"
     },
     {
@@ -31,7 +31,7 @@
       "licenseUrl": "https://github.com/Mictronics/aircraft-database/blob/main/LICENSE",
       "dataType": "Aircraft registration/type database (aircraft.csv.gz)",
       "updateFrequency": "monthly",
-      "lastUpdated": "2026-09-29",
+      "lastUpdated": "2026-09-30",
       "notes": "Download: https://github.com/wiedehopf/tar1090-db/raw/refs/heads/csv/aircraft.csv.gz — derived from Mictronics/aircraft-database, whose exports are made available under the Open Data Commons Attribution License (ODC-By-1.0)."
     },
     {

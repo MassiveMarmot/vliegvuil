@@ -30,13 +30,13 @@ export const AIRPORT_STATUS_OVERLAY: Record<string, AirportStatus> = {
   EHRD: 'commercial', // Rotterdam The Hague
   EHEH: 'military-shared', // Eindhoven (military airbase, civil flights)
   EHVK: 'military-shared', // Volkel
-  EHLZ: 'military-shared', // Leeuwarden
-  EHGG: 'military-shared', // Gilze-Rijen
+  EHLW: 'military-shared', // Leeuwarden
+  EHGR: 'military-shared', // Gilze-Rijen
   EHKD: 'military-shared', // De Kooy
   EHTW: 'military-shared', // Twenthe
-  EHWG: 'military-shared', // Woensdrecht
+  EHWO: 'military-shared', // Woensdrecht
   EHLE: 'planned', // Lelystad — planned commercial (spec §10)
-  EHGR: 'commercial', // Groningen Eelde
+  EHGG: 'commercial', // Groningen Eelde
   EHBK: 'commercial', // Maastricht Aachen
 };
 

@@ -25,11 +25,9 @@ export interface AircraftSnapshot {
   icao24: string;
   registration: string | null;
   type: string | null;
-  manufacturer: string | null;
-  icaoType: string | null;
   model: string | null;
+  year: string | null;
   operator: string | null;
-  operatorCallsign: string | null;
   source: string;
   license: string;
   date: string;
