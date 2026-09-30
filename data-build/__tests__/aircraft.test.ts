@@ -1,69 +1,81 @@
 import { describe, it, expect } from 'vitest';
-import { buildAircraft, filterAircraft, aircraftToJson } from '../src/aircraft';
-import { parseCsv } from '../src/csv';
+import { readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { buildAircraft, filterAircraft, parseTar1090Csv, aircraftToJson } from '../src/aircraft';
 
-// Fixture: subset of tar1090-db aircraft.csv columns (icao24, r, t, desc, ownOp)
-const FIXTURE_CSV = `icao24,r,t,desc,ownOp,callSign
-484000,PH-BHA,B738,"Boeing 737-800 KLM",KLM,KLM
-484501,PH-KHA,B788,"Boeing 787-8 KLM",KLM,KLM
-3C6666,D-ABCD,A320,"Airbus A320 Lufthansa",Lufthansa,DLH
-400101,G-EUAA,A320,"Airbus A320 British Airways",British Airways,BAW
-484102,PH-MXA,B77W,"Boeing 777-300ER KLM",KLM,KLM
-400102,PH-NOE,B738,"Boeing 737-800 Transavia",Transavia,TRA
-484103,,A320,"Airbus A320 no registration",
-`;
+// Fixture: real rows from the tar1090-db aircraft.csv (csv branch), fetched
+// 2026-09-30 and trimmed; format per the repo's toJson.py writer:
+// icao24;reg;typeCode;flags;longType;year;ownOp;
+const FIXTURE = readFileSync(
+  join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'tar1090-aircraft.csv'),
+  'utf8',
+);
+
+describe('parseTar1090Csv', (): void => {
+  it('parses the semicolon-separated, headerless format', (): void => {
+    const rows = parseTar1090Csv(FIXTURE);
+    expect(rows.length).toBe(6);
+    const first = rows[0];
+    expect(first?.get('icao24')).toBe('480000');
+    expect(first?.get('reg')).toBe('PH-KZH');
+    expect(first?.get('typeCode')).toBe('F70');
+    expect(first?.get('longType')).toBe('FOKKER 70');
+  });
+
+  it('maps empty fields to null', (): void => {
+    const rows = parseTar1090Csv(FIXTURE);
+    const noLongType = rows[1];
+    expect(noLongType?.get('longType')).toBeNull();
+    const miscode = rows[5];
+    expect(miscode?.get('reg')).toBeNull();
+  });
+});
 
 describe('filterAircraft (nlOnly: true)', (): void => {
   it('keeps only NL-registered aircraft', (): void => {
-    const rows = parseCsv(FIXTURE_CSV);
+    const rows = parseTar1090Csv(FIXTURE);
     const aircraft = filterAircraft(rows, { nlOnly: true });
     const registrations = aircraft.map((a): string | null => a.registration);
-
-    expect(registrations).toContain('PH-BHA');
-    expect(registrations).toContain('PH-KHA');
-    expect(registrations).toContain('PH-MXA');
-    expect(registrations).toContain('PH-NOE');
-    expect(registrations).not.toContain('D-ABCD');
-    expect(registrations).not.toContain('G-EUAA');
+    expect(registrations).toContain('PH-KZH');
+    expect(registrations).toContain('PH-BFA');
+    expect(registrations).not.toContain('D-APGS');
   });
 
   it('excludes rows without an ICAO24 identifier', (): void => {
-    const csvWithBlank = `icao24,r
-,PH-XXX
-`;
-    const aircraft = filterAircraft(parseCsv(csvWithBlank), { nlOnly: true });
+    const rows = parseTar1090Csv(';;;10;;;Miscode - VARIOUS;\n');
+    const aircraft = filterAircraft(rows, { nlOnly: true });
     expect(aircraft).toEqual([]);
   });
 
   it('uppercases the ICAO24 identifier', (): void => {
-    const rows = parseCsv(FIXTURE_CSV);
-    const aircraft = filterAircraft(rows, { nlOnly: true });
-    for (const ac of aircraft) {
+    const rows = parseTar1090Csv(FIXTURE);
+    for (const ac of filterAircraft(rows, { nlOnly: true })) {
       expect(ac.icao24).toBe(ac.icao24.toUpperCase());
     }
   });
 });
 
 describe('buildAircraft', (): void => {
-  it('returns metadata for sources.json with a TODO licence marker', (): void => {
-    const result = buildAircraft(FIXTURE_CSV, '2026-09-29');
+  it('returns metadata for sources.json', (): void => {
+    const result = buildAircraft(FIXTURE, '2026-09-30');
     expect(result.source).toContain('tar1090-db');
-    expect(result.license).toContain('TODO');
-    expect(result.date).toBe('2026-09-29');
+    expect(result.license).toBe('ODC-By-1.0');
+    expect(result.date).toBe('2026-09-30');
     expect(result.aircraft.length).toBeGreaterThan(0);
     expect(result.warnings).toEqual([]);
   });
 
   it('stamps the snapshot date on every entry', (): void => {
-    const result = buildAircraft(FIXTURE_CSV, '2026-09-29');
+    const result = buildAircraft(FIXTURE, '2026-09-30');
     for (const ac of result.aircraft) {
-      expect(ac.date).toBe('2026-09-29');
+      expect(ac.date).toBe('2026-09-30');
       expect(ac.source).toBe('tar1090-db');
     }
   });
 
   it('warns when nothing matches', (): void => {
-    const result = buildAircraft('icao24,r\n', '2026-09-29');
+    const result = buildAircraft('3C00AF;D-APGS;A319;0001;AIRBUS A-319;;;\n', '2026-09-30');
     expect(result.aircraft).toEqual([]);
     expect(result.warnings.length).toBe(1);
   });
@@ -71,14 +83,9 @@ describe('buildAircraft', (): void => {
 
 describe('aircraftToJson', (): void => {
   it('serialises to valid JSON', (): void => {
-    const result = buildAircraft(FIXTURE_CSV, '2026-09-29');
+    const result = buildAircraft(FIXTURE, '2026-09-30');
     const parsed = JSON.parse(aircraftToJson(result.aircraft));
     expect(Array.isArray(parsed)).toBe(true);
     expect(parsed.length).toBe(result.aircraft.length);
   });
 });
-
-function parseCsvRows(content: string): Map<string, string | null>[] {
-  return parseCsv(content);
-}
-void parseCsvRows;
