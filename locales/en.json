@@ -70,7 +70,12 @@
     "title": "Attribution",
     "sources": "Sources",
     "license": "License",
-    "odbl": "Live aircraft data from adsb.lol — © adsb.lol contributors, licensed under the Open Database License (ODbL) v1.0."
+    "odbl": "Live aircraft data from adsb.lol — © adsb.lol contributors, licensed under the Open Database License (ODbL) v1.0.",
+    "dataAge": "Retrieved on {{date}}",
+    "dataAgeStale": "Newer data may be available; this dataset was last updated on {{date}}.",
+    "dataAgeStaleIcon": "Warning: dataset may be outdated",
+    "lastChecked": "Data last checked on {{date}}",
+    "referenceYear": "Reference year: {{year}}"
   },
   "banner": {
     "loading": "Loading...",

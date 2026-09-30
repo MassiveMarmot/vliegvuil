@@ -10,6 +10,7 @@ import { useSmoothedAircraft } from './movement/useSmoothedAircraft';
 import { useTranslation } from 'react-i18next';
 import { DEFAULT_POLLING_CONFIG } from './types';
 import type { NoiseContours } from '@vliegvuil/core';
+import noiseSources from '../../sources.json';
 import { loadUnits, type UnitSettings, DEFAULT_UNITS } from './units';
 
 /**
@@ -164,6 +165,11 @@ function App(): React.ReactElement {
               typeof year !== 'number' || typeof metric !== 'string'
             ) return null;
             if (kind !== 'actual' && kind !== 'permitted') return null;
+            // The legend year must agree with the recorded state in sources.json
+            // (session 22b); features from a different reference year are dropped.
+            const recordedYear = (noiseSources as { sources: Array<{ id: string; referenceYear?: number }> })
+              .sources.find((s): boolean => s.id === 'rivm-end-2021-noise')?.referenceYear;
+            if (recordedYear !== undefined && year !== recordedYear) return null;
             return {
               airport,
               year,

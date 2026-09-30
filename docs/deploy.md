@@ -153,6 +153,40 @@ sudo systemctl reload caddy
 Reload (not restart) keeps the rate-limit state and picks up the new build
 without dropping connections.
 
+## 8. Data freshness timer (session 22b)
+
+A monthly systemd timer runs the data `check` and then
+`refresh all-auto` (airports + aircraft only; noise sources are manual).
+Unit files live in `deploy/`:
+
+- `vliegvuil-data-check.service` — runs `pnpm run check`, writes
+  `data-build/status/data-status.json`
+- `vliegvuil-data-refresh.service` — runs `pnpm run refresh -- all-auto`
+  and rebuilds the web app so `dist/` serves the new data
+- `vliegvuil-data-refresh.timer` — monthly, 1st of the month 04:00,
+  `Persistent=true`
+
+Install (verified with `systemd-analyze verify` against these files):
+
+```bash
+sudo cp deploy/vliegvuil-data-check.service \
+        deploy/vliegvuil-data-refresh.service \
+        deploy/vliegvuil-data-refresh.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now vliegvuil-data-refresh.timer
+```
+
+Failures land in the journal:
+
+```bash
+journalctl -u vliegvuil-data-check.service
+journalctl -u vliegvuil-data-refresh.service
+cat /srv/vliegvuil/data-build/status/data-status.json
+```
+
+See `docs/data-updates.md` for how checks and refreshes behave, and for
+rolling back a bad refresh from `data-build/previous/`.
+
 ## Troubleshooting
 
 ```bash

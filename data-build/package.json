@@ -11,6 +11,8 @@
     "lint": "eslint . --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "check": "tsx src/check.ts",
+    "refresh": "tsx src/refresh.ts",
     "validate:sources": "tsx src/validate-sources.ts ../sources.json"
   },
   "devDependencies": {
