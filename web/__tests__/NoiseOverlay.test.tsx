@@ -11,7 +11,9 @@ function makeContours(): NoiseContours {
       {
         airport: 'EHAM',
         year: 2024,
-        band: 48,
+        bandLowerDb: 55,
+        metric: 'Lden',
+        kind: 'actual',
         geometry: {
           type: 'Polygon',
           coordinates: [
@@ -29,7 +31,9 @@ function makeContours(): NoiseContours {
       {
         airport: 'EHAM',
         year: 2024,
-        band: 70,
+        bandLowerDb: 70,
+        metric: 'Lden',
+        kind: 'actual',
         geometry: {
           type: 'Polygon',
           coordinates: [
@@ -47,7 +51,9 @@ function makeContours(): NoiseContours {
       {
         airport: 'EHEH',
         year: 2024,
-        band: 56,
+        bandLowerDb: 56,
+        metric: 'Lden',
+        kind: 'permitted',
         geometry: {
           type: 'Polygon',
           coordinates: [
@@ -76,7 +82,7 @@ describe('buildLegendEntries', (): void => {
     const entries = buildLegendEntries(makeContours());
     expect(entries).toHaveLength(3);
     expect(entries[0]?.airport).toBe('EHAM');
-    expect(entries.some((e): boolean => e.band === 70 && e.year === 2024)).toBe(true);
+    expect(entries.some((e): boolean => e.bandLowerDb === 70 && e.year === 2024 && e.kind === 'actual')).toBe(true);
     expect(entries.every((e): boolean => e.metric === 'Lden')).toBe(true);
   });
 });
@@ -108,7 +114,7 @@ describe('NoiseOverlay', (): void => {
     expect(legend.textContent).toContain('Lden');
     expect(legend.textContent).toContain('annual average');
     expect(screen.getByTestId('noise-swatch-70')).toBeDefined();
-    expect(screen.getByTestId('noise-swatch-48')).toBeDefined();
+    expect(screen.getByTestId('noise-swatch-55')).toBeDefined();
   });
 
   it('shows the Eindhoven civil caveat', (): void => {
@@ -130,7 +136,7 @@ describe('NoiseBadge', (): void => {
   it('returns the highest band containing the point', (): void => {
     render(<NoiseBadge lat={52.45} lon={4.8} contours={makeContours()} />);
     const badge = screen.getByTestId('noise-badge');
-    expect(badge.textContent).toContain('48');
+    expect(badge.textContent).toContain('55');
   });
 
   it('renders nothing outside all contours', (): void => {
