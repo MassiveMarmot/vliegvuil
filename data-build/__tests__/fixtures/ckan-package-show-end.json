@@ -1,0 +1,43 @@
+{
+  "help": "https://data.overheid.nl/data/api/3/action/help_show?name=package_show",
+  "success": true,
+  "result": {
+    "id": "bc7703a1-9323-4e4f-9ce7-246ace877b59",
+    "name": "34888-geluidbelasting-belangrijke-luchthavens--schiphol---lden-en-lnight--2021--inspire-",
+    "title": "Geluidbelastingkaart hoofd luchthavens, Lden en Lnight, 2021 (INSPIRE)",
+    "metadata_created": "2023-01-26T06:27:46.003658",
+    "metadata_modified": "2025-07-17T05:36:19.387730",
+    "resources": [
+      {
+        "format": "http://publications.europa.eu/resource/authority/file-type/ATOM",
+        "url": "https://haleconnect.com/services/bsp/org.1251.31fc0cfb-352e-4e97-8311-eab4fcd6c36b/service/atom/id_predefined_dataset",
+        "created": "2025-07-17T05:36:20.379280",
+        "last_modified": null
+      },
+      {
+        "format": "http://publications.europa.eu/resource/authority/file-type/WMS_SRVC",
+        "url": "https://haleconnect.com/ows/services/org.1251.31fc0cfb-352e-4e97-8311-eab4fcd6c36b_wms?SERVICE=WMS&Request=GetCapabilities",
+        "created": "2025-07-17T05:36:20.379288",
+        "last_modified": null
+      },
+      {
+        "format": "http://publications.europa.eu/resource/authority/file-type/WMS_SRVC",
+        "url": "https://haleconnect.com/ows/services/org.1251.31fc0cfb-352e-4e97-8311-eab4fcd6c36b_wms?SERVICE=WMS&Request=GetCapabilities",
+        "created": "2025-07-17T05:36:20.379291",
+        "last_modified": null
+      },
+      {
+        "format": "http://publications.europa.eu/resource/authority/file-type/WFS_SRVC",
+        "url": "https://haleconnect.com/ows/services/org.1251.31fc0cfb-352e-4e97-8311-eab4fcd6c36b_wfs?SERVICE=WFS&REQUEST=GetCapabilities",
+        "created": "2025-07-17T05:36:20.379311",
+        "last_modified": null
+      },
+      {
+        "format": "http://publications.europa.eu/resource/authority/file-type/WFS_SRVC",
+        "url": "https://haleconnect.com/ows/services/org.1251.31fc0cfb-352e-4e97-8311-eab4fcd6c36b_wfs?SERVICE=WFS&REQUEST=GetCapabilities",
+        "created": "2025-07-17T05:36:20.379314",
+        "last_modified": null
+      }
+    ]
+  }
+}

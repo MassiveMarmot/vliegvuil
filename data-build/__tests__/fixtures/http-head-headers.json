@@ -1,0 +1,14 @@
+{
+  "ourairports-airports.csv": {
+    "status": 200,
+    "etag": "\"7a48f511cc1bf8a1daf1ce69ce0f48aac70df28c76ad07509b78572493d67d60\"",
+    "content-length": "12733703",
+    "last-modified": null
+  },
+  "tar1090-aircraft.csv.gz": {
+    "status": 200,
+    "etag": "\"cbcb78fdc08e246471126e733ddef3a1c43b266d1ba7a90f6ba120aca4fd7cab\"",
+    "content-length": "8381192",
+    "last-modified": null
+  }
+}
