@@ -1,0 +1,11 @@
+[Unit]
+Description=VliegVuil data freshness check
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/vliegvuil/data-build
+ExecStart=/usr/bin/env pnpm run check
+User=vliegvuil
+# Failures land in the journal: journalctl -u vliegvuil-data-check.service

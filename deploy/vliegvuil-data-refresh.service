@@ -1,0 +1,12 @@
+[Unit]
+Description=Refresh VliegVuil auto-refresh datasets (airports, aircraft)
+After=vliegvuil-data-check.service
+Wants=vliegvuil-data-check.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/vliegvuil/data-build
+# Runs after the check; the web app is rebuilt afterwards so dist/ serves the new files.
+ExecStart=/usr/bin/env pnpm run refresh -- all-auto
+ExecStartPost=/usr/bin/env pnpm --filter @vliegvuil/web run build
+User=vliegvuil

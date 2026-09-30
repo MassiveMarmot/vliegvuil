@@ -1,0 +1,10 @@
+[Unit]
+Description=Monthly VliegVuil data refresh timer
+
+[Timer]
+OnCalendar=*-*-01 04:00:00
+Persistent=true
+Unit=vliegvuil-data-refresh.service
+
+[Install]
+WantedBy=timers.target

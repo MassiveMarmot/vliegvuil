@@ -10,7 +10,13 @@
       "dataType": "Live ADS-B positions",
       "updateFrequency": "continuous (polled every 5s via proxy)",
       "lastUpdated": "2026-09-29",
-      "notes": "Official docs (api.adsb.lol/docs): \"The license for the API as well as all data ADSB.lol makes public is ODbL\" (Open Database License v1.0, same as OpenStreetMap). API source code is BSD-3-Clause (https://github.com/adsblol/api). Future API key may require feeding adsb.lol (see README); rate limits are dynamic."
+      "notes": "Official docs (api.adsb.lol/docs): \"The license for the API as well as all data ADSB.lol makes public is ODbL\" (Open Database License v1.0, same as OpenStreetMap). API source code is BSD-3-Clause (https://github.com/adsblol/api). Future API key may require feeding adsb.lol (see README); rate limits are dynamic.",
+      "cadence": "monthly",
+      "refresh": "manual",
+      "upstream": {
+        "method": "manual",
+        "url": "https://api.adsb.lol/docs"
+      }
     },
     {
       "id": "ourairports",
@@ -21,7 +27,17 @@
       "dataType": "Airport database (airports.csv)",
       "updateFrequency": "nightly",
       "lastUpdated": "2026-09-30",
-      "notes": "Verified 2026-09-29: 'All data is released to the Public Domain.' Download from https://raw.githubusercontent.com/davidmegginson/ourairports-data/main/airports.csv"
+      "notes": "Verified 2026-09-29: 'All data is released to the Public Domain.' Download from https://raw.githubusercontent.com/davidmegginson/ourairports-data/main/airports.csv",
+      "cadence": "monthly",
+      "refresh": "auto",
+      "retrievedAt": "2026-09-30",
+      "upstreamVersion": "f31ef57d6e9b67764b3c2ec2336a10bcaa4e28b6",
+      "checkedAt": "2026-10-08T00:00:00.000Z",
+      "upstream": {
+        "method": "github",
+        "url": "https://api.github.com/repos/davidmegginson/ourairports-data/commits/main"
+      },
+      "contentSha256": "12b6fa265307bbc3cf73a1f672fe7e3b48d44e5158a504f9287f472b4ac70a4c"
     },
     {
       "id": "tar1090-db",
@@ -32,7 +48,17 @@
       "dataType": "Aircraft registration/type database (aircraft.csv.gz)",
       "updateFrequency": "monthly",
       "lastUpdated": "2026-09-30",
-      "notes": "Download: https://github.com/wiedehopf/tar1090-db/raw/refs/heads/csv/aircraft.csv.gz — derived from Mictronics/aircraft-database, whose exports are made available under the Open Data Commons Attribution License (ODC-By-1.0)."
+      "notes": "Download: https://github.com/wiedehopf/tar1090-db/raw/refs/heads/csv/aircraft.csv.gz — derived from Mictronics/aircraft-database, whose exports are made available under the Open Data Commons Attribution License (ODC-By-1.0).",
+      "cadence": "monthly",
+      "refresh": "auto",
+      "retrievedAt": "2026-09-30",
+      "upstreamVersion": "655afe27950658a4124d15d75766538b1ae9ea3b",
+      "checkedAt": "2026-10-08T00:00:00.000Z",
+      "upstream": {
+        "method": "github",
+        "url": "https://api.github.com/repos/wiedehopf/tar1090-db/commits/csv"
+      },
+      "contentSha256": "65d40dd7d41961e6feb64289d717d12680bc27d17a3ccb11a29bbac11d48d325"
     },
     {
       "id": "pdok-brt",
@@ -43,7 +69,13 @@
       "dataType": "Basemap tiles",
       "updateFrequency": "n/a",
       "lastUpdated": "2026-09-29",
-      "notes": "Licence overview at https://www.pdok.nl/open-data. TODO: verify current PDOK tile URL"
+      "notes": "Licence overview at https://www.pdok.nl/open-data. TODO: verify current PDOK tile URL",
+      "cadence": "yearly",
+      "refresh": "manual",
+      "upstream": {
+        "method": "manual",
+        "url": "https://www.pdok.nl/open-data"
+      }
     },
     {
       "id": "rivm-end-2021-noise",
@@ -54,7 +86,18 @@
       "dataType": "Schiphol Lden noise contours, 5 dB bands 55-75 (actual traffic 2021, EU END)",
       "updateFrequency": "per END reporting round (~5-yearly)",
       "lastUpdated": "2026-09-30",
-      "notes": "Verified 2026-09-30: data.overheid.nl dataset bc7703a1-9323-4e4f-9ce7-246ace877b59 (“Geluidbelastingkaart hoofd luchthavens, Lden en Lnight, 2021 (INSPIRE)”), licence CC-0 1.0. WFS feature type gpkg:NoiseContours_majorAirportsIncludingAgglomeration_Lden (haleconnect). Categories Lden5559/Lden6064/Lden6569/Lden7074/LdenGreaterThan75 are mapped to band lower bounds 55/60/65/70/75, kind “actual”. Schiphol only in this build. The Atlas Leefomgeving “Geluid van vliegverkeer” WMS rasters are NOT used (raster, no polygons). Agglomeration-cut regional contours NOT used (cut at agglomeration boundaries, would mislead)."
+      "notes": "Verified 2026-09-30: data.overheid.nl dataset bc7703a1-9323-4e4f-9ce7-246ace877b59 (“Geluidbelastingkaart hoofd luchthavens, Lden en Lnight, 2021 (INSPIRE)”), licence CC-0 1.0. WFS feature type gpkg:NoiseContours_majorAirportsIncludingAgglomeration_Lden (haleconnect). Categories Lden5559/Lden6064/Lden6569/Lden7074/LdenGreaterThan75 are mapped to band lower bounds 55/60/65/70/75, kind “actual”. Schiphol only in this build. The Atlas Leefomgeving “Geluid van vliegverkeer” WMS rasters are NOT used (raster, no polygons). Agglomeration-cut regional contours NOT used (cut at agglomeration boundaries, would mislead).",
+      "cadence": "multi-year",
+      "refresh": "manual",
+      "retrievedAt": "2026-09-30",
+      "upstreamVersion": "2025-07-17T05:36:19.387730",
+      "referenceYear": 2021,
+      "checkedAt": "2026-10-08T00:00:00.000Z",
+      "upstream": {
+        "method": "ckan-metadata",
+        "url": "https://data.overheid.nl/data/api/3/action/package_show?id=bc7703a1-9323-4e4f-9ce7-246ace877b59"
+      },
+      "contentSha256": "cd0769962947840db639d48ce9c9eebcfcc0428ad46cccd21d5a0cc8ff1b95b5"
     },
     {
       "id": "clo-nlr-regional",
@@ -65,7 +108,16 @@
       "dataType": "Lden contours for Rotterdam, Eindhoven, Maastricht, Groningen Eelde",
       "updateFrequency": "2018 & 2024 studies",
       "lastUpdated": "2026-09-29",
-      "notes": "CC-BY applies to CLO content unless stated otherwise (clo.nl copyright page: figures may be reused freely with attribution, under the creative commons licence; photos are excluded). CLO indicator 0588 (v04, 2026-08-31) publishes 48/56/70 dB(A) Lden contours 2018 & 2024 for Eindhoven/Rotterdam/Maastricht/Groningen as MAP IMAGES ONLY; the data.pbl.nl infographic embeds (0588_001k/002k/004k/005k_clo_04_nl) offer bitmap and PDF downloads only. TODO: maintainer requests vector data from RIVM/NLR; not included in the build. Eindhoven: civil Lden contours chosen; label “civil traffic only” per spec §10 once vector data is available."
+      "notes": "CC-BY applies to CLO content unless stated otherwise (clo.nl copyright page: figures may be reused freely with attribution, under the creative commons licence; photos are excluded). CLO indicator 0588 (v04, 2026-08-31) publishes 48/56/70 dB(A) Lden contours 2018 & 2024 for Eindhoven/Rotterdam/Maastricht/Groningen as MAP IMAGES ONLY; the data.pbl.nl infographic embeds (0588_001k/002k/004k/005k_clo_04_nl) offer bitmap and PDF downloads only. TODO: maintainer requests vector data from RIVM/NLR; not included in the build. Eindhoven: civil Lden contours chosen; label “civil traffic only” per spec §10 once vector data is available.",
+      "cadence": "multi-year",
+      "refresh": "manual",
+      "retrievedAt": "2026-09-29",
+      "reviewDueBy": "2027-03-01",
+      "checkedAt": "2026-10-08T00:00:00.000Z",
+      "upstream": {
+        "method": "manual",
+        "url": "https://www.clo.nl/indicatoren/nl0588"
+      }
     }
   ]
 }

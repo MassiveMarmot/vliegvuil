@@ -46,6 +46,60 @@
           "notes": {
             "type": "string",
             "description": "Additional notes"
+          },
+          "upstream": {
+            "type": "object",
+            "description": "How to check upstream for changes (session 22b)",
+            "properties": {
+              "method": {
+                "type": "string",
+                "enum": ["ckan-metadata", "http", "github", "wfs", "manual"],
+                "description": "Metadata signal to query"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri",
+                "description": "URL to query for the signal"
+              }
+            },
+            "required": ["method", "url"]
+          },
+          "cadence": {
+            "type": "string",
+            "enum": ["monthly", "yearly", "multi-year"],
+            "description": "How often the dataset is expected to change"
+          },
+          "reviewDueBy": {
+            "type": "string",
+            "format": "date",
+            "description": "Manual sources: date by which a human review is due"
+          },
+          "refresh": {
+            "type": "string",
+            "enum": ["auto", "manual"],
+            "description": "Whether refresh may run automatically"
+          },
+          "retrievedAt": {
+            "type": "string",
+            "format": "date",
+            "description": "When the committed snapshot was retrieved"
+          },
+          "upstreamVersion": {
+            "type": "string",
+            "description": "Recorded upstream signal: commit sha, ETag, or dataset metadata date"
+          },
+          "contentSha256": {
+            "type": "string",
+            "description": "SHA-256 of the raw upstream payload at retrieval"
+          },
+          "referenceYear": {
+            "type": "integer",
+            "description": "Reference year of the data (noise contours)"
+          },
+          "checkedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the recorded upstream signal was last verified"
           }
         },
         "required": [
