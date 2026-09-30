@@ -20,9 +20,11 @@
     "source": "Source: {{source}} ({{license}})",
     "annualAverage": "Contours show the annual average noise load, not live noise.",
     "annualAverageShort": "annual average, not live noise",
-    "badge": "Inside the ≥{{band}} dB Lden contour of {{airport}}, {{year}}",
+    "badge": "Inside the ≥{{band}} dB {{metric}} contour of {{airport}}, {{year}}",
     "opened": "Noise contours shown",
-    "closed": "Noise contours hidden"
+    "closed": "Noise contours hidden",
+    "kindActual": "actual traffic",
+    "kindPermitted": "permitted use"
   },
   "telemetry": {
     "title": "Aircraft details",

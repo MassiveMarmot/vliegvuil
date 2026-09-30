@@ -26,7 +26,9 @@ describe('lookupNoiseBand', () => {
       const result = lookupNoiseBand(TEST_POINTS.SCHIPHOL_INSIDE_70DB, schipholContours);
       expect(result).toEqual({
         airport: 'Schiphol',
-        band: 70,
+        bandLowerDb: 70,
+        metric: 'Lden',
+        kind: 'actual',
         year: 2024,
         inside: true,
       });
@@ -36,7 +38,9 @@ describe('lookupNoiseBand', () => {
       const result = lookupNoiseBand(TEST_POINTS.SCHIPHOL_INSIDE_56DB, schipholContours);
       expect(result).toEqual({
         airport: 'Schiphol',
-        band: 56,
+        bandLowerDb: 60,
+        metric: 'Lden',
+        kind: 'actual',
         year: 2024,
         inside: true,
       });
@@ -46,7 +50,9 @@ describe('lookupNoiseBand', () => {
       const result = lookupNoiseBand(TEST_POINTS.SCHIPHOL_INSIDE_48DB, schipholContours);
       expect(result).toEqual({
         airport: 'Schiphol',
-        band: 48,
+        bandLowerDb: 55,
+        metric: 'Lden',
+        kind: 'actual',
         year: 2024,
         inside: true,
       });
@@ -55,7 +61,7 @@ describe('lookupNoiseBand', () => {
     it('should return highest band when point is in multiple contours', () => {
       // Point at Schiphol center should be in all three contours
       const result = lookupNoiseBand(TEST_POINTS.SCHIPHOL_CENTER, schipholContours);
-      expect(result?.band).toBe(70); // Highest band
+      expect(result?.bandLowerDb).toBe(70); // Highest band
     });
   });
 
@@ -66,7 +72,9 @@ describe('lookupNoiseBand', () => {
       const result = lookupNoiseBand(TEST_POINTS.ROTTERDAM_INSIDE_56DB, rotterdamContours);
       expect(result).toEqual({
         airport: 'Rotterdam The Hague',
-        band: 56,
+        bandLowerDb: 60,
+        metric: 'Lden',
+        kind: 'actual',
         year: 2024,
         inside: true,
       });
@@ -84,19 +92,19 @@ describe('lookupNoiseBand', () => {
     it('should detect Schiphol 70 dB', () => {
       const result = lookupNoiseBand(TEST_POINTS.SCHIPHOL_INSIDE_70DB, allContours);
       expect(result?.airport).toBe('Schiphol');
-      expect(result?.band).toBe(70);
+      expect(result?.bandLowerDb).toBe(70);
     });
 
     it('should detect Rotterdam 56 dB', () => {
       const result = lookupNoiseBand(TEST_POINTS.ROTTERDAM_INSIDE_56DB, allContours);
       expect(result?.airport).toBe('Rotterdam The Hague');
-      expect(result?.band).toBe(56);
+      expect(result?.bandLowerDb).toBe(60);
     });
 
     it('should detect Eindhoven 48 dB', () => {
       const result = lookupNoiseBand(TEST_POINTS.EINDHOVEN_INSIDE_48DB, allContours);
       expect(result?.airport).toBe('Eindhoven');
-      expect(result?.band).toBe(48);
+      expect(result?.bandLowerDb).toBe(56);
     });
 
     it('should return null for points outside all airport contours', () => {
@@ -112,7 +120,9 @@ describe('lookupNoiseBand', () => {
       const result = lookupNoiseBand(TEST_POINTS.MULTI_POLY_INSIDE_FIRST, multiContours);
       expect(result).toEqual({
         airport: 'Test Airport',
-        band: 56,
+        bandLowerDb: 60,
+        metric: 'Lden',
+        kind: 'actual',
         year: 2024,
         inside: true,
       });
@@ -122,7 +132,9 @@ describe('lookupNoiseBand', () => {
       const result = lookupNoiseBand(TEST_POINTS.MULTI_POLY_INSIDE_SECOND, multiContours);
       expect(result).toEqual({
         airport: 'Test Airport',
-        band: 56,
+        bandLowerDb: 60,
+        metric: 'Lden',
+        kind: 'actual',
         year: 2024,
         inside: true,
       });
@@ -160,7 +172,7 @@ describe('getNoiseBadgeText', () => {
 
   it('should return badge text for 56 dB contour', () => {
     const text = getNoiseBadgeText(TEST_POINTS.SCHIPHOL_INSIDE_56DB, schipholContours);
-    expect(text).toBe('Inside the >=56 dB Lden contour of Schiphol, 2024');
+    expect(text).toBe('Inside the >=60 dB Lden contour of Schiphol, 2024');
   });
 
   it('should return null for point outside contours', () => {

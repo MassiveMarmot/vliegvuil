@@ -3,7 +3,12 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // Noise contour types
 
-export type NoiseBand = 48 | 56 | 70; // dB Lden bands
+/**
+ * Kind of contour dataset. "actual" contours are calculated from the traffic
+ * that actually flew in a reference year; "permitted" contours are planning
+ * contours under an airport decree (maximum permitted use).
+ */
+export type NoiseKind = 'actual' | 'permitted';
 
 export interface GeoJSONPolygon {
   type: 'Polygon';
@@ -15,10 +20,19 @@ export interface GeoJSONMultiPolygon {
   coordinates: number[][][][];
 }
 
+/**
+ * A noise contour ring set for one airport / band lower bound / year.
+ * Bands are expressed as a lower bound in dB (e.g. 55 means ">= 55 dB"),
+ * because sources differ: the EU END 2021 Schiphol set uses 5 dB bands
+ * (55, 60, 65, 70, 75), while airport-decree contours use 48/56/70.
+ */
 export interface NoiseContour {
   airport: string;
   year: number;
-  band: NoiseBand;
+  /** Lower bound of the band in dB (band covers bandLowerDb..bandLowerDb+4 or more) */
+  bandLowerDb: number;
+  metric: string;
+  kind: NoiseKind;
   geometry: GeoJSONPolygon | GeoJSONMultiPolygon;
   properties: {
     source: string;
@@ -31,7 +45,9 @@ export interface NoiseContour {
 
 export interface NoiseLookupResult {
   airport: string;
-  band: NoiseBand;
+  bandLowerDb: number;
+  metric: string;
+  kind: NoiseKind;
   year: number;
   inside: boolean;
 }

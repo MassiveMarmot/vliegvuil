@@ -88,7 +88,9 @@ export const SCHIPHOL_CONTOURS = [
     {
         airport: 'Schiphol',
         year: 2024,
-        band: 48,
+        bandLowerDb: 55,
+        metric: 'Lden',
+        kind: 'actual',
         coordinates: SCHIPHOL_48DB,
         geometryType: 'Polygon',
         properties: {
@@ -100,7 +102,9 @@ export const SCHIPHOL_CONTOURS = [
     {
         airport: 'Schiphol',
         year: 2024,
-        band: 56,
+        bandLowerDb: 60,
+        metric: 'Lden',
+        kind: 'actual',
         coordinates: SCHIPHOL_56DB,
         geometryType: 'Polygon',
         properties: {
@@ -112,7 +116,9 @@ export const SCHIPHOL_CONTOURS = [
     {
         airport: 'Schiphol',
         year: 2024,
-        band: 70,
+        bandLowerDb: 70,
+        metric: 'Lden',
+        kind: 'actual',
         coordinates: SCHIPHOL_70DB,
         geometryType: 'Polygon',
         properties: {
@@ -127,7 +133,9 @@ export const ROTTERDAM_CONTOURS = [
     {
         airport: 'Rotterdam The Hague',
         year: 2024,
-        band: 48,
+        bandLowerDb: 55,
+        metric: 'Lden',
+        kind: 'actual',
         coordinates: ROTTERDAM_48DB,
         geometryType: 'Polygon',
         properties: {
@@ -139,7 +147,9 @@ export const ROTTERDAM_CONTOURS = [
     {
         airport: 'Rotterdam The Hague',
         year: 2024,
-        band: 56,
+        bandLowerDb: 60,
+        metric: 'Lden',
+        kind: 'actual',
         coordinates: ROTTERDAM_56DB,
         geometryType: 'Polygon',
         properties: {
@@ -154,7 +164,9 @@ export const EINDHOVEN_CONTOURS = [
     {
         airport: 'Eindhoven',
         year: 2024,
-        band: 48,
+        bandLowerDb: 56,
+        metric: 'Lden',
+        kind: 'permitted',
         coordinates: EINDHOVEN_48DB,
         geometryType: 'Polygon',
         properties: {
@@ -168,7 +180,9 @@ export const EINDHOVEN_CONTOURS = [
 export const MULTI_POLYGON_TEST_CONTOUR = {
     airport: 'Test Airport',
     year: 2024,
-    band: 56,
+    bandLowerDb: 60,
+    metric: 'Lden',
+    kind: 'actual',
     coordinates: MULTI_POLYGON_CONTOUR,
     geometryType: 'MultiPolygon',
     properties: {
@@ -183,7 +197,9 @@ function createNoiseContour(testContour) {
         return {
             airport: testContour.airport,
             year: testContour.year,
-            band: testContour.band,
+            bandLowerDb: testContour.bandLowerDb,
+            metric: testContour.metric,
+            kind: testContour.kind,
             geometry: {
                 type: 'Polygon',
                 coordinates: testContour.coordinates,
@@ -195,7 +211,9 @@ function createNoiseContour(testContour) {
         return {
             airport: testContour.airport,
             year: testContour.year,
-            band: testContour.band,
+            bandLowerDb: testContour.bandLowerDb,
+            metric: testContour.metric,
+            kind: testContour.kind,
             geometry: {
                 type: 'MultiPolygon',
                 coordinates: testContour.coordinates,
