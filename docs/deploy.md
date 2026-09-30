@@ -31,6 +31,131 @@ runs them.
 - Node.js and pnpm (for building the web app)
 - SSH access
 
+## 0. One-time server setup and hardening (OVHcloud, 2 vCPU / 4 GB / 40 GB)
+
+Run these once on a fresh Debian stable or Ubuntu LTS install, before
+anything in the sections below. Order matters: keep one SSH session open
+until key-based login is confirmed working.
+
+### 0.1 System basics
+
+```bash
+sudo apt update && sudo apt full-upgrade -y
+sudo apt install -y unattended-upgrades git curl
+sudo dpkg-reconfigure -plow unattended-upgrades
+sudo timedatectl set-timezone Europe/Amsterdam
+```
+
+### 0.2 SSH: keys only, no root login
+
+Generate a **dedicated key** on your own machine (not a general-purpose
+key), e.g. `ssh-keygen -t ed25519 -C "vliegvuil-vps"`, and add the public
+half to the instance (in the OVHcloud panel at creation, or into
+`~/.ssh/authorized_keys` afterwards). Keeping the private key in a
+password manager with SSH-agent support (e.g. KeePassXC) is fine, but the
+key is your only way in once password login is off, so also keep a
+break-glass path: the OVHcloud web console (KVM) works without SSH.
+
+Then, in `/etc/ssh/sshd_config` (or a drop-in under
+`/etc/ssh/sshd_config.d/`):
+
+```
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin no
+PubkeyAuthentication yes
+```
+
+```bash
+sudo sshd -t && sudo systemctl restart ssh
+```
+
+Leave the current session open and verify login from a **new** terminal
+before closing it.
+
+### 0.3 Firewall and brute-force protection
+
+```bash
+sudo apt install -y ufw fail2ban
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow OpenSSH
+sudo ufw allow 80,443/tcp
+sudo ufw enable
+sudo systemctl enable --now fail2ban
+```
+
+Nothing else is public: no database, no Node listener, no monitoring
+port. OVHcloud applies anti-DDoS filtering at its network edge.
+
+### 0.4 Automatic security updates
+
+Enabled in §0.1 (`unattended-upgrades`, security updates only). Verify:
+
+```bash
+systemctl is-active unattended-upgrades
+sudo tail -5 /var/log/unattended-upgrades/unattended-upgrades.log
+```
+
+### 0.5 A second human user (admin) and the service user
+
+Do not run anything as root beyond setup. The app is owned by the
+`vliegvuil` user (created in §2); Caddy runs as its packaged service
+user. If you want a separate admin account with sudo:
+
+```bash
+sudo adduser <your-admin-name>
+sudo usermod -aG sudo <your-admin-name>
+# install your SSH key for the new user, then test login in a new terminal
+```
+
+### 0.6 No access logs, ever
+
+The Caddyfile (§4) deliberately configures no access log, and the
+service never logs client IPs. Do not add access logging later without
+rewriting `docs/privacy.md` first. OVHcloud's own network-layer
+infrastructure logs are outside our control and covered in
+`privacy.md`.
+
+### 0.7 Node.js and pnpm
+
+Install Node 22 (the repo's `engines.node`) from NodeSource, then enable
+pnpm via corepack:
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs
+sudo corepack enable
+corepack prepare pnpm@10.34.1 --activate
+```
+
+(The pnpm version comes from `packageManager` in `package.json`.)
+
+### 0.8 Go toolchain (for the custom Caddy build in §1)
+
+```bash
+sudo apt install -y golang-go
+```
+
+Any currently supported Go version works for `xcaddy`.
+
+### 0.9 DNS
+
+Point an A record for `vliegvuil.nl` at the instance IPv4 address and an
+AAAA record at its IPv6 address. Caddy obtains and renews Let's Encrypt
+certificates automatically via the ACME HTTP-01 challenge on port 80.
+
+### 0.10 Post-setup checklist
+
+- [ ] `ssh <admin>@vliegvuil.nl` works with the key, as non-root
+- [ ] `ssh -o PreferredAuthentications=password <admin>@vliegvuil.nl` is refused
+- [ ] `sudo ufw status` shows only OpenSSH and 80,443/tcp allowed
+- [ ] `systemctl is-active fail2ban unattended-upgrades` prints active twice
+- [ ] OVHcloud web console login tested once (break-glass path)
+- [ ] `ss -tlnp` shows nothing unexpected listening before Caddy starts
+
+Then continue with §1 (custom Caddy build).
+
 ## 1. Build Caddy with the required modules
 
 Rate limiting and the micro-cache are **Caddy modules**, not part of the
