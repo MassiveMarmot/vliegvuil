@@ -31,26 +31,42 @@ the repository.
 - VPS running **Ubuntu 26.04 LTS** with ports 80 and 443 (TCP) reachable
 - Domain `vliegvuil.nl` with an A record (and an AAAA record if the VPS has
   IPv6) pointing at the server
-- `git`, `curl`, a Go toolchain (for `xcaddy`) and Node.js with Corepack (for
+- `git`, `curl`, `gnupg`, `python3` (used by `scripts/verify-caddy-headers.sh`),
+  a Go toolchain (for `xcaddy`), and Node.js 22 with npm and pnpm (for
   building the web app)
 - SSH access with a key
 
-Ubuntu 26.04 notes (from the Ubuntu 26.04 release notes):
+Ubuntu 26.04 notes (from the Ubuntu 26.04 release notes and package pages):
 
 - `sudo` is now **sudo-rs** and most core utilities are the Rust **uutils**
   implementations. In 26.04, `cp`, `mv` and `rm` are **still GNU** (they
   switch in 26.10), and the commands in this guide use only basic features
   anyway. The traditional sudo is available as `sudo.ws` (and the GNU
   coreutils as the `coreutils-from-gnu` package) if anything misbehaves.
-- Check what you actually have: `go version` and `node -v`. CI builds with
-  Node 22; if Caddy or `xcaddy` needs a newer Go than Ubuntu provides,
-  install Go from <https://go.dev/dl/>.
+- **Do not use `sudo -H`.** sudo-rs does not list a `-H` option in its manual
+  and always sets `HOME` from the target user, so `sudo -u vliegvuil bash -c
+  '...'` already runs with the right home directory. This guide omits `-H`.
+- Ubuntu's `nodejs` package is 22.22.1 (universe), which satisfies the
+  repository's `engines` requirement (Node ≥ 22). Corepack is a separate,
+  **old** package in Ubuntu 26.04 (`node-corepack` 0.24.0); Corepack older
+  than 0.31.0 fails to download pnpm 10.1+ with "Cannot find matching keyid".
+  This guide therefore installs pnpm with npm instead of using Corepack.
+- Check what you actually have: `go version` and `node -v`. If Caddy or
+  `xcaddy` needs a newer Go than Ubuntu provides, install Go from
+  <https://go.dev/dl/>.
+- `nodejs`, `npm` and `golang-go` come from the `universe` component. If
+  `apt` cannot find them, run `sudo add-apt-repository universe`.
+- Ubuntu home directories are not world-readable by default, and
+  `sudo -u vliegvuil` inherits your current directory. **Run the commands in
+  this guide from a neutral directory** (`cd /tmp`) to avoid "cannot access
+  current directory" errors.
 
 ### Server baseline (once)
 
 ```bash
+cd /tmp
 sudo apt update && sudo apt upgrade
-sudo apt install git curl golang-go nodejs npm
+sudo apt install git curl gnupg ca-certificates golang-go nodejs npm
 # unattended security updates (usually enabled on Ubuntu Server; verify)
 sudo apt install unattended-upgrades
 systemctl status unattended-upgrades --no-pager
@@ -60,7 +76,14 @@ sudo tee /etc/ssh/sshd_config.d/10-vliegvuil.conf <<'CONF'
 PasswordAuthentication no
 PermitRootLogin no
 CONF
-sudo sshd -t && sudo systemctl reload ssh
+sudo sshd -t
+# Ubuntu 26.04 starts sshd through ssh.socket; restarting ssh.service applies
+# the new authentication settings and keeps your open session alive.
+sudo systemctl restart ssh
+# Show the settings sshd actually uses. Drop-in files are read in alphabetical
+# order and the first value wins, so 10-vliegvuil.conf takes precedence over
+# e.g. a provider's 50-cloud-init.conf.
+sudo sshd -T | grep -iE '^(passwordauthentication|permitrootlogin)'
 
 # Firewall (Ubuntu ships ufw inactive). Allow SSH first.
 sudo ufw allow OpenSSH
@@ -72,14 +95,17 @@ sudo ufw enable
 ```
 
 If your provider also offers a network firewall, allow the same ports there.
-Time sync is handled by `chrony`, the default on new Ubuntu 26.04 installs.
+Time sync is handled by `chrony`, the default on **new** Ubuntu 26.04
+installs (a provider image may differ; check with `chronyc tracking`).
 
 Post-setup checklist:
 
 - [ ] key login as a non-root user works, from a **new** terminal
 - [ ] `ssh -o PreferredAuthentications=password <user>@vliegvuil.nl` is refused
+- [ ] `sudo sshd -T` shows `passwordauthentication no` and `permitrootlogin no`
 - [ ] `sudo ufw status` shows only OpenSSH, 80/tcp, 443/tcp, 443/udp
 - [ ] `systemctl is-active unattended-upgrades` prints active
+- [ ] `chronyc tracking` reports a synchronised clock
 - [ ] the OVHcloud web console (KVM) was tested once — it is the break-glass
       path once password SSH is off
 
@@ -95,7 +121,9 @@ custom builds for Debian/Ubuntu/Raspbian").
 ```bash
 # 1a. Caddy from the official repository. If these commands differ from the
 #     current instructions at https://caddyserver.com/docs/install, follow those.
-sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
+#     (Caddy's page also lists debian-keyring, debian-archive-keyring and
+#     apt-transport-https; they are not needed to verify Caddy's repository.)
+cd /tmp
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
   | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
 curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
@@ -107,8 +135,9 @@ sudo apt update && sudo apt install caddy
 
 ```bash
 # 1b. Build the custom binary as an unprivileged user (not root).
+cd /tmp
 sudo useradd -m -s /bin/bash vliegvuil || true   # also used in §2
-sudo -u vliegvuil -H bash -c '
+sudo -u vliegvuil bash -c '
   go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
   cd ~ && ~/go/bin/xcaddy build \
     --with github.com/mholt/caddy-ratelimit \
@@ -162,6 +191,7 @@ against the one published in GitHub's documentation before accepting it).
 ```bash
 # The app lives in /srv/vliegvuil (owned by the vliegvuil user); the user's
 # home is /home/vliegvuil, so the clone target is an empty directory.
+cd /tmp
 sudo useradd -m -s /bin/bash vliegvuil || true
 sudo mkdir -p /srv/vliegvuil
 sudo chown vliegvuil:vliegvuil /srv/vliegvuil
@@ -174,9 +204,22 @@ sudo -u vliegvuil git clone https://github.com/<owner>/vliegvuil.git /srv/vliegv
 
 Run builds as the `vliegvuil` user so files are not owned by root.
 
+The repository pins its package manager (`packageManager` in `package.json`,
+currently `pnpm@10.34.1`). Install exactly that version once, and keep it in
+sync when the pin changes:
+
 ```bash
-sudo corepack enable          # once: lets `pnpm` resolve to the version pinned in package.json
-sudo -u vliegvuil -H bash -c '
+cd /tmp
+grep '"packageManager"' /srv/vliegvuil/package.json   # shows the pinned pnpm version
+sudo npm install -g pnpm@10.34.1                      # use the version printed above
+pnpm --version
+```
+
+The repository's `preinstall` script runs `npx only-allow pnpm`, which is why
+`npm` must be installed as well.
+
+```bash
+sudo -u vliegvuil bash -c '
   cd /srv/vliegvuil
   pnpm install --frozen-lockfile
   pnpm --filter web build
@@ -216,7 +259,8 @@ the DNS record from the prerequisites and ports 80/443 open.
   stderr (visible via `journalctl -u caddy`).
 - **No client IP upstream.** All requests to `/api/*` are forwarded with
   `X-Forwarded-For` (and friends) deleted and a fixed
-  `User-Agent: VliegVuil.nl/1.0`. adsb.lol never learns the visitor IP.
+  `User-Agent: VliegVuil.nl/1.0 (+https://vliegvuil.nl)`. adsb.lol never
+  learns the visitor IP.
 - **Same-origin API.** `connect-src 'self'` is the whole CSP connect policy;
   there are no third-party API calls and no CORS headers.
 - **Only third-party request from the browser:** PDOK tiles
@@ -272,7 +316,8 @@ zone leaves generous headroom while capping abuse.
 ## 7. Updates
 
 ```bash
-sudo -u vliegvuil -H bash -c '
+cd /tmp
+sudo -u vliegvuil bash -c '
   cd /srv/vliegvuil
   git pull --ff-only
   pnpm install --frozen-lockfile
@@ -283,6 +328,9 @@ sudo cp /srv/vliegvuil/Caddyfile /etc/caddy/Caddyfile
 sudo caddy validate --config /etc/caddy/Caddyfile
 sudo systemctl reload caddy
 ```
+
+If `package.json` changed its `packageManager` pin, reinstall pnpm at the new
+version first (§3).
 
 Reload (not restart) keeps the rate-limit state and picks up the new build
 without dropping connections.
@@ -345,8 +393,8 @@ commit the result to a branch and open a PR by hand. See
   Record the Caddy and module versions you deployed.
 - **System updates.** Unattended upgrades handle security patches. After
   kernel updates, reboot when `/var/run/reboot-required` exists.
-- **Node and Go.** Keep them in line with CI (Node 22) and with what
-  `xcaddy` needs.
+- **Node, Go and pnpm.** Keep Node in line with CI (Node 22), pnpm with the
+  `packageManager` pin, and Go with what `xcaddy` needs.
 - **State and backups.** The only state on the server is Caddy's TLS data in
   `/var/lib/caddy`, which Caddy recreates on its own. Everything else can be
   rebuilt from git, so the server is disposable: if it breaks, reinstall and
@@ -373,3 +421,10 @@ step 1: check `update-alternatives --display caddy`.
 If the certificate is not issued, check that the DNS record points at this
 server and that ports 80 and 443 are open in both the server firewall and
 any provider firewall.
+
+If `pnpm install` fails with "Cannot find matching keyid", something is using
+Corepack: remove the Corepack shims (`sudo corepack disable`) and use the
+npm-installed pnpm from §3.
+
+If `sudo` rejects an option that works elsewhere, you are on sudo-rs; try the
+original with `sudo.ws` to compare.
