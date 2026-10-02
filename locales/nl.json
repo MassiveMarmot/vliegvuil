@@ -70,7 +70,7 @@
     "title": "Bronvermelding",
     "sources": "Bronnen",
     "license": "Licentie",
-    "odbl": "Live vliegtuigdata van adsb.lol — © adsb.lol-bijdragers, gelicentieerd onder de Open Database License (ODbL) v1.0.",
+    "liveData": "Live vliegtuigdata van adsb.fi — adsb.fi open-data API, hergebruikt volgens de gepubliceerde API-voorwaarden.",
     "dataAge": "Opgehaald op {{date}}",
     "dataAgeStale": "Nieuwere data is mogelijk beschikbaar; deze dataset is voor het laatst bijgewerkt op {{date}}.",
     "dataAgeStaleIcon": "Waarschuwing: dataset is mogelijk verouderd",

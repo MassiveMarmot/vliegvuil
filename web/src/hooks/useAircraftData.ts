@@ -93,7 +93,7 @@ export interface UseAircraftDataConfig {
 
 /**
  * Hook for managing aircraft data with polling.
- * Real data comes from the core adsb.lol provider through a configurable
+ * Real data comes from the core adsb.fi provider through a configurable
  * API base URL (VITE_API_BASE, default /api). VITE_MOCK=1 enables a
  * dev-only mock (web/src/mock/mockAircraftData.ts).
  */
