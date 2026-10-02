@@ -10,7 +10,7 @@ VliegVuil.nl is privacy-first by design. This page documents what the site does 
 - **No third-party scripts, fonts, or pixels** — everything is served from our own origin
 - **No cookies** — settings (language, units) are stored in your browser's localStorage and never sent to us
 - **No access logs** — the Caddy web server has access logging disabled
-- **No client IP forwarded upstream** — requests proxied to the ADS-B data provider (adsb.lol) are stripped of your IP address and identifying headers
+- **No client IP forwarded upstream** — requests proxied to the ADS-B data provider (adsb.fi) are stripped of your IP address and identifying headers
 - **No accounts or profiling** — there is nothing to log into and no behavioural tracking of any kind
 
 ## Third-party requests

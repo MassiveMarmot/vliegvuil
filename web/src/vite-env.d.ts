@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  /** Base URL of the adsb.lol proxy; same-origin /api by default */
+  /** Base URL of the adsb.fi proxy; same-origin /api by default */
   readonly VITE_API_BASE: string;
   /** Legacy MapTiler key (unused; kept for type compatibility) */
   readonly VITE_MAPTILER_KEY: string;

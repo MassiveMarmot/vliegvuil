@@ -25,7 +25,7 @@ VliegVuil.nl is a monorepo with three workspaces and a strict layering rule: `/c
 ## Runtime data flow
 
 1. The web app polls its own origin every 5 s for aircraft positions (`useAircraftData`).
-2. In production, Caddy reverse-proxies those requests to the adsb.lol API with a ~5 s micro-cache, strips client IP/headers upstream, and rate-limits per IP. In dev, the Vite proxy stands in.
+2. In production, Caddy reverse-proxies those requests to the adsb.fi open-data API with a ~5 s micro-cache, strips client IP/headers upstream, and rate-limits per IP. In dev, the Vite proxy stands in.
 3. Positions go through core's `PositionProvider` interface; `toDisplayAircraft` converts them for the UI, with dead-reckoning interpolation for smooth movement between updates.
 4. Noise lookup runs entirely client-side: the app fetches a small GeoJSON contour snapshot (built by `/data-build`) and uses core's point-in-polygon `lookupNoiseBand`.
 
@@ -41,7 +41,7 @@ Every snapshot records its source, licence, and date in `sources.json`, which al
 
 ## Key decisions
 
-- **Provider interface**: adsb.lol sits behind `PositionProvider` so fallbacks (adsb.fi, airplanes.live, OpenSky) can be added without UI changes.
+- **Provider interface**: adsb.fi sits behind `PositionProvider` so fallbacks (adsb.lol, airplanes.live, OpenSky) can be added without UI changes.
 - **Client-side noise lookup**: avoids a spatial backend; contours are small enough for in-browser point-in-polygon.
 - **Eindhoven civil contours**: civil Lden chosen over military Ke contours; labelled "civil traffic only" in the UI.
 - **PWA app shell only**: offline caching covers the shell, not live data — the app is honest about needing a connection for positions.

@@ -6,12 +6,12 @@ VliegVuil.nl runs on a single OVHcloud VPS (2 vCPU, 4 GB RAM, 40 GB storage)
 with Ubuntu 26.04 LTS. There is no Cloudflare or other proxy in front: the
 browser connects directly to Caddy, which serves the static app and
 reverse-proxies the ADS-B API on the **same origin**
-(`/api/*` → `https://api.adsb.lol/v2/*`). Because the API is same origin,
+(`/api/*` → `https://opendata.adsb.fi/api/v2/*`). Because the API is same origin,
 CORS is not needed and no CORS headers are sent.
 
 ```text
 ┌───────────────────────────────┐        ┌──────────────────┐
-│  Browser                      │        │  adsb.lol API    │
+│  Browser                      │        │  adsb.fi API     │
 │  https://vliegvuil.nl         │        │  (external)      │
 │   ├── static app  ────────────┼──► Caddy ── /api/* ───────►│
 │   └── /api/*      (same origin)│  (VPS)  ~5s micro-cache    │
@@ -317,7 +317,7 @@ http://<vps-hostname> {
 
 	handle /api/* {
 		uri strip_prefix /api
-		reverse_proxy https://api.adsb.lol {
+		reverse_proxy https://opendata.adsb.fi {
 			header_up -X-Forwarded-For
 			header_up -X-Real-IP
 			header_up -X-Forwarded-Proto
@@ -372,7 +372,7 @@ sudo systemctl reload caddy
   stderr (visible via `journalctl -u caddy`).
 - **No client IP upstream.** All requests to `/api/*` are forwarded with
   `X-Forwarded-For` (and friends) deleted and a fixed
-  `User-Agent: VliegVuil.nl/1.0 (+https://vliegvuil.nl)`. adsb.lol never
+  `User-Agent: VliegVuil.nl/1.0 (+https://vliegvuil.nl)`. adsb.fi never
   learns the visitor IP.
 - **Same-origin API.** `connect-src 'self'` is the whole CSP connect policy;
   there are no third-party API calls and no CORS headers.

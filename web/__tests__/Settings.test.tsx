@@ -99,7 +99,7 @@ describe('AttributionPage', (): void => {
     // Real sources.json content
     const page = document.querySelector('.attribution-page');
     expect(page).not.toBeNull();
-    expect(page?.textContent).toContain('adsb.lol');
+    expect(page?.textContent).toContain('adsb.fi');
   });
 
   it('exposes sources for tests via listSources', (): void => {

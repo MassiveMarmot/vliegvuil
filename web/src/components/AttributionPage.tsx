@@ -162,8 +162,8 @@ export function AttributionPage({
           })}
         </p>
       )}
-      <p className="attribution-odbl">
-        {t('attribution.odbl', 'Live aircraft data from adsb.lol — © adsb.lol contributors, licensed under the Open Database License (ODbL) v1.0.')}
+      <p className="attribution-live">
+        {t('attribution.liveData', 'Live aircraft data from adsb.fi — adsb.fi open-data API, reused under its published API terms.')}
       </p>
     </section>
   );

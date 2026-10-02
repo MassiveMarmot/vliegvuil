@@ -118,7 +118,7 @@ GitHub Actions scope widened from "lint, tests and typecheck only" to include sc
 
 11. Open decisions
 License — RESOLVED: MPL-2.0.
-Final provider terms check: adsb.lol data licence is ODbL 1.0 (per adsb.lol docs); still to confirm caching/proxying and donation-funded use, and that an API key (obtainable by feeding) is not required later; Climate TRACE aviation-sector granularity for NL
+Final provider terms check — RESOLVED 2026-10-02: primary switched to adsb.fi open-data API (terms at the API root, "by accessing the API, you agree to the terms"; 1 req/s public limit). adsb.lol kept as fallback: ODbL 1.0 data licence, but datacenter IPs throttled to ~2/min and a feeder-gated API key is planned. Still open: Climate TRACE aviation-sector granularity for NL
 PDOK style compatibility with MapLibre (verify) vs. going straight to PMTiles
 Which Eindhoven contour set to use — RESOLVED: civil Lden, labelled "civil traffic only"; the vector source is still pending (CLO 0588 maps only; see §10).
 Whether Schiphol's Atlas layer offers finer noise bands than the regional 48/56/70 dB set — RESOLVED (session 22): the open vector source is the EU END 2021 set with 5 dB bands (55–75); Schiphol's Atlas WMS raster offers no download, and CLO/NLR regional contours are published as maps only.

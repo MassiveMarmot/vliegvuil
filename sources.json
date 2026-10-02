@@ -2,15 +2,32 @@
   "$schema": "./sources.schema.json",
   "sources": [
     {
+      "id": "adsb-fi",
+      "name": "adsb.fi",
+      "url": "https://opendata.adsb.fi/",
+      "license": "adsb.fi open-data API terms",
+      "licenseUrl": "https://github.com/adsbfi/opendata",
+      "dataType": "Live ADS-B positions",
+      "updateFrequency": "continuous (polled every 5s via proxy)",
+      "lastUpdated": "2026-10-02",
+      "notes": "Primary live-positions provider since 2026-10-02. Public open-data API (https://opendata.adsb.fi), responses compatible with the ADSBexchange v2 API; public endpoints rate limited to 1 request/second (our poll rate is 1 request per 5 seconds). Terms at the API root: 'By accessing the API, you agree to the terms.' Feeding the network is encouraged but not required. Verified 2026-10-02: 12 paced requests from the production VPS, all 200 with correct JSON.",
+      "cadence": "monthly",
+      "refresh": "manual",
+      "upstream": {
+        "method": "manual",
+        "url": "https://opendata.adsb.fi/"
+      }
+    },
+    {
       "id": "adsb-lol",
       "name": "adsb.lol",
       "url": "https://adsb.lol/",
       "license": "ODbL-1.0",
       "licenseUrl": "https://opendatacommons.org/licenses/odbl/1.0/",
       "dataType": "Live ADS-B positions",
-      "updateFrequency": "continuous (polled every 5s via proxy)",
+      "updateFrequency": "n/a (fallback, not polled)",
       "lastUpdated": "2026-09-29",
-      "notes": "Official docs (api.adsb.lol/docs): \"The license for the API as well as all data ADSB.lol makes public is ODbL\" (Open Database License v1.0, same as OpenStreetMap). API source code is BSD-3-Clause (https://github.com/adsblol/api). Future API key may require feeding adsb.lol (see README); rate limits are dynamic.",
+      "notes": "Fallback live-positions provider (unused since 2026-10-02). Official docs (api.adsb.lol/docs): \"The license for the API as well as all data ADSB.lol makes public is ODbL\" (Open Database License v1.0, same as OpenStreetMap). API source code is BSD-3-Clause (https://github.com/adsblol/api). Measured 2026-10-02: datacenter IPs are throttled to ~2 requests/minute (burst 3), far below the 12/min poll rate; a future API key may require feeding adsb.lol (see README).",
       "cadence": "monthly",
       "refresh": "manual",
       "upstream": {
