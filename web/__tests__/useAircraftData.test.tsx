@@ -3,7 +3,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import type { AircraftPosition, PositionProvider } from '@vliegvuil/core';
 
-// Mock the core provider factory; the real AdsblolProvider is covered by
+// Mock the core provider factory; the real AdsbfiProvider is covered by
 // core/__tests__/providers/adsb-fi.test.ts against the real fixture.
 const fetchPositions = vi.fn();
 vi.mock('@vliegvuil/core', async (importOriginal) => {

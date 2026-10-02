@@ -21,7 +21,7 @@ export abstract class PositionProvider implements PositionProviderInterface {
 
   constructor(config: Partial<PositionProviderConfig> = {}) {
     this.config = {
-      baseUrl: 'https://api.adsb.lol/v2',
+      baseUrl: 'https://opendata.adsb.fi/api/v2',
       pollInterval: 5000,
       cacheTTL: 5,
       maxRetries: 3,

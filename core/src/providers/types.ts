@@ -52,7 +52,7 @@ export const NETHERLANDS_BBOX: BoundingBox = {
 
 // Default configuration for position providers
 export const DEFAULT_PROVIDER_CONFIG: PositionProviderConfig = {
-  baseUrl: 'https://api.adsb.lol/v2',
+  baseUrl: 'https://opendata.adsb.fi/api/v2',
   pollInterval: 5000,
   cacheTTL: 5,
   maxRetries: 3,

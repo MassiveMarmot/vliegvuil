@@ -13,7 +13,7 @@ the stale-data banner); the browser never contacts upstream (spec §5).
 | `ourairports` | monthly | `github`: latest commit sha of `main` — `https://api.github.com/repos/davidmegginson/ourairports-data/commits/main` | `auto` | `data-build/previous/airports.json` |
 | `rivm-end-2021-noise` | multi-year | `ckan-metadata`: dataset `metadata_modified` — `https://data.overheid.nl/data/api/3/action/package_show?id=bc7703a1-9323-4e4f-9ce7-246ace877b59` | `manual` | `data-build/previous/noise-contours.geojson` |
 | `clo-nlr-regional` | multi-year | `manual` (no machine-readable signal; CLO publishes map images) | `manual` | n/a (not in build yet) |
-| `adsb-lol` | — | n/a (live API, not a snapshot) | n/a | n/a |
+| `adsb-fi` | — | n/a (live API, not a snapshot) | n/a | n/a |
 | `pdok-brt` | — | n/a (basemap tiles) | n/a | n/a |
 
 Cadence and method were read from the official pages/APIs, not guessed:
