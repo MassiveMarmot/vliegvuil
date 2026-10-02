@@ -186,5 +186,21 @@ describe('AdsblolProvider', () => {
         .calls[0]?.[0] as string;
       expect(calledUrl).toContain('https://proxy.example/v2/point/');
     });
+    it('supports a relative base URL (production same-origin /api proxy)', async () => {
+      const relative = new AdsblolProvider({ baseUrl: '/api' });
+      (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(fixture),
+      } as Response);
+      // Regression: the URL constructor rejects relative URLs, which made
+      // every production fetch throw before reaching the network. fetch
+      // must receive the path as a string so the browser resolves it
+      // same-origin.
+      const positions = await relative.fetchFromSource(NETHERLANDS_BBOX);
+      const calledUrl = (fetch as unknown as ReturnType<typeof vi.fn>).mock
+        .calls[0]?.[0] as string;
+      expect(calledUrl).toMatch(/^\/api\/point\/52\.25\d*\/5\.0\d*\/\d+$/);
+      expect(positions.length).toBeGreaterThan(0);
+    });
   });
 });

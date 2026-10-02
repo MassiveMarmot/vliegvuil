@@ -95,7 +95,7 @@ export class AdsblolProvider extends PositionProvider {
 
   async fetchFromSource(bbox: BoundingBox): Promise<AircraftPosition[]> {
     const url = this.buildUrl(bbox);
-    const response = await fetch(url.toString(), {
+    const response = await fetch(url, {
       headers: { Accept: 'application/json' },
     });
     if (!response.ok) {
@@ -109,13 +109,15 @@ export class AdsblolProvider extends PositionProvider {
       .map((ac) => this.convertAircraft(ac, data.now));
   }
 
-  private buildUrl(bbox: BoundingBox): URL {
+  // Returns a URL string, not a URL object: relative base URLs (the
+  // same-origin "/api" proxy path used in production) are invalid input
+  // for the URL constructor, but fetch() resolves them against the page
+  // origin, which is exactly the deployment's intent.
+  private buildUrl(bbox: BoundingBox): string {
     const centerLat = (bbox.minLatitude + bbox.maxLatitude) / 2;
     const centerLon = (bbox.minLongitude + bbox.maxLongitude) / 2;
     const radius = radiusForBoundingBox(bbox);
-    return new URL(
-      `${this.config.baseUrl}/point/${centerLat.toFixed(4)}/${centerLon.toFixed(4)}/${radius}`,
-    );
+    return `${this.config.baseUrl}/point/${centerLat.toFixed(4)}/${centerLon.toFixed(4)}/${radius}`;
   }
 
   private isInBoundingBox(ac: AdsblolAircraft, bbox: BoundingBox): boolean {
