@@ -40,7 +40,6 @@ interface AdsbfiAircraft {
 }
 
 const EARTH_RADIUS_KM = 6371;
-const KM_PER_NM = 1.852;
 const MAX_RADIUS_KM = 250;
 
 /** Great-circle distance between two points in kilometres */
