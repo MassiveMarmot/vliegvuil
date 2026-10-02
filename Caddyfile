@@ -20,10 +20,6 @@
 vliegvuil.nl {
 	# Static app (git pull + pnpm build on the server, see docs/deploy.md)
 	root * /srv/vliegvuil/web/dist
-
-	# SPA routing: serve the file if it exists, otherwise index.html
-	try_files {path} /index.html
-	file_server
 	encode zstd gzip
 
 	# Security headers (same origin only; the API is proxied below, so no
@@ -70,23 +66,43 @@ vliegvuil.nl {
 			}
 		}
 
-		uri strip_prefix /api
+		# route preserves the order below: strip /api first, then add /v2,
+		# then proxy. Without route, Caddy sorts rewrite before uri, which
+		# would produce /v2/api/... (double prefix).
+		route {
+			uri strip_prefix /api
+			rewrite * /v2{uri}
 
-		reverse_proxy https://api.adsb.lol {
-			# Privacy: strip anything that could identify the client.
-			# reverse_proxy adds X-Forwarded-For itself; deleting it here
-			# means the upstream never sees the client IP.
-			header_up -X-Forwarded-For
-			header_up -X-Real-IP
-			header_up -X-Forwarded-Proto
-			header_up -X-Forwarded-Host
-			# Present ourselves instead of the client
-			header_up User-Agent "VliegVuil.nl/1.0 (+https://vliegvuil.nl)"
-			header_up Accept "application/json"
-			# Do not reveal upstream server details to the client
-			header_down -Server
-			header_down -Via
-			header_down -X-Powered-By
+			reverse_proxy https://api.adsb.lol {
+				# The upstream nginx routes by virtual host; without this,
+				# the client's Host header is passed through and the default
+				# backend answers 503.
+				header_up Host api.adsb.lol
+
+				# Privacy: strip anything that could identify the client.
+				# reverse_proxy adds X-Forwarded-For itself; deleting it here
+				# means the upstream never sees the client IP.
+				header_up -X-Forwarded-For
+				header_up -X-Real-IP
+				header_up -X-Forwarded-Proto
+				header_up -X-Forwarded-Host
+				# Present ourselves instead of the client
+				header_up User-Agent "VliegVuil.nl/1.0 (+https://vliegvuil.nl)"
+				header_up Accept "application/json"
+				# Do not reveal upstream server details to the client
+				header_down -Server
+				header_down -Via
+				header_down -X-Powered-By
+			}
 		}
+	}
+
+	# SPA routing: serve the file if it exists, otherwise index.html.
+	# Must live inside a catch-all handle: a top-level try_files runs before
+	# handle blocks and would rewrite /api/* to /index.html, bypassing the
+	# proxy entirely.
+	handle {
+		try_files {path} /index.html
+		file_server
 	}
 }
