@@ -1,0 +1,188 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+// adsb.fi open-data position provider implementation
+// Pure TypeScript - no DOM, no React
+
+// Response shape verified against
+// https://opendata.adsb.fi/api/v2/lat/{lat}/lon/{lon}/dist/{dist}
+// (dist in kilometres). Unlike adsb.lol's /v2/point, this endpoint wraps
+// the array as "aircraft" rather than "ac" (noted in adsbfi/opendata docs).
+
+import { PositionProvider } from './PositionProvider';
+import { RateLimitError, parseRetryAfter } from './types';
+import type {
+  AircraftPosition,
+  BoundingBox,
+  PositionProviderConfig,
+} from './types';
+
+/** Real adsb.fi open-data response (only the fields we consume) */
+interface AdsbfiResponse {
+  aircraft?: AdsbfiAircraft[];
+  now?: number;
+}
+
+interface AdsbfiAircraft {
+  hex: string;
+  flight?: string;
+  r?: string;
+  t?: string;
+  alt_baro?: number | 'ground';
+  gs?: number;
+  track?: number;
+  baro_rate?: number;
+  squawk?: string;
+  lat?: number;
+  lon?: number;
+  seen_pos?: number;
+}
+
+const EARTH_RADIUS_KM = 6371;
+const KM_PER_NM = 1.852;
+const MAX_RADIUS_KM = 250;
+
+/** Great-circle distance between two points in kilometres */
+function haversineKm(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number {
+  const toRad = Math.PI / 180;
+  const dLat = (lat2 - lat1) * toRad;
+  const dLon = (lon2 - lon1) * toRad;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * toRad) * Math.cos(lat2 * toRad) * Math.sin(dLon / 2) ** 2;
+  return 2 * EARTH_RADIUS_KM * Math.asin(Math.sqrt(a));
+}
+
+/**
+ * Radius (kilometres) needed to cover the bounding box from its centre,
+ * capped at the API's maximum of 250 km.
+ */
+export function radiusKmForBoundingBox(bbox: BoundingBox): number {
+  const centerLat = (bbox.minLatitude + bbox.maxLatitude) / 2;
+  const centerLon = (bbox.minLongitude + bbox.maxLongitude) / 2;
+  const corners: Array<[number, number]> = [
+    [bbox.minLatitude, bbox.minLongitude],
+    [bbox.minLatitude, bbox.maxLongitude],
+    [bbox.maxLatitude, bbox.minLongitude],
+    [bbox.maxLatitude, bbox.maxLongitude],
+  ];
+  let maxKm = 0;
+  for (const [lat, lon] of corners) {
+    maxKm = Math.max(maxKm, haversineKm(centerLat, centerLon, lat, lon));
+  }
+  return Math.min(Math.ceil(maxKm), MAX_RADIUS_KM);
+}
+
+/** Trimmed string or null when missing/empty */
+function trimmedOrNull(value: string | undefined): string | null {
+  if (value === undefined) {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+/**
+ * adsb.fi open-data position provider for live aircraft data.
+ * Public endpoints are rate limited to 1 request/second (we poll at
+ * 1 request per 5 seconds); feeding the network is encouraged but not
+ * required for API access.
+ */
+export class AdsbfiProvider extends PositionProvider {
+  constructor(config: Partial<PositionProviderConfig> = {}) {
+    super({
+      baseUrl: 'https://opendata.adsb.fi/api/v2',
+      ...config,
+    });
+  }
+
+  async fetchFromSource(
+    bbox: BoundingBox,
+    signal?: AbortSignal,
+  ): Promise<AircraftPosition[]> {
+    const url = this.buildUrl(bbox);
+    const response = await fetch(url, {
+      headers: { Accept: 'application/json' },
+      signal,
+    });
+    if (response.status === 429) {
+      throw new RateLimitError(
+        parseRetryAfter(response.headers?.get?.('Retry-After')),
+      );
+    }
+    if (!response.ok) {
+      throw new Error(
+        `adsb.fi API error: ${response.status} ${response.statusText}`,
+      );
+    }
+    const data = (await response.json()) as AdsbfiResponse;
+    return (data.aircraft ?? [])
+      .filter((ac) => this.isInBoundingBox(ac, bbox))
+      .map((ac) => this.convertAircraft(ac, data.now));
+  }
+
+  // Returns a URL string, not a URL object: relative base URLs (the
+  // same-origin "/api" proxy path used in production) are invalid input
+  // for the URL constructor, but fetch() resolves them against the page
+  // origin, which is exactly the deployment's intent.
+  private buildUrl(bbox: BoundingBox): string {
+    const centerLat = (bbox.minLatitude + bbox.maxLatitude) / 2;
+    const centerLon = (bbox.minLongitude + bbox.maxLongitude) / 2;
+    const radius = radiusKmForBoundingBox(bbox);
+    return `${this.config.baseUrl}/lat/${centerLat.toFixed(4)}/lon/${centerLon.toFixed(4)}/dist/${radius}`;
+  }
+
+  private isInBoundingBox(ac: AdsbfiAircraft, bbox: BoundingBox): boolean {
+    if (typeof ac.lat !== 'number' || typeof ac.lon !== 'number') {
+      return false;
+    }
+    return (
+      ac.lat >= bbox.minLatitude &&
+      ac.lat <= bbox.maxLatitude &&
+      ac.lon >= bbox.minLongitude &&
+      ac.lon <= bbox.maxLongitude
+    );
+  }
+
+  private convertAircraft(
+    ac: AdsbfiAircraft,
+    nowSeconds: number | undefined,
+  ): AircraftPosition {
+    const onGround = ac.alt_baro === 'ground';
+    const now = nowSeconds ?? Date.now() / 1000;
+    const seenPos = typeof ac.seen_pos === 'number' ? ac.seen_pos : 0;
+    return {
+      icao24: ac.hex.toUpperCase(),
+      callsign: trimmedOrNull(ac.flight),
+      registration: trimmedOrNull(ac.r),
+      type: trimmedOrNull(ac.t),
+      operator: null,
+      latitude: ac.lat as number,
+      longitude: ac.lon as number,
+      altitude:
+        onGround || typeof ac.alt_baro !== 'number'
+          ? null
+          : Math.round(ac.alt_baro),
+      speed: typeof ac.gs === 'number' ? Math.round(ac.gs * 10) / 10 : null,
+      heading: typeof ac.track === 'number' ? ac.track : null,
+      verticalRate:
+        typeof ac.baro_rate === 'number' ? Math.round(ac.baro_rate) : null,
+      squawk: trimmedOrNull(ac.squawk),
+      timestamp: Math.round(now - seenPos),
+      onGround,
+    };
+  }
+}
+
+/** Factory function to create a configured adsb.fi provider */
+export function createAdsbfiProvider(
+  config: Partial<PositionProviderConfig> = {},
+): AdsbfiProvider {
+  return new AdsbfiProvider(config);
+}

@@ -44,7 +44,7 @@ vliegvuil.nl {
 		}
 	}
 
-	# Same-origin API proxy: /api/* -> https://api.adsb.lol/v2/*
+	# Same-origin API proxy: /api/* -> https://opendata.adsb.fi/api/v2/*
 	# This removes CORS entirely: the browser only ever talks to vliegvuil.nl.
 	handle /api/* {
 		# Stricter per-IP rate limit for the proxied API
@@ -56,7 +56,8 @@ vliegvuil.nl {
 			}
 		}
 
-		# ~5s micro-cache to reduce load on adsb.lol
+		# ~5s micro-cache to reduce load on adsb.fi (their public limit
+		# is 1 req/s; our poll rate is 1 req/5s)
 		cache {
 			ttl 5s
 			otter {
@@ -66,18 +67,18 @@ vliegvuil.nl {
 			}
 		}
 
-		# route preserves the order below: strip /api first, then add /v2,
-		# then proxy. Without route, Caddy sorts rewrite before uri, which
-		# would produce /v2/api/... (double prefix).
+		# route preserves the order below: strip /api first, then add the
+		# upstream /api/v2 prefix, then proxy. Without route, Caddy sorts
+		# rewrite before uri, which would produce the wrong prefix order.
 		route {
 			uri strip_prefix /api
-			rewrite * /v2{uri}
+			rewrite * /api/v2{uri}
 
-			reverse_proxy https://api.adsb.lol {
+			reverse_proxy https://opendata.adsb.fi {
 				# The upstream nginx routes by virtual host; without this,
 				# the client's Host header is passed through and the default
 				# backend answers 503.
-				header_up Host api.adsb.lol
+				header_up Host opendata.adsb.fi
 
 				# Privacy: strip anything that could identify the client.
 				# reverse_proxy adds X-Forwarded-For itself; deleting it here
