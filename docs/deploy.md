@@ -437,6 +437,59 @@ commit the result to a branch and open a PR by hand. See
   ```
 
   Record the Caddy and module versions you deployed.
+
+  **The whole rebuild as one command.** To make the monthly rebuild low-effort
+  and mistake-proof, wrap it in a script. Create it once:
+
+  ```bash
+  sudo tee /usr/local/sbin/rebuild-caddy >/dev/null <<'SCRIPT'
+  #!/usr/bin/env bash
+  set -euo pipefail
+  cd /tmp
+
+  sudo -u vliegvuil bash -c '
+    go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
+    cd ~ && ~/go/bin/xcaddy build \
+      --with github.com/mholt/caddy-ratelimit \
+      --with github.com/caddyserver/cache-handler \
+      --with github.com/darkweak/storages/otter/caddy
+  '
+
+  sudo mv /home/vliegvuil/caddy /usr/bin/caddy.custom
+  sudo chown root:root /usr/bin/caddy.custom
+  sudo chmod 755 /usr/bin/caddy.custom
+  sudo caddy validate --config /etc/caddy/Caddyfile
+  sudo systemctl restart caddy
+
+  echo "$(date -Is)  $(/usr/bin/caddy.custom version)" | tee -a /var/log/caddy-versions.log
+  echo "Deployed: $(/usr/bin/caddy.custom version)"
+  SCRIPT
+  sudo chmod 755 /usr/local/sbin/rebuild-caddy
+  ```
+
+  The monthly rebuild is then a single command:
+
+  ```bash
+  sudo rebuild-caddy
+  ```
+
+  Notes on the script:
+
+  - `set -euo pipefail` stops before the restart if the build or `caddy
+    validate` fails, so a broken build cannot take down the running Caddy.
+    Validation runs after the swap but before the restart; during a routine
+    rebuild the config does not change, so a failure there indicates a module
+    incompatibility — exactly what you want caught before restarting.
+  - Each run appends a timestamped `caddy version` line to
+    `/var/log/caddy-versions.log`, which is the record of deployed versions
+    this section asks for.
+  - The script builds `@latest` (no pinned versions). That is the
+    set-and-forget choice: security fixes arrive automatically and no
+    bookkeeping is needed. The trade-off is that each rebuild silently jumps
+    to the newest Caddy and module versions; if you ever need change
+    control, pin versions in the `xcaddy build` command instead.
+  - This is a small piece of infrastructure you own: keep it simple, and
+    update it in the same sitting whenever the module set or paths change.
 - **System updates.** Unattended upgrades handle security patches. After
   kernel updates, reboot when `/var/run/reboot-required` exists.
 - **Node, Go and pnpm.** Keep Node in line with CI (Node 22), pnpm with the
