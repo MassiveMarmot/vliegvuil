@@ -3,6 +3,6 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // Position providers
 export type { AircraftPosition, BoundingBox, PositionProvider, PositionProviderConfig } from './types';
-export { NETHERLANDS_BBOX } from './types';
+export { NETHERLANDS_BBOX, RateLimitError, parseRetryAfter } from './types';
 export { PositionProvider as BasePositionProvider } from './PositionProvider';
 export { AdsblolProvider, createAdsblolProvider, radiusForBoundingBox } from './adsb-lol';

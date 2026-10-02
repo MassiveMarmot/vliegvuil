@@ -4,6 +4,7 @@
 // Base PositionProvider interface implementation
 // Pure TypeScript - no DOM, no React
 
+import { RateLimitError } from './types';
 import type {
   AircraftPosition,
   BoundingBox,
@@ -29,7 +30,10 @@ export abstract class PositionProvider implements PositionProviderInterface {
     };
   }
 
-  abstract fetchFromSource(bbox: BoundingBox): Promise<AircraftPosition[]>;
+  abstract fetchFromSource(
+    bbox: BoundingBox,
+    signal?: AbortSignal,
+  ): Promise<AircraftPosition[]>;
 
   async fetchPositions(bbox: BoundingBox): Promise<AircraftPosition[]> {
     const now = Date.now() / 1000;
@@ -53,7 +57,14 @@ export abstract class PositionProvider implements PositionProviderInterface {
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
         this.lastError = lastError;
-        
+
+        // 429: retrying only burns more of the exhausted budget. Surface it
+        // so the caller can pause polling (cache is not served: it is stale
+        // by definition at this point and the caller keeps its own data).
+        if (error instanceof RateLimitError) {
+          throw error;
+        }
+
         // Wait before retry (exponential backoff)
         if (attempt < this.config.maxRetries - 1) {
           const delay = this.config.pollInterval * Math.pow(2, attempt);
@@ -74,14 +85,26 @@ export abstract class PositionProvider implements PositionProviderInterface {
   protected async fetchFromSourceWithTimeout(
     bbox: BoundingBox,
   ): Promise<AircraftPosition[]> {
+    // Abort the underlying fetch on timeout (otherwise hung requests keep
+    // holding one of the browser's limited connection slots) and always
+    // clear the timer.
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => {
+      timer = setTimeout(() => {
+        controller.abort();
         reject(new Error(`Request timeout after ${this.config.timeout}ms`));
       }, this.config.timeout);
     });
 
-    const fetchPromise = this.fetchFromSource(bbox);
-    return Promise.race([fetchPromise, timeoutPromise]);
+    try {
+      return await Promise.race([
+        this.fetchFromSource(bbox, controller.signal),
+        timeoutPromise,
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   getDataAge(): number {

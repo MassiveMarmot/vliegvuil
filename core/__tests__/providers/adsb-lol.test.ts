@@ -166,6 +166,33 @@ describe('AdsblolProvider', () => {
       );
     });
 
+    it('throws RateLimitError with Retry-After on 429', async () => {
+      (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ok: false,
+        status: 429,
+        statusText: 'Too Many Requests',
+        headers: new Headers({ 'Retry-After': '42' }),
+      } as Response);
+      await expect(provider.fetchFromSource(NETHERLANDS_BBOX)).rejects.toMatchObject({
+        name: 'RateLimitError',
+        retryAfterMs: 42000,
+      });
+    });
+
+    it('does not retry a 429 in fetchPositions', async () => {
+      (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ok: false,
+        status: 429,
+        statusText: 'Too Many Requests',
+        headers: new Headers(),
+      } as Response);
+      const p = new AdsblolProvider({ maxRetries: 3 });
+      await expect(p.fetchPositions(NETHERLANDS_BBOX)).rejects.toMatchObject({
+        name: 'RateLimitError',
+      });
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+
     it('treats a missing ac array as empty', async () => {
       (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
         ok: true,
