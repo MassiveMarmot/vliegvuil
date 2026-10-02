@@ -7,7 +7,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import type { DisplayAircraft, AppState } from '../types';
 import { DEFAULT_POLLING_CONFIG } from '../types';
 import type { AircraftPosition, PositionProvider } from '@vliegvuil/core';
-import { createAdsblolProvider, RateLimitError } from '@vliegvuil/core';
+import { createAdsbfiProvider, RateLimitError } from '@vliegvuil/core';
 import i18n from '../i18n';
 
 /** Aircraft not seen for longer than this are dropped from the display */
@@ -67,14 +67,14 @@ export function toDisplayAircraft(
 }
 
 /**
- * Provider factory: real adsb.lol provider via configurable base URL.
- * Retries live in this hook (maxRetries/retryDelay), so the provider is
+ * Provider factory: real adsb.fi open-data provider via configurable base
+ * URL. Retries live in this hook (maxRetries/retryDelay), so the provider is
  * configured with maxRetries: 1 to avoid stacking retry loops: a failure
  * otherwise triggered 3 provider attempts per hook retry (3x), i.e. up
  * to 9 upstream requests per poll cycle.
  */
 export function createProvider(apiBase: string): PositionProvider {
-  return createAdsblolProvider({ baseUrl: apiBase, maxRetries: 1 });
+  return createAdsbfiProvider({ baseUrl: apiBase, maxRetries: 1 });
 }
 
 // Hook return type

@@ -4,13 +4,13 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import type { AircraftPosition, PositionProvider } from '@vliegvuil/core';
 
 // Mock the core provider factory; the real AdsblolProvider is covered by
-// core/__tests__/providers/adsb-lol.test.ts against the real fixture.
+// core/__tests__/providers/adsb-fi.test.ts against the real fixture.
 const fetchPositions = vi.fn();
 vi.mock('@vliegvuil/core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@vliegvuil/core')>();
   return {
     ...actual,
-    createAdsblolProvider: (_config: unknown): PositionProvider => ({
+    createAdsbfiProvider: (_config: unknown): PositionProvider => ({
       fetchPositions: (...args: unknown[]) =>
         fetchPositions(...(args as Parameters<PositionProvider['fetchPositions']>)),
       getDataAge: () => 0,

@@ -6,3 +6,4 @@ export type { AircraftPosition, BoundingBox, PositionProvider, PositionProviderC
 export { NETHERLANDS_BBOX, RateLimitError, parseRetryAfter } from './types';
 export { PositionProvider as BasePositionProvider } from './PositionProvider';
 export { AdsblolProvider, createAdsblolProvider, radiusForBoundingBox } from './adsb-lol';
+export { AdsbfiProvider, createAdsbfiProvider, radiusKmForBoundingBox } from './adsb-fi';
