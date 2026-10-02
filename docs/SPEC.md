@@ -6,7 +6,7 @@ Funding: donations and/or subsidies are possible, so keep licenses clean and the
 Build method: built entirely by an LLM, so use strict typing, tests, lint and a written AGENTS.md of conventions.
 1. Data sources
 Need	Source	Handling
-Live positions	adsb.lol (primary), behind a PositionProvider interface. Fallbacks: adsb.fi, airplanes.live, OpenSky	Polled by the proxy only. Check each provider's terms on caching/redistribution and non-commercial use
+Live positions	adsb.fi open-data API (primary; public, 1 req/s limit, ADSBx-v2-compatible), behind a PositionProvider interface. Fallbacks: airplanes.live (requires prior email contact), adsb.lol (throttles datacenter IPs to ~2/min; plans feeder-gated API keys), OpenSky (400 req/day anonymous)	Polled by the proxy only. Check each provider's terms on caching/redistribution and non-commercial use
 Aircraft type/registration	tar1090-db or the OpenSky aircraft CSV	Build-time snapshot, refreshed monthly
 Country of registration	Static ICAO24 address-block table	Build-time
 Airports	OurAirports, trimmed to NL and nearby, plus a hand-maintained status overlay (commercial / military-shared / planned)	Build-time snapshot

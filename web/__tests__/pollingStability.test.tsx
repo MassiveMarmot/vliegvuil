@@ -10,7 +10,7 @@ vi.mock('@vliegvuil/core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@vliegvuil/core')>();
   return {
     ...actual,
-    createAdsblolProvider: (_config: unknown): PositionProvider => ({
+    createAdsbfiProvider: (_config: unknown): PositionProvider => ({
       fetchPositions: (...args: unknown[]) =>
         fetchPositions(...(args as Parameters<PositionProvider['fetchPositions']>)),
       getDataAge: () => 0,
