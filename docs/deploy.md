@@ -296,6 +296,73 @@ standard distribution rejects the `rate_limit` and `cache` directives. On
 the first start Caddy obtains the TLS certificate automatically; this needs
 the DNS record from the prerequisites and ports 80/443 open.
 
+### Temporary preview before the domain is registered
+
+The reload above cannot succeed until the domain is registered and its DNS
+records point at the server (Caddy cannot obtain a certificate without it).
+To preview the built app before that, append a temporary plain-HTTP site
+block for the provider hostname (here `<vps-hostname>`, e.g.
+`vps-xxxxxxx.vps.ovh.net`) to the running Caddyfile:
+
+```bash
+sudo tee -a /etc/caddy/Caddyfile >/dev/null <<'CONF'
+
+# TEMPORARY: preview on the provider hostname until the domain is
+# registered. Remove this block after the domain go-live (see below).
+http://<vps-hostname> {
+	root * /srv/vliegvuil/web/dist
+	try_files {path} /index.html
+	file_server
+	encode zstd gzip
+
+	handle /api/* {
+		uri strip_prefix /api
+		reverse_proxy https://api.adsb.lol {
+			header_up -X-Forwarded-For
+			header_up -X-Real-IP
+			header_up -X-Forwarded-Proto
+			header_up -X-Forwarded-Host
+			header_up User-Agent "VliegVuil.nl/1.0 (+https://vliegvuil.nl)"
+			header_up Accept "application/json"
+			header_down -Server
+			header_down -Via
+			header_down -X-Powered-By
+		}
+	}
+}
+CONF
+
+sudo caddy validate --config /etc/caddy/Caddyfile
+sudo systemctl reload caddy
+```
+
+The preview is then reachable at `http://<vps-hostname>`. Notes:
+
+- The `http://` prefix forces plain HTTP, so Caddy does not attempt any
+  certificate issuance for the provider hostname; the browser shows a
+  "not secure" warning, which is expected for a preview.
+- The block deliberately omits `rate_limit`, `cache` and the security
+  headers: rate-limit zones are global in caddy-ratelimit (re-declaring
+  them in a second block can conflict), and the headers matter for the
+  real site, not the preview.
+- The API proxy is included so the map loads live aircraft.
+- `caddy validate` may warn that the Caddyfile input is not formatted; that
+  comes from appending to a file and is cosmetic. Do not run
+  `caddy fmt --overwrite` here — it would reformat the whole file.
+- While this block exists the app is publicly reachable at the provider
+  hostname over HTTP. That is usually acceptable (the repository is
+  public), but the preview is not private.
+
+**Remove the temporary block at the domain go-live** by copying the repo's
+Caddyfile back over it — the normal §4 install sequence, which also picks up
+the certificate on the reload:
+
+```bash
+sudo cp /srv/vliegvuil/Caddyfile /etc/caddy/Caddyfile
+sudo caddy validate --config /etc/caddy/Caddyfile
+sudo systemctl reload caddy
+```
+
 ## 5. Privacy properties (what to expect)
 
 - **No access logs.** Caddy does not write access logs unless one is
