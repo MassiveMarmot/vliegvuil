@@ -58,3 +58,36 @@ export const DEFAULT_PROVIDER_CONFIG: PositionProviderConfig = {
   maxRetries: 3,
   timeout: 10000,
 };
+
+/**
+ * Thrown when the upstream (or our same-origin proxy) answers 429.
+ * Callers must pause polling instead of retrying: every retry spends more
+ * of the same per-IP budget that was just exhausted.
+ */
+export class RateLimitError extends Error {
+  readonly status = 429;
+  /** Server-requested wait in ms (from Retry-After), or null if absent */
+  readonly retryAfterMs: number | null;
+
+  constructor(retryAfterMs: number | null = null) {
+    super('Rate limited (429 Too Many Requests)');
+    this.name = 'RateLimitError';
+    this.retryAfterMs = retryAfterMs;
+  }
+}
+
+/** Parse a Retry-After header (delta-seconds or HTTP-date) into ms */
+export function parseRetryAfter(value: string | null | undefined): number | null {
+  if (!value) {
+    return null;
+  }
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return Math.round(seconds * 1000);
+  }
+  const date = Date.parse(value);
+  if (!Number.isNaN(date)) {
+    return Math.max(0, date - Date.now());
+  }
+  return null;
+}

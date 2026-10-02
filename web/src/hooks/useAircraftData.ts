@@ -7,11 +7,14 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import type { DisplayAircraft, AppState } from '../types';
 import { DEFAULT_POLLING_CONFIG } from '../types';
 import type { AircraftPosition, PositionProvider } from '@vliegvuil/core';
-import { createAdsblolProvider } from '@vliegvuil/core';
+import { createAdsblolProvider, RateLimitError } from '@vliegvuil/core';
 import i18n from '../i18n';
 
 /** Aircraft not seen for longer than this are dropped from the display */
 export const MAX_AGE_SECONDS = 60;
+
+/** Pause after a 429 without Retry-After (the proxy limit window is 1 min) */
+export const DEFAULT_RATE_LIMIT_PAUSE_MS = 60_000;
 
 /** Generate unique ID for aircraft */
 export function generateAircraftId(icao24: string, callsign: string): string {
@@ -116,6 +119,16 @@ export function useAircraftData(
   const retryCountRef = useRef(0);
   const hasLoadedOnceRef = useRef(false);
   const mountedRef = useRef(true);
+  // Guards live in refs, never in React state: state is stale inside
+  // effects/callbacks and put start/stop in an endless ping-pong
+  // (isPolling in startPolling's deps changed its identity on every flip).
+  const pollingActiveRef = useRef(false);
+  const inFlightRef = useRef(false);
+  const aircraftSizeRef = useRef(0);
+  const configRef = useRef(pollingConfig);
+  const refreshRef = useRef<() => Promise<void>>(() => Promise.resolve());
+  aircraftSizeRef.current = aircraft.size;
+  configRef.current = pollingConfig;
 
   const fetchAircraftData = useCallback(
     async (): Promise<AircraftPosition[]> => {
@@ -169,35 +182,74 @@ export function useAircraftData(
     [],
   );
 
-  // Handle fetch errors
+  // (Re)arm the poll interval; always clears the previous one first so
+  // intervals can never stack.
+  const armInterval = useCallback((): void => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+    }
+    pollingRef.current = setInterval((): void => {
+      void refreshRef.current();
+    }, configRef.current.interval);
+  }, []);
+
+  // Handle fetch errors. Stable identity: reads volatile values via refs.
   const handleError = useCallback(
     (err: Error, refresh: () => Promise<void>): void => {
       setIsLoading(false);
       setError(err.message);
       // Show stale banner if we have data but error occurred
-      if (aircraft.size > 0) {
+      if (aircraftSizeRef.current > 0) {
         setShowStaleBanner(true);
         setStaleMessage(i18n.t('stale.connection', 'Gegevens niet up-to-date: verbindingsfout'));
       }
+      if (retryRef.current) {
+        clearTimeout(retryRef.current);
+        retryRef.current = null;
+      }
+
+      // 429: do not retry. Pause the whole poll loop, then resume.
+      if (err instanceof RateLimitError) {
+        if (pollingRef.current) {
+          clearInterval(pollingRef.current);
+          pollingRef.current = null;
+        }
+        const base = err.retryAfterMs ?? DEFAULT_RATE_LIMIT_PAUSE_MS;
+        const delay = Math.max(base, 1000) + Math.random() * 2000;
+        retryRef.current = setTimeout((): void => {
+          retryRef.current = null;
+          if (!pollingActiveRef.current || !mountedRef.current) {
+            return;
+          }
+          retryCountRef.current = 0;
+          armInterval();
+          void refresh();
+        }, delay);
+        return;
+      }
+
       // Retry if configured
       if (
-        retryCountRef.current < pollingConfig.maxRetries &&
-        pollingConfig.enabled
+        retryCountRef.current < configRef.current.maxRetries &&
+        configRef.current.enabled &&
+        pollingActiveRef.current
       ) {
         retryCountRef.current += 1;
         retryRef.current = setTimeout((): void => {
+          retryRef.current = null;
           void refresh();
-        }, pollingConfig.retryDelay * retryCountRef.current);
+        }, configRef.current.retryDelay * retryCountRef.current);
       }
     },
-    [aircraft.size, pollingConfig.maxRetries, pollingConfig.retryDelay, pollingConfig.enabled],
+    [armInterval],
   );
 
-  // Refresh aircraft data
+  // Refresh aircraft data. Stable identity; never runs two requests at once.
   const refreshAircraft = useCallback(async (): Promise<void> => {
-    if (!pollingConfig.enabled) {
+    if (!configRef.current.enabled || inFlightRef.current) {
       return;
     }
+    inFlightRef.current = true;
     // Only show the loading banner before the first successful fetch;
     // routine background refreshes keep the previous data on screen.
     setIsLoading(!hasLoadedOnceRef.current);
@@ -208,18 +260,24 @@ export function useAircraftData(
         updateAircraft(data);
       }
     } catch (err) {
-      handleError(
-        err instanceof Error ? err : new Error('Unknown error'),
-        refreshAircraft,
-      );
+      if (mountedRef.current) {
+        handleError(
+          err instanceof Error ? err : new Error('Unknown error'),
+          refreshRef.current,
+        );
+      }
+    } finally {
+      inFlightRef.current = false;
     }
-  }, [pollingConfig.enabled, fetchAircraftData, updateAircraft, handleError]);
+  }, [fetchAircraftData, updateAircraft, handleError]);
+  refreshRef.current = refreshAircraft;
 
   // Start polling
   const startPolling = useCallback((): void => {
-    if (isPolling) {
+    if (pollingActiveRef.current) {
       return;
     }
+    pollingActiveRef.current = true;
     setIsPolling(true);
     setError(null);
     retryCountRef.current = 0;
@@ -228,24 +286,26 @@ export function useAircraftData(
     void refreshAircraft();
 
     // Poll interval
-    pollingRef.current = setInterval((): void => {
-      void refreshAircraft();
-    }, pollingConfig.interval);
+    armInterval();
 
     // Periodically check whether data is going stale
+    if (staleCheckRef.current) {
+      clearInterval(staleCheckRef.current);
+    }
     staleCheckRef.current = setInterval((): void => {
       setLastUpdate((last) => {
-        if (last != null && Date.now() - last > pollingConfig.interval * 3) {
+        if (last != null && Date.now() - last > configRef.current.interval * 3) {
           setShowStaleBanner(true);
           setStaleMessage(i18n.t('stale.outdated', 'Gegevens mogelijk verouderd'));
         }
         return last;
       });
-    }, pollingConfig.interval);
-  }, [isPolling, pollingConfig.interval, refreshAircraft]);
+    }, configRef.current.interval);
+  }, [armInterval, refreshAircraft]);
 
   // Stop polling
   const stopPolling = useCallback((): void => {
+    pollingActiveRef.current = false;
     setIsPolling(false);
     if (pollingRef.current) {
       clearInterval(pollingRef.current);

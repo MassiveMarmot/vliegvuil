@@ -7,6 +7,7 @@
 // Response shape verified against https://api.adsb.lol/v2/point/{lat}/{lon}/{radius}
 // (radius in nautical miles, max 250); fixture: core/__tests__/fixtures/adsb-lol-point.json
 import { PositionProvider } from './PositionProvider';
+import { RateLimitError, parseRetryAfter } from './types';
 import type {
   AircraftPosition,
   BoundingBox,
@@ -93,11 +94,20 @@ export class AdsblolProvider extends PositionProvider {
     });
   }
 
-  async fetchFromSource(bbox: BoundingBox): Promise<AircraftPosition[]> {
+  async fetchFromSource(
+    bbox: BoundingBox,
+    signal?: AbortSignal,
+  ): Promise<AircraftPosition[]> {
     const url = this.buildUrl(bbox);
     const response = await fetch(url, {
       headers: { Accept: 'application/json' },
+      signal,
     });
+    if (response.status === 429) {
+      throw new RateLimitError(
+        parseRetryAfter(response.headers?.get?.('Retry-After')),
+      );
+    }
     if (!response.ok) {
       throw new Error(
         `ADS-B.lol API error: ${response.status} ${response.statusText}`,
