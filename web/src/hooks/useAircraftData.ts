@@ -63,9 +63,15 @@ export function toDisplayAircraft(
   };
 }
 
-/** Provider factory: real adsb.lol provider via configurable base URL */
+/**
+ * Provider factory: real adsb.lol provider via configurable base URL.
+ * Retries live in this hook (maxRetries/retryDelay), so the provider is
+ * configured with maxRetries: 1 to avoid stacking retry loops: a failure
+ * otherwise triggered 3 provider attempts per hook retry (3x), i.e. up
+ * to 9 upstream requests per poll cycle.
+ */
 export function createProvider(apiBase: string): PositionProvider {
-  return createAdsblolProvider({ baseUrl: apiBase });
+  return createAdsblolProvider({ baseUrl: apiBase, maxRetries: 1 });
 }
 
 // Hook return type
@@ -108,6 +114,7 @@ export function useAircraftData(
   const retryRef = useRef<NodeJS.Timeout | null>(null);
   const providerRef = useRef<PositionProvider | null>(null);
   const retryCountRef = useRef(0);
+  const hasLoadedOnceRef = useRef(false);
   const mountedRef = useRef(true);
 
   const fetchAircraftData = useCallback(
@@ -153,6 +160,7 @@ export function useAircraftData(
       });
       setLastUpdate(Date.now());
       setIsLoading(false);
+      hasLoadedOnceRef.current = true;
       setError(null);
       retryCountRef.current = 0;
       setShowStaleBanner(false);
@@ -190,7 +198,9 @@ export function useAircraftData(
     if (!pollingConfig.enabled) {
       return;
     }
-    setIsLoading(true);
+    // Only show the loading banner before the first successful fetch;
+    // routine background refreshes keep the previous data on screen.
+    setIsLoading(!hasLoadedOnceRef.current);
     setLastPollTime(Date.now());
     try {
       const data = await fetchAircraftData();
