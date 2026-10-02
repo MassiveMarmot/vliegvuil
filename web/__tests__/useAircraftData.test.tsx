@@ -183,4 +183,26 @@ describe('useAircraftData', () => {
     expect(ac.track).toBe(0);
     expect(ac.symbolRotate).toBe(0);
   });
+  it('does not show the loading banner during routine background refreshes', async () => {
+    fetchPositions.mockResolvedValue([position()]);
+    const { result } = renderHook(() =>
+      useAircraftData({ interval: 5000 }),
+    );
+    act(() => {
+      result.current.startPolling();
+    });
+    // First fetch: banner visible until data arrives
+    await vi.waitFor(() => {
+      expect(result.current.aircraft.size).toBe(1);
+    });
+    expect(result.current.isLoading).toBe(false);
+    // Next poll cycle completes: isLoading must stay false throughout
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    await vi.waitFor(() => {
+      expect(fetchPositions.mock.calls.length).toBe(2);
+    });
+    expect(result.current.isLoading).toBe(false);
+  });
 });
