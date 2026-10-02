@@ -84,6 +84,9 @@ External safety contours
 Natura 2000
 PMTiles basemap on the VPS
 CO₂/emissions layer — Climate TRACE API (satellite/ML-derived, per-facility and per-flight aviation sector, free, no auth) as primary; Google Travel Impact Model API (per-passenger, CC BY-SA 4.0, future commercial flights only) as a complementary passenger-footprint feature
+Airspace structure layer (NL) — LVNL Geoportaal official airspace polygons (CTR, TMA, CTA, TSA/TRA, danger/restricted areas; free GeoJSON download for the Dutch FIR EHAA); openAIP (CC BY-NC) and open flightmaps as alternatives. Same build-time pipeline as the noise contours: simplify → GeoJSON → maplibre fill layer
+ATS route network (Europe) — published airways; EUROCONTROL DDR/NM B2B data is registration-restricted to ATM stakeholders, so this depends on openAIP's airway coverage or an access request; revisit availability
+Actual flown corridors (NL/Europe) — derived, not official: density heatmap or per-airport departure/arrival track bundles computed from historical ADS-B (adsb.lol ODbL bulk dumps, or OpenSky historical with research registration). Measured traffic, not modelled — fits §9; heavier build (needs a history pipeline), but no official open equivalent exists
 Native apps
 Live noise sensors
 Schiphol flight API (free with registration)
