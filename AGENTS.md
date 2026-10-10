@@ -8,7 +8,7 @@ Read docs/SPEC.md and docs/BUILD.md before every task, then the session file nam
 - Every module ships with Vitest tests. Before finishing run `pnpm lint && pnpm typecheck && pnpm test`, and report the results in the PR description.
 - All UI strings via i18next (`/locales/nl.json`, `/locales/en.json`). No hard-coded text.
 - Privacy: no analytics, no third-party scripts/fonts, no IP logging, strict CSP. Only third-party request: PDOK tiles.
-- Every data layer shows source, date, licence (from `sources.json`). No medical claims; no causal claims about airports unless an official study is cited.
+- Every data layer links to its entry on the Attribution page, which shows source, date, licence and caveats; the legend or badge shows a one-line essential (what, year, annual average). No medical claims; no causal claims about airports unless an official study is cited.
 - New dependency: state name, licence, reason in the PR. Prefer MIT/Apache/BSD/MPL.
 - Do not invent URLs, licences or API fields. If you cannot verify one by fetching the official page, leave a TODO with the link to check.
 - One task per session, one branch/PR per task, PR description lists: what changed, what was verified, what was not.

@@ -26,7 +26,11 @@
     "opened": "Noise contours shown",
     "closed": "Noise contours hidden",
     "kindActual": "actual traffic",
-    "kindPermitted": "permitted use"
+    "kindPermitted": "permitted use",
+    "layerName": "Noise contours",
+    "essential": "Annual average, not live",
+    "year": "Year: {{year}}",
+    "sourcesLink": "Sources and details"
   },
   "telemetry": {
     "title": "Aircraft details",
@@ -77,7 +81,19 @@
     "dataAgeStale": "Newer data may be available; this dataset was last updated on {{date}}.",
     "dataAgeStaleIcon": "Warning: dataset may be outdated",
     "lastChecked": "Data last checked on {{date}}",
-    "referenceYear": "Reference year: {{year}}"
+    "referenceYear": "Reference year: {{year}}",
+    "referenceYears": "Years: {{years}}",
+    "sectionAircraft": "Aircraft (live)",
+    "sectionNoise": "Noise contours",
+    "sectionAirports": "Airports",
+    "sectionBasemap": "Basemap",
+    "sectionAircraftDatabase": "Aircraft database",
+    "kindNote": "Some contours show permitted use: the noise the airport is allowed to cause within its government limits. Others show actual traffic: the noise measured or calculated for real flights in that year.",
+    "caveatAircraft": "Positions are live ADS-B reports, refreshed every few seconds; a missing aircraft is not proof it is not flying.",
+    "caveatNoise": "Contours show the annual average noise load, not live noise.",
+    "caveatAirports": "Airport locations and details are reference data, updated occasionally.",
+    "caveatBasemap": "The basemap shows the Netherlands in detail; abroad only country borders are shown. Borders are indicative, not a legal boundary.",
+    "caveatAircraftDatabase": "Registration and type details come from a community database and may be incomplete or outdated."
   },
   "banner": {
     "loading": "Loading...",

@@ -82,6 +82,7 @@ function App(): React.ReactElement {
   const [noiseContours, setNoiseContours] = useState<NoiseContours | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showAttribution, setShowAttribution] = useState(false);
+  const [attributionFocusSection, setAttributionFocusSection] = useState<string | undefined>(undefined);
   const [units, setUnits] = useState<UnitSettings>(DEFAULT_UNITS);
 
   // Load persisted settings on mount (spec §2: localStorage only)
@@ -142,6 +143,13 @@ function App(): React.ReactElement {
     setNoiseEnabled(enabled);
     announce(enabled ? t('noise.opened', 'Geluidscontouren getoond') : t('noise.closed', 'Geluidscontouren verborgen'));
   }, [announce, t]);
+
+  // Open the Attribution page at the noise layer section (App owns navigation;
+  // session 25 can swap this for a route plus #anchor)
+  const handleOpenNoiseSources = useCallback((): void => {
+    setAttributionFocusSection('noise');
+    setShowAttribution(true);
+  }, []);
 
   // Load the noise contour snapshot (built by data-build, spec §5)
   useEffect((): (() => void) => {
@@ -266,11 +274,12 @@ function App(): React.ReactElement {
         </Suspense>
       </MapErrorBoundary>
 
-      {/* Noise overlay toggle + legend (session 10) */}
+      {/* Noise overlay toggle + legend (session 10; compact legend follow-up) */}
       <NoiseOverlay
         enabled={noiseEnabled}
         onToggle={handleToggleNoise}
         contours={noiseContours}
+        onOpenSources={handleOpenNoiseSources}
       />
 
       {/* Info overlay */}
@@ -376,9 +385,15 @@ function App(): React.ReactElement {
         onUnitsChange={setUnits}
       />
 
-      {/* Attribution page (session 11) */}
+      {/* Attribution page (session 11); focusSection deep-links to a layer section */}
       {showAttribution && (
-        <AttributionPage onClose={(): void => setShowAttribution(false)} />
+        <AttributionPage
+          onClose={(): void => {
+            setShowAttribution(false);
+            setAttributionFocusSection(undefined);
+          }}
+          focusSectionId={attributionFocusSection}
+        />
       )}
     </div>
   );
