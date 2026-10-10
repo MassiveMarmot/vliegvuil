@@ -41,6 +41,8 @@ jobs:
           node-version: '22'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # The service-worker precache test asserts against web/dist/sw.js
+      - run: pnpm --filter @vliegvuil/web build
       - run: pnpm test
 
   build:

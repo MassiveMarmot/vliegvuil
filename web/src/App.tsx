@@ -3,8 +3,12 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // Main application component
 
-import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
-import { Map, SimpleBanner, TelemetryPanel, SearchBox, AircraftList, NoiseOverlay, SettingsPanel, AttributionPage } from './components';
+import React, { useEffect, useState, useCallback, useRef, useMemo, lazy, Suspense } from 'react';
+import { SimpleBanner, TelemetryPanel, SearchBox, AircraftList, NoiseOverlay, SettingsPanel, AttributionPage } from './components';
+// MapLibre is the heaviest dependency (~1 MB); load it in its own chunk.
+// The direct module path keeps the components barrel (which re-exports Map)
+// from pulling maplibre-gl into the initial bundle.
+const Map = lazy(() => import('./components/Map'));
 import { useAircraftData } from './hooks';
 import { useSmoothedAircraft } from './movement/useSmoothedAircraft';
 import { useTranslation } from 'react-i18next';
@@ -247,14 +251,16 @@ function App(): React.ReactElement {
         onSelect={handleAircraftSelect}
       />
 
-      {/* Map */}
-      <Map
-        aircraft={smoothedPositions.size > 0 ? smoothedAircraft : aircraft}
-        selectedAircraftId={selectedAircraftId}
-        onAircraftClick={handleAircraftClick}
-        noiseContours={noiseContours ? noiseContoursToGeoJson(noiseContours) : null}
-        noiseEnabled={noiseEnabled}
-      />
+      {/* Map (lazy-loaded MapLibre chunk) */}
+      <Suspense fallback={<div className="map-container" role="status" aria-label={t('app.loading', 'Laden...')} />}>
+        <Map
+          aircraft={smoothedPositions.size > 0 ? smoothedAircraft : aircraft}
+          selectedAircraftId={selectedAircraftId}
+          onAircraftClick={handleAircraftClick}
+          noiseContours={noiseContours ? noiseContoursToGeoJson(noiseContours) : null}
+          noiseEnabled={noiseEnabled}
+        />
+      </Suspense>
 
       {/* Noise overlay toggle + legend (session 10) */}
       <NoiseOverlay
