@@ -107,3 +107,10 @@ vliegvuil.nl {
 		file_server
 	}
 }
+
+# www.vliegvuil.nl: redirect to the apex. The www CNAME in the DNS zone
+# points at the apex, so Caddy obtains a certificate for www too and
+# every request is moved to the canonical host in one hop.
+www.vliegvuil.nl {
+	redir https://vliegvuil.nl{uri} permanent
+}
