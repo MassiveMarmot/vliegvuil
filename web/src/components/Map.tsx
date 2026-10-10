@@ -6,7 +6,7 @@
 import React, { useEffect } from 'react';
 import maplibregl, { SymbolLayerSpecification, MapLayerMouseEvent } from 'maplibre-gl';
 import type { DisplayAircraft } from '../types';
-import { useMap } from '../hooks';
+import { useMap } from '../hooks/useMap';
 import { DEFAULT_MAP_CONFIG, PDOK_BRT_STYLE } from '../types';
 import { NOISE_FILL_OPACITY, noiseFillExpression } from '../noiseStyle';
 import {

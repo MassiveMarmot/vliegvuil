@@ -1,8 +1,9 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
-// Export all components
-export { Map } from './Map';
+// Export all components. Map is deliberately NOT re-exported here: it
+// imports maplibre-gl (~1 MB) and App lazy-loads it directly from
+// './components/Map' so the initial chunk stays small (session 24).
 export {
   ALTITUDE_BANDS,
   SELECTED_ICON_ID,

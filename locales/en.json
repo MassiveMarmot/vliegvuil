@@ -11,7 +11,9 @@
     "toggleNoise": "Show noise contours",
     "staleData": "Data is stale",
     "noData": "No data available",
-    "hideNoise": "Hide noise contours"
+    "hideNoise": "Hide noise contours",
+    "loadError": "The map failed to load. Reload the page to get the latest version.",
+    "reload": "Reload"
   },
   "noise": {
     "legendTitle": "Noise contours legend",
