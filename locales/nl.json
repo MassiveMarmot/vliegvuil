@@ -11,7 +11,9 @@
     "toggleNoise": "Toon geluidscontouren",
     "staleData": "Gegevens zijn verouderd",
     "noData": "Geen gegevens beschikbaar",
-    "hideNoise": "Verberg geluidscontouren"
+    "hideNoise": "Verberg geluidscontouren",
+    "loadError": "De kaart kan niet worden geladen. Herlaad de pagina om de nieuwste versie te gebruiken.",
+    "reload": "Herlaad"
   },
   "noise": {
     "legendTitle": "Legenda geluidscontouren",
