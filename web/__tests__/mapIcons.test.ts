@@ -74,7 +74,7 @@ describe('altitude band icons', () => {
 
 describe('basemap', () => {
   it('uses the PDOK BRT WMTS on service.pdok.nl in EPSG:3857', () => {
-    expect(PDOK_BRT_TILE_URL).toContain('https://service.pdok.nl/kadaster/brt-achtergrondkaart/wmts/v2_0/');
+    expect(PDOK_BRT_TILE_URL).toContain('https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/');
     expect(PDOK_BRT_TILE_URL).toContain('EPSG:3857');
     expect(PDOK_BRT_TILE_URL).toContain('{z}/{x}/{y}.png');
     expect(PDOK_BRT_TILE_URL).not.toContain('nationaalgeoregister');
