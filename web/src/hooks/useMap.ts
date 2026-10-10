@@ -18,7 +18,7 @@ const NEIGHBOURS_ATTRIBUTION = 'Made with Natural Earth';
 // Flat, muted colours that sit under the BRT map without competing with it
 // (palette per SPEC \u00a73: cream/sand land, soft blue-grey water).
 const NEIGHBOURS_FILL_COLOR = '#efe7d9';
-const NEIGHBOURS_BORDER_COLOR = '#c9bfae';
+const NEIGHBOURS_BORDER_COLOR = '#8c7f6b';
 const MAP_BACKGROUND_COLOR = '#b8c6cc';
 
 // Hook return type
@@ -84,7 +84,7 @@ export function useMap(config: MapConfig, _style?: MapStyle): UseMapReturn {
               source: NEIGHBOURS_SOURCE_ID,
               paint: {
                 'line-color': NEIGHBOURS_BORDER_COLOR,
-                'line-width': 0.8,
+                'line-width': 1.5,
               },
             },
             {
