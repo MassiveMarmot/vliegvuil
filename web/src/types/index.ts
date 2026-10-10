@@ -100,7 +100,7 @@ export const DEFAULT_MAP_CONFIG: MapConfig = {
 // PDOK BRT Achtergrondkaart WMTS (verified against the GetCapabilities
 // document, EPSG:3857 tile matrix set; see session 17 PR for the excerpt)
 export const PDOK_BRT_TILE_URL =
-  'https://service.pdok.nl/kadaster/brt-achtergrondkaart/wmts/v2_0/standaard/EPSG:3857/{z}/{x}/{y}.png';
+  'https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/standaard/EPSG:3857/{z}/{x}/{y}.png';
 
 export const PDOK_BRT_ATTRIBUTION = 'Kaartgegevens © PDOK / Kadaster';
 
