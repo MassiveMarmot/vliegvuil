@@ -135,6 +135,23 @@
         "method": "manual",
         "url": "https://www.clo.nl/indicatoren/nl0588"
       }
+    },
+    {
+      "id": "natural-earth-neighbours",
+      "name": "Natural Earth — admin 0 countries",
+      "url": "https://www.naturalearthdata.com/downloads/50m-cultural-vectors/",
+      "license": "Public domain (no attribution required)",
+      "licenseUrl": "https://www.naturalearthdata.com/about/terms-of-use/",
+      "dataType": "Country borders of states neighbouring the Netherlands (map context layer)",
+      "updateFrequency": "static (version 5.1.1), re-clip only when Natural Earth publishes a new version",
+      "lastUpdated": "2026-10-10",
+      "notes": "ne_50m_admin_0_countries v5.1.1, clipped to 47-58N, 4W-16E, Netherlands removed (covered by the PDOK BRT basemap), coordinates rounded to 4 decimals. Terms of use (verified 2026-10-10): 'All versions of Natural Earth raster + vector map data found on this website are in the public domain.' Served same-origin as web/public/data/neighbours.geojson (~38 KB); no third-party request. Generalised 1:50m data: borders are indicative, not a legal boundary.",
+      "upstream": {
+        "method": "manual",
+        "url": "https://naciscdn.org/naturalearth/50m/cultural/ne_50m_admin_0_countries.zip"
+      },
+      "retrievedAt": "2026-10-10",
+      "checkedAt": "2026-10-10T00:00:00.000Z"
     }
   ]
 }

@@ -8,6 +8,19 @@ import maplibregl, { Map as MapLibreMap, LngLatBounds } from 'maplibre-gl';
 import type { MapConfig, MapStyle } from '../types';
 import { NETHERLANDS_BBOX, getBasemapUrl, PDOK_BRT_ATTRIBUTION } from '../types';
 
+// Country context for bordering states: the PDOK BRT basemap renders only the
+// Netherlands (abroad is transparent by design), so neighbouring countries
+// come from a bundled public-domain Natural Earth clip (same origin, ~38 KB).
+const NEIGHBOURS_SOURCE_ID = 'neighbours';
+const NEIGHBOURS_GEOJSON_URL = '/data/neighbours.geojson';
+const NEIGHBOURS_ATTRIBUTION = 'Made with Natural Earth';
+
+// Flat, muted colours that sit under the BRT map without competing with it
+// (palette per SPEC \u00a73: cream/sand land, soft blue-grey water).
+const NEIGHBOURS_FILL_COLOR = '#efe7d9';
+const NEIGHBOURS_BORDER_COLOR = '#c9bfae';
+const MAP_BACKGROUND_COLOR = '#b8c6cc';
+
 // Hook return type
 export interface UseMapReturn {
   mapContainer: React.RefObject<HTMLDivElement>;
@@ -37,6 +50,11 @@ export function useMap(config: MapConfig, _style?: MapStyle): UseMapReturn {
         style: {
           version: 8,
           sources: {
+            neighbours: {
+              type: 'geojson',
+              data: NEIGHBOURS_GEOJSON_URL,
+              attribution: NEIGHBOURS_ATTRIBUTION,
+            },
             'pdok-brt': {
               type: 'raster',
               tiles: [getBasemapUrl()],
@@ -45,6 +63,30 @@ export function useMap(config: MapConfig, _style?: MapStyle): UseMapReturn {
             },
           },
           layers: [
+            {
+              id: 'background',
+              type: 'background',
+              paint: {
+                'background-color': MAP_BACKGROUND_COLOR,
+              },
+            },
+            {
+              id: 'neighbours-fill',
+              type: 'fill',
+              source: NEIGHBOURS_SOURCE_ID,
+              paint: {
+                'fill-color': NEIGHBOURS_FILL_COLOR,
+              },
+            },
+            {
+              id: 'neighbours-border',
+              type: 'line',
+              source: NEIGHBOURS_SOURCE_ID,
+              paint: {
+                'line-color': NEIGHBOURS_BORDER_COLOR,
+                'line-width': 0.8,
+              },
+            },
             {
               id: 'pdok-brt-layer',
               type: 'raster',
