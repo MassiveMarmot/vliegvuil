@@ -561,6 +561,31 @@ commit the result to a branch and open a PR by hand. See
     control, pin versions in the `xcaddy build` command instead.
   - This is a small piece of infrastructure you own: keep it simple, and
     update it in the same sitting whenever the module set or paths change.
+- **Reading memory usage.** Judge memory by the `available` column of
+  `free -h` (`MemAvailable`), not by `used` or `free`. Linux fills spare RAM
+  with reclaimable page cache by design, so a 4 GB VPS that shows only a few
+  hundred MB "free" is healthy, not leaking. The long-running processes are
+  Caddy and little else; a high `buff/cache` value is expected. Use
+  `systemctl status caddy` / `ps -o rss= -C caddy` if you want the actual
+  Caddy RSS.
+- **Optional: cap Caddy's Go heap.** As a safety net against a future cache
+  or module regression growing the Go heap, you can give Caddy a soft memory
+  limit with a systemd drop-in. It is not needed today (measured Caddy RSS
+  is tens of MB); add it only if you want the guarantee:
+  ```bash
+  sudo mkdir -p /etc/systemd/system/caddy.service.d
+  sudo tee /etc/systemd/system/caddy.service.d/90-gomemlimit.conf >/dev/null <<'CONF'
+  [Service]
+  Environment=GOMEMLIMIT=1GiB
+  CONF
+  sudo systemctl daemon-reload
+  sudo systemctl restart caddy
+  ```
+  `GOMEMLIMIT` is a soft limit: the Go garbage collector runs harder as the
+  heap approaches it instead of letting it grow without bounds. Pick a
+  value well below the VPS RAM (1 GiB on the 4 GB VPS leaves ample room for
+  page cache and peaks); if Caddy ever needs more, raise it or remove the
+  drop-in.
 - **System updates.** Unattended upgrades handle security patches. After
   kernel updates, reboot when `/var/run/reboot-required` exists.
 - **Node, Go and pnpm.** Keep Node in line with CI (Node 22), pnpm with the
