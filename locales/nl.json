@@ -26,7 +26,11 @@
     "opened": "Geluidscontouren getoond",
     "closed": "Geluidscontouren verborgen",
     "kindActual": "werkelijk verkeer",
-    "kindPermitted": "vergund gebruik"
+    "kindPermitted": "vergund gebruik",
+    "layerName": "Geluidscontouren",
+    "essential": "Jaargemiddelde, niet live",
+    "year": "Jaar: {{year}}",
+    "sourcesLink": "Bronnen en details"
   },
   "telemetry": {
     "title": "Vliegtuigdetails",
@@ -77,7 +81,19 @@
     "dataAgeStale": "Nieuwere data is mogelijk beschikbaar; deze dataset is voor het laatst bijgewerkt op {{date}}.",
     "dataAgeStaleIcon": "Waarschuwing: dataset is mogelijk verouderd",
     "lastChecked": "Data voor het laatst gecontroleerd op {{date}}",
-    "referenceYear": "Referentiejaar: {{year}}"
+    "referenceYear": "Referentiejaar: {{year}}",
+    "referenceYears": "Jaren: {{years}}",
+    "sectionAircraft": "Vliegtuigen (live)",
+    "sectionNoise": "Geluidscontouren",
+    "sectionAirports": "Luchthavens",
+    "sectionBasemap": "Achtergrondkaart",
+    "sectionAircraftDatabase": "Vliegtuigdatabase",
+    "kindNote": "Sommige contouren laten vergund gebruik zien: het geluid dat de luchthaven mag veroorzaken binnen de overheidsgrenzen. Andere laten werkelijk verkeer zien: het geluid dat voor de echte vluchten in dat jaar is gemeten of berekend.",
+    "caveatAircraft": "Posities zijn live ADS-B-meldingen die elke paar seconden worden ververst; een ontbrekend vliegtuig is geen bewijs dat het niet vliegt.",
+    "caveatNoise": "Contouren tonen het jaargemiddelde van de geluidsbelasting, geen live geluid.",
+    "caveatAirports": "Luchthavenlocaties en -gegevens zijn referentiedata die af en toe worden bijgewerkt.",
+    "caveatBasemap": "De achtergrondkaart toont Nederland in detail; in het buitenland zijn alleen landsgrenzen zichtbaar. Grenzen zijn indicatief, geen juridische grens.",
+    "caveatAircraftDatabase": "Registratie- en typegegevens komen uit een communitydatabase en kunnen onvolledig of verouderd zijn."
   },
   "banner": {
     "loading": "Laden...",

@@ -1,8 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { vi } from 'vitest';
 import React from 'react';
-import { NoiseOverlay, NoiseBadge, buildLegendEntries } from '../src/components/NoiseOverlay';
+import { NoiseOverlay, NoiseBadge, buildLegendEntries, buildBandRows } from '../src/components/NoiseOverlay';
 import type { NoiseContours } from '@vliegvuil/core';
 
 function makeContours(): NoiseContours {
@@ -87,7 +86,34 @@ describe('buildLegendEntries', (): void => {
   });
 });
 
-describe('NoiseOverlay', (): void => {
+describe('buildBandRows', (): void => {
+  it('groups entries into one row per band, sorted by dB', (): void => {
+    const rows = buildBandRows(buildLegendEntries(makeContours()));
+    expect(rows.map((r): number => r.bandLowerDb)).toEqual([55, 56, 70]);
+    expect(rows.every((r): boolean => r.metric === 'Lden')).toBe(true);
+  });
+
+  it('merges kinds per band', (): void => {
+    const entries = [
+      ...buildLegendEntries(makeContours()),
+      {
+        airport: 'EHGR',
+        year: 2024,
+        bandLowerDb: 55,
+        metric: 'Lden',
+        kind: 'permitted' as const,
+        source: 'CLO/NLR',
+        license: 'CC-BY',
+      },
+    ];
+    const rows = buildBandRows(entries);
+    const band55 = rows.find((r): boolean => r.bandLowerDb === 55);
+    expect(band55?.kinds).toContain('actual');
+    expect(band55?.kinds).toContain('permitted');
+  });
+});
+
+describe('NoiseOverlay (compact legend)', (): void => {
   it('renders nothing without contour data', (): void => {
     const { container } = render(
       <NoiseOverlay enabled={false} onToggle={(): void => {}} contours={null} />,
@@ -106,20 +132,98 @@ describe('NoiseOverlay', (): void => {
     expect(onToggle).toHaveBeenCalledWith(true);
   });
 
-  it('shows legend with band, airport and year when enabled', (): void => {
+  it('shows compact legend with essential line, year and grouped band rows when enabled', (): void => {
     render(<NoiseOverlay enabled={true} onToggle={(): void => {}} contours={makeContours()} />);
     const legend = screen.getByTestId('noise-legend');
-    expect(legend.textContent).toContain('EHAM');
+    expect(legend.textContent).toContain('Annual average, not live');
     expect(legend.textContent).toContain('2024');
     expect(legend.textContent).toContain('Lden');
-    expect(legend.textContent).toContain('annual average');
     expect(screen.getByTestId('noise-swatch-70')).toBeDefined();
     expect(screen.getByTestId('noise-swatch-55')).toBeDefined();
+    expect(screen.getByTestId('noise-swatch-56')).toBeDefined();
   });
 
-  it('shows the Eindhoven civil caveat', (): void => {
+  it('fires the sources callback from the legend link', (): void => {
+    const onOpenSources = vi.fn();
+    render(
+      <NoiseOverlay
+        enabled={true}
+        onToggle={(): void => {}}
+        contours={makeContours()}
+        onOpenSources={onOpenSources}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('noise-legend-sources'));
+    expect(onOpenSources).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('NoiseOverlay (narrow viewport chip + sheet)', (): void => {
+  let matchMediaSpy: ReturnType<typeof vi.fn>;
+
+  beforeEach((): void => {
+    matchMediaSpy = vi.fn().mockImplementation((query: string) => ({
+      matches: true,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+    vi.stubGlobal('matchMedia', matchMediaSpy);
+  });
+
+  it('starts collapsed as a chip with aria-expanded=false on narrow viewports', (): void => {
     render(<NoiseOverlay enabled={true} onToggle={(): void => {}} contours={makeContours()} />);
-    expect(screen.getByTestId('noise-legend').textContent).toContain('civil traffic only');
+    const chip = screen.getByTestId('noise-legend-chip');
+    expect(chip.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByTestId('noise-legend-sheet')).toBeNull();
+  });
+
+  it('expands the sheet on chip click and toggles aria-expanded', (): void => {
+    render(<NoiseOverlay enabled={true} onToggle={(): void => {}} contours={makeContours()} />);
+    const chip = screen.getByTestId('noise-legend-chip');
+    fireEvent.click(chip);
+    expect(chip.getAttribute('aria-expanded')).toBe('true');
+    expect(screen.getByTestId('noise-legend-sheet')).toBeDefined();
+    expect(screen.getByTestId('noise-swatch-55')).toBeDefined();
+    fireEvent.click(chip);
+    expect(chip.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByTestId('noise-legend-sheet')).toBeNull();
+  });
+
+  it('closes the sheet with the close button and returns focus to the chip', (): void => {
+    render(<NoiseOverlay enabled={true} onToggle={(): void => {}} contours={makeContours()} />);
+    const chip = screen.getByTestId('noise-legend-chip');
+    fireEvent.click(chip);
+    const close = screen.getByTestId('noise-legend-close');
+    fireEvent.click(close);
+    expect(chip.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByTestId('noise-legend-sheet')).toBeNull();
+    expect(document.activeElement).toBe(chip);
+  });
+
+  it('closes the sheet on Esc and returns focus to the chip', (): void => {
+    render(<NoiseOverlay enabled={true} onToggle={(): void => {}} contours={makeContours()} />);
+    const chip = screen.getByTestId('noise-legend-chip');
+    fireEvent.click(chip);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(chip.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByTestId('noise-legend-sheet')).toBeNull();
+    expect(document.activeElement).toBe(chip);
+  });
+
+  it('fires the sources callback from the sheet link', (): void => {
+    const onOpenSources = vi.fn();
+    render(
+      <NoiseOverlay
+        enabled={true}
+        onToggle={(): void => {}}
+        contours={makeContours()}
+        onOpenSources={onOpenSources}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('noise-legend-chip'));
+    fireEvent.click(screen.getByTestId('noise-legend-sources'));
+    expect(onOpenSources).toHaveBeenCalledTimes(1);
   });
 });
 

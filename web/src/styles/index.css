@@ -677,11 +677,103 @@ body {
   color: #555;
 }
 
+/* Compact legend (mobile follow-up): chip + bottom sheet under 40rem */
+.noise-legend-chip {
+  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--vv-border);
+  border-radius: 999px;
+  background-color: var(--vv-surface);
+  color: var(--vv-ink);
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.noise-legend-sheet {
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: 4.75rem;
+  max-height: 40vh;
+  overflow-y: auto;
+  background-color: var(--vv-surface);
+  border: 1px solid var(--vv-border);
+  border-radius: var(--vv-radius-md);
+  box-shadow: var(--vv-shadow-soft);
+  padding: 0.75rem 1rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 0.8125rem;
+}
+
+.noise-legend-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.noise-legend-close {
+  border: none;
+  background: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--vv-ink);
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+}
+
+.noise-legend-essential {
+  margin: 0 0 0.25rem;
+  font-weight: 600;
+}
+
+.noise-legend-year {
+  margin: 0 0 0.5rem;
+  color: var(--vv-muted);
+}
+
+.noise-legend-sources {
+  margin-top: 0.5rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--vv-ink);
+  font-family: inherit;
+  font-size: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.attribution-layer {
+  margin: 0 0 1.25rem;
+}
+
+.attribution-layer-heading {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.attribution-years,
+.attribution-kindnote {
+  margin: 0.25rem 0;
+  color: var(--vv-muted);
+  font-size: 0.8125rem;
+}
+
+.attribution-caveat {
+  margin: 0.25rem 0 0.5rem;
+  color: var(--vv-muted);
+  font-size: 0.8125rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .noise-overlay,
   .noise-toggle,
-  .noise-legend {
+  .noise-legend,
+  .noise-legend-chip,
+  .noise-legend-sheet {
     transition: none;
+    animation: none;
   }
 }
 

@@ -97,7 +97,7 @@ Explicitly excluded (reviewed, not integrated):
 Worker health/mortality data — none exists publicly (GDPR, incomplete employer records); link to RIVM/TNO exposure studies instead, no map layer.
 Crowdsourced noise-complaint platforms (vliegherrie.nl, vliegoverlast.nl, schipholherrie.nl) and commercial sensor networks (Sensornet/NINA, donderdorp.nl) — no open API, complaint data is opinion not measurement, or commercial licensing. Link out as "further reading," don't integrate.
 9. "Measurements, not causes" principle
-Every layer shows source, date, license.
+Every layer links to its entry on the Attribution page, which shows source, date, licence and caveats; the legend or badge shows a one-line essential (what, year, annual average).
 Airport attribution stated only where an official study supports it (e.g., Schiphol's PFAS study). UFP: According to TNO (2026, R10578), aviation was the largest source of ultrafine particle-number emissions in the Netherlands in 2024 (41% of particles up to 325 nm). Caveats: only emissions below 914 m are counted; particles below 10 nm are excluded (for aviation these are more than half of the particles); it is an emissions estimate, not exposure. No health effects stated or implied.
 No medical claims.
 No commercial data aggregators as sources.
