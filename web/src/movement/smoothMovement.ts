@@ -91,6 +91,12 @@ export interface AnimationFrameStep {
  * Build the frame scheduler: given a provider of aircraft and a sink for
  * frames, produce a step function for the animation loop. Exposed for
  * unit testing with fake timers.
+ *
+ * Frames whose positions all equal the previously emitted frame are
+ * suppressed: nothing downstream (React state, GeoJSON rebuild, map
+ * source setData) needs to run when no aircraft moved. This keeps idle
+ * scenes (all aircraft grounded, stale data beyond the extrapolation
+ * cap) from allocating a fresh positions Map and re-rendering 10x/s.
  */
 export function createFrameScheduler(
   getAircraft: () => Iterable<ExtrapolatableAircraft>,
@@ -100,6 +106,7 @@ export function createFrameScheduler(
   step: (nowMs: number) => boolean;
 } {
   let lastFrameMs: number | null = null;
+  let lastPositions: Map<string, ExtrapolatedPosition> | null = null;
   return {
     step(nowMs: number): boolean {
       const elapsed =
@@ -107,11 +114,35 @@ export function createFrameScheduler(
       if (elapsed < MIN_FRAME_INTERVAL_MS) {
         return false;
       }
-      lastFrameMs = nowMs;
       const nowSeconds = nowMs / 1000;
       const positions = extrapolateBatch(getAircraft(), nowSeconds);
+      if (lastPositions !== null && positionsEqual(positions, lastPositions)) {
+        lastFrameMs = nowMs;
+        return false;
+      }
+      lastFrameMs = nowMs;
+      lastPositions = positions;
       emitFrame({ nowMs, nowSeconds, positions });
       return true;
     },
   };
+}
+
+function positionsEqual(
+  a: Map<string, ExtrapolatedPosition>,
+  b: Map<string, ExtrapolatedPosition>,
+): boolean {
+  if (a.size !== b.size) {
+    return false;
+  }
+  for (const [id, pos] of a) {
+    const other = b.get(id);
+    if (other === undefined) {
+      return false;
+    }
+    if (pos.lat !== other.lat || pos.lon !== other.lon) {
+      return false;
+    }
+  }
+  return true;
 }

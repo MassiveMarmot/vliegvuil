@@ -124,4 +124,23 @@ describe('createFrameScheduler', () => {
     scheduler.step(200);
     expect(emit.mock.calls[1]?.[0].positions.has('NEW')).toBe(true);
   });
+  it('suppresses frames when no aircraft moved (grounded fleet)', () => {
+    vi.useFakeTimers();
+    getAircraft.mockReturnValue([aircraft({ speed: 0, onGroundSkip: true })]);
+    const scheduler = createFrameScheduler(getAircraft, emit);
+    scheduler.step(0);
+    scheduler.step(200);
+    scheduler.step(400);
+    expect(emit).toHaveBeenCalledTimes(1);
+  });
+  it('emits again once positions change after a suppressed frame', () => {
+    vi.useFakeTimers();
+    getAircraft.mockReturnValue([aircraft({ speed: 0 })]);
+    const scheduler = createFrameScheduler(getAircraft, emit);
+    scheduler.step(0);
+    scheduler.step(200);
+    getAircraft.mockReturnValue([aircraft({ speed: 450, timestamp: 0 })]);
+    scheduler.step(400);
+    expect(emit).toHaveBeenCalledTimes(2);
+  });
 });
