@@ -75,10 +75,10 @@ License: MPL-2.0 for all code (decided). AGPL/GPL-style licenses are awkward for
 Data licenses (ODbL, CC-BY, CC0, CC BY-SA, etc.) listed on the attribution page.
 Funding: NLnet/NGI Zero (EU, FOSS/privacy-focused) is a natural fit — verify the current call. Donations via Liberapay or Open Collective Europe. Confirm the ADS-B provider's terms accept a donation-funded, non-commercial project.
 8. Deferred to v1+
-Atlas air-quality grids (NO₂, PM₂.₅)
+Atlas air-quality grids (NO₂, PM₂.₅) — design note: a PM₂.₅ or NO₂ layer may understate aviation, because per TNO R10578 aviation is about 0.2% of Dutch PM₂.₅ mass emissions (2024) but 41% of particle-number emissions; any such layer must carry a legend note saying so, and concentration grids (Atlas) and emission inventories (Emissieregistratie) must not share a legend
 CBS Wijk- en buurtkaart socio-economic layer
 Water/soil PFAS (Waterkwaliteitsportaal, RIVM/Atlas soil PFAS points, Schiphol's own PFAS study for documented airport attribution)
-Ultrafine particles (RIVM 2017–18 dataset, TNO 2021 — dated, label clearly)
+Ultrafine particles — current national inventory: TNO 2026 R10578, "Particle number emissions of 2022-24 for the Dutch emission inventory" (1 April 2026, for RIVM/Emissieregistratie; ER 1990–2024), replacing the earlier TNO 2021 work. It gives national totals only, with no spatial distribution (the report names spatially distributing the emissions as a next step), so no map layer is possible from it alone. These are emissions, not concentrations or exposure, and TNO says the uncertainties are larger than for NOx or PM₂.₅. Regional emissions study: TNO "Ultrafijnstof in Noord-Brabant" (8 October 2026) — emission map published as an image only; the underlying report TNO-2026-17706 has not been read, so data availability and licence are unknown. Status: deferred to v1+; unblock condition: spatially distributed emissions or modelled concentrations under a verified open licence. Any future UFP layer keeps the "dated, label clearly" principle.
 Leefbaarometer, as context only (its inputs already include noise/air quality — not evidence of an aviation effect)
 External safety contours
 Natura 2000
@@ -98,7 +98,7 @@ Worker health/mortality data — none exists publicly (GDPR, incomplete employer
 Crowdsourced noise-complaint platforms (vliegherrie.nl, vliegoverlast.nl, schipholherrie.nl) and commercial sensor networks (Sensornet/NINA, donderdorp.nl) — no open API, complaint data is opinion not measurement, or commercial licensing. Link out as "further reading," don't integrate.
 9. "Measurements, not causes" principle
 Every layer shows source, date, license.
-Airport attribution stated only where an official study supports it (e.g., Schiphol's PFAS study).
+Airport attribution stated only where an official study supports it (e.g., Schiphol's PFAS study). UFP: According to TNO (2026, R10578), aviation was the largest source of ultrafine particle-number emissions in the Netherlands in 2024 (41% of particles up to 325 nm). Caveats: only emissions below 914 m are counted; particles below 10 nm are excluded (for aviation these are more than half of the particles); it is an emissions estimate, not exposure. No health effects stated or implied.
 No medical claims.
 No commercial data aggregators as sources.
 10. Conflicts found and resolved (cumulative)
@@ -125,3 +125,5 @@ Final provider terms check — RESOLVED 2026-10-02: primary switched to adsb.fi 
 PDOK style compatibility with MapLibre (verify) vs. going straight to PMTiles
 Which Eindhoven contour set to use — RESOLVED: civil Lden, labelled "civil traffic only"; the vector source is still pending (CLO 0588 maps only; see §10).
 Whether Schiphol's Atlas layer offers finer noise bands than the regional 48/56/70 dB set — RESOLVED (session 22): the open vector source is the EU END 2021 set with 5 dB bands (55–75); Schiphol's Atlas WMS raster offers no download, and CLO/NLR regional contours are published as maps only.
+Does the Emissieregistratie data export or maps include particle-number (TPN) data, and under what licence? UNRESOLVED — pages to check: the data export, "Vliegvelden", and "Ruimtelijke verdeling" on emissieregistratie.nl.
+Could the Emissieregistratie "Vliegvelden" page supply airport-level emissions for the session 23 airport popup? UNRESOLVED, not scoped — do not change session 23.
