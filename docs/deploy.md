@@ -374,10 +374,14 @@ sudo systemctl reload caddy
   `X-Forwarded-For` (and friends) deleted and a fixed
   `User-Agent: VliegVuil.nl/1.0 (+https://vliegvuil.nl)`. adsb.fi never
   learns the visitor IP.
-- **Same-origin API.** `connect-src 'self'` is the whole CSP connect policy;
-  there are no third-party API calls and no CORS headers.
-- **Only third-party request from the browser:** PDOK tiles
-  (`https://service.pdok.nl`), allowed in `img-src`.
+- **Same-origin API.** The app makes no third-party API calls and no CORS
+  headers exist. `connect-src` allows `https://service.pdok.nl` in addition
+  to `'self'` because MapLibre GL loads raster tiles via `fetch()`, which is
+  governed by `connect-src`, not `img-src`.
+- **Third-party requests from the browser:** only PDOK tiles
+  (`https://service.pdok.nl`), allowed in both `img-src` and `connect-src`.
+  `worker-src 'self' blob:` permits the PWA service worker (`/sw.js`,
+  same-origin script) plus MapLibre's blob workers.
 - **System logs are a separate thing.** `sshd` logs administrator logins and
   the firewall logging is turned off in the baseline (`ufw logging off`).
 
