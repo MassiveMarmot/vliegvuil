@@ -90,6 +90,7 @@ Actual flown corridors (NL/Europe) — derived, not official: density heatmap or
 Native apps
 Live noise sensors
 Schiphol flight API (free with registration)
+Self-hosted privacy-first analytics (GoatCounter, EUPL-1.2, single binary, SQLite on the VPS): unique visitors, date/time and country of origin only; the visitor IP is processed in memory on the localhost Caddy→GoatCounter route to derive a country and a one-way visit hash, and is never stored or logged; no hosted service, no goatcounter.com account. Planned in session 25c — see docs/sessions/25c-analytics.md and the 25c row in BUILD.md §4. Until 25c ships, the "no analytics" statements in §5 remain true and are updated in that session.
 Accounts, playback, schedules
 
 Explicitly excluded (reviewed, not integrated):
