@@ -93,7 +93,7 @@
     "caveatNoise": "Contours show the annual average noise load, not live noise.",
     "caveatAirports": "Airport locations and details are reference data, updated occasionally.",
     "caveatBasemap": "The basemap shows the Netherlands in detail; abroad only country borders are shown. Borders are indicative, not a legal boundary.",
-    "caveatAircraftDatabase": "Registration and type details come from a community database and may be incomplete or outdated."
+    "caveatAircraftDatabase": "Registration and type details come from a community database and may be incomplete or outdated. The database serves as a fallback: missing registration, type or operator is filled in from the snapshot (see the date above); live data always wins."
   },
   "banner": {
     "loading": "Loading...",
@@ -109,5 +109,12 @@
   "stale": {
     "connection": "Data not up to date: connection error",
     "outdated": "Data may be outdated"
+  },
+  "airport": {
+    "title": "Airport information",
+    "statusCommercial": "Commercial",
+    "statusMilitaryShared": "Military, partly civil aviation",
+    "statusPlanned": "Planned",
+    "selected": "{{name}} selected"
   }
 }

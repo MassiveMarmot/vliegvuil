@@ -28,6 +28,10 @@ describe('service worker precache manifest (app shell only)', () => {
     if (manifest) {
       expect(manifest[1]).not.toMatch(/\/api\//);
       expect(manifest[1]).not.toMatch(/service\.pdok\.nl/);
+      // Session 23: the airport list and the aircraft snapshot load
+      // lazily and stay out of the app-shell precache.
+      expect(manifest[1]).not.toMatch(/airports\.json/);
+      expect(manifest[1]).not.toMatch(/aircraft\.json/);
     }
   });
 
