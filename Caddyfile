@@ -98,6 +98,12 @@ vliegvuil.nl {
 		}
 	}
 
+	# Map glyph ranges are static binary files. They must NOT fall back to
+	# the SPA index.html (a 200 with HTML makes MapLibre's PBF parser fail);
+	# a missing range has to be a real 404.
+	handle /fonts/* {
+		file_server
+	}
 	# SPA routing: serve the file if it exists, otherwise index.html.
 	# Must live inside a catch-all handle: a top-level try_files runs before
 	# handle blocks and would rewrite /api/* to /index.html, bypassing the

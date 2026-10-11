@@ -65,10 +65,23 @@ EOF
 python3 "$WORK/echo.py" "$WORK/headers.json" "$ECHO_PORT" &
 ECHO_PID=$!
 
+# Fixture for the /fonts/* check: one real range, one missing range.
+# The directory name is the shipped font stack; it contains a space, so
+# the test requests the percent-encoded form (as a browser would).
+mkdir -p "$WORK/fonts/Space Grotesk Regular"
+printf 'pbf-fixture' > "$WORK/fonts/Space Grotesk Regular/0-255.pbf"
+
 # 3. Caddy site: same header_up/header_down directives as the real Caddyfile,
 #    but proxying to the local echo server.
 sed -e "s/__ECHO_PORT__/$ECHO_PORT/" > "$WORK/Caddyfile.test" <<'EOF'
 :__PROXY_PORT__ {
+	# Same /fonts/* handle as the real Caddyfile: no SPA fallback, so a
+	# missing glyph range is a 404, not index.html. __WORK__ is replaced
+	# with the temp dir so the root points at the fixture files below.
+	handle /fonts/* {
+		root * __WORK__
+		file_server
+	}
 	handle /api/* {
 		uri strip_prefix /api
 		reverse_proxy http://127.0.0.1:__ECHO_PORT__ {
@@ -86,6 +99,7 @@ sed -e "s/__ECHO_PORT__/$ECHO_PORT/" > "$WORK/Caddyfile.test" <<'EOF'
 }
 EOF
 sed -i -e "s/__PROXY_PORT__/$PROXY_PORT/" "$WORK/Caddyfile.test"
+sed -i -e "s|__WORK__|$WORK|" "$WORK/Caddyfile.test"
 
 "$CADDY" run --config "$WORK/Caddyfile.test" --adapter caddyfile > "$WORK/caddy.log" 2>&1 &
 CADDY_PID=$!
@@ -150,4 +164,30 @@ print('OK: User-Agent was replaced with', headers['User-Agent'])
 print('Upstream received these headers:')
 for k, v in sorted(headers.items()):
     print(f'  {k}: {v}')
+
+# Glyph range checks (path contains a space: use the encoded form).
+import urllib.error
+base = f'http://127.0.0.1:{proxy_port}'
+missing = base + '/fonts/Space%20Grotesk%20Regular/512-767.pbf'
+try:
+    urllib.request.urlopen(missing, timeout=10)
+    print('FAIL: missing glyph range did not return 404')
+    sys.exit(1)
+except urllib.error.HTTPError as e:
+    if e.status != 404:
+        print('FAIL: missing glyph range returned', e.status, 'instead of 404')
+        sys.exit(1)
+print('OK: missing glyph range returns 404 (no SPA fallback)')
+
+existing = base + '/fonts/Space%20Grotesk%20Regular/0-255.pbf'
+with urllib.request.urlopen(existing, timeout=10) as r:
+    body = r.read()
+    ctype = r.headers.get('Content-Type', '')
+    if r.status != 200:
+        print('FAIL: existing glyph range returned', r.status)
+        sys.exit(1)
+    if 'html' in ctype.lower():
+        print('FAIL: existing glyph range served as HTML:', ctype)
+        sys.exit(1)
+print('OK: existing glyph range returns 200 with non-HTML content type:', ctype)
 EOF

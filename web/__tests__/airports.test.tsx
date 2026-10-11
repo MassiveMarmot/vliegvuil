@@ -209,6 +209,29 @@ describe('glyph files for the configured font stack', () => {
     }
     expect(bytes).toBeLessThan(2_000_000);
   });
+
+  it('covers every character of every shown airport name', () => {
+    // A name with a character outside the shipped ranges would make
+    // MapLibre request a missing .pbf; Caddy's SPA fallback answers
+    // that with index.html and a 200, which MapLibre cannot parse.
+    const covered = (char: string): boolean => {
+      const code = char.codePointAt(0);
+      return code !== undefined && code <= 511;
+    };
+    const offenders: string[] = [];
+    for (const airport of filterAirports(airportsJson)) {
+      for (const char of airport.name) {
+        if (!covered(char)) {
+          offenders.push(
+            `${airport.icao} "${airport.name}": character "${char}" (U+${
+              char.codePointAt(0)?.toString(16).padStart(4, '0')
+            }) is outside the shipped glyph ranges (0-511). Generate the new range with fontnik (see docs/architecture.md, session 23) or change the name.`,
+          );
+        }
+      }
+    }
+    expect(offenders.join('\n')).toBe('');
+  });
 });
 
 describe('airport lazy loading', () => {
