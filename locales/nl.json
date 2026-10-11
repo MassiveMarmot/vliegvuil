@@ -93,7 +93,7 @@
     "caveatNoise": "Contouren tonen het jaargemiddelde van de geluidsbelasting, geen live geluid.",
     "caveatAirports": "Luchthavenlocaties en -gegevens zijn referentiedata die af en toe worden bijgewerkt.",
     "caveatBasemap": "De achtergrondkaart toont Nederland in detail; in het buitenland zijn alleen landsgrenzen zichtbaar. Grenzen zijn indicatief, geen juridische grens.",
-    "caveatAircraftDatabase": "Registratie- en typegegevens komen uit een communitydatabase en kunnen onvolledig of verouderd zijn."
+    "caveatAircraftDatabase": "Registratie- en typegegevens komen uit een communitydatabase en kunnen onvolledig of verouderd zijn. De database dient als fallback: ontbrekende registratie, type of operator wordt aangevuld vanuit de snapshot (zie de datum hierboven); live data heeft altijd voorrang."
   },
   "banner": {
     "loading": "Laden...",
@@ -109,5 +109,12 @@
   "stale": {
     "connection": "Gegevens niet up-to-date: verbindingsfout",
     "outdated": "Gegevens mogelijk verouderd"
+  },
+  "airport": {
+    "title": "Luchthaveninformatie",
+    "statusCommercial": "Commercieel",
+    "statusMilitaryShared": "Militair, deels burgerluchtvaart",
+    "statusPlanned": "Gepland",
+    "selected": "{{name}} geselecteerd"
   }
 }

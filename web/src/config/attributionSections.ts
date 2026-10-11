@@ -72,7 +72,7 @@ export const ATTRIBUTION_SECTIONS: readonly AttributionSectionConfig[] = [
     sourceIds: ['tar1090-db'],
     caveatKey: 'attribution.caveatAircraftDatabase',
     caveatDefault:
-      'Registration and type details come from a community database and may be incomplete or outdated.',
+      'Registration and type details come from a community database and may be incomplete or outdated. The database serves as a fallback: missing registration, type or operator is filled in from the snapshot (see the date above); live data always wins.',
   },
 ];
 

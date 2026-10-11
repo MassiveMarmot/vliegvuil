@@ -15,6 +15,16 @@ import {
   iconIdForAircraft,
   SELECTED_ICON_ID,
 } from './aircraftIcons';
+import {
+  AIRPORT_SOURCE_ID,
+  AIRPORT_MARKER_LAYER_ID,
+  AIRPORT_LABEL_LAYER_ID,
+  AIRPORT_LABEL_MIN_ZOOM,
+  AIRPORT_FONT_STACK,
+  airportLayerConfig,
+} from '../airports/airportLayer';
+import { registerAirportIcons, airportIconId } from '../airports/airportIcons';
+import type { AirportPopupData } from '../airports/airportLayer';
 
 // Aircraft symbol layer configuration
 const AIRCRAFT_LAYER_ID = 'aircraft-symbols';
@@ -42,6 +52,10 @@ export interface MapProps {
   noiseContours?: { type: 'FeatureCollection'; features: Array<{ type: 'Feature'; geometry: unknown; properties: Record<string, unknown> }> } | null;
   /** Whether the noise overlay layer is visible */
   noiseEnabled?: boolean;
+  /** Airports to show as markers (session 23); loaded lazily by App */
+  airports?: readonly import('../airports/airports').AirportData[];
+  /** Called when a visitor clicks an airport marker */
+  onAirportClick?: (airport: AirportPopupData) => void;
 }
 
 /**
@@ -50,7 +64,7 @@ export interface MapProps {
 const NOISE_SOURCE_ID = 'noise-contours';
 const NOISE_LAYER_ID = 'noise-contours-fill';
 
-export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContours, noiseEnabled = false }: MapProps): React.ReactElement {
+export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContours, noiseEnabled = false, airports, onAirportClick }: MapProps): React.ReactElement {
   const { mapContainer, map, mapLoaded } = useMap(DEFAULT_MAP_CONFIG, PDOK_BRT_STYLE);
 
   // Update aircraft layer when data changes
@@ -178,6 +192,110 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
       map.setLayoutProperty(NOISE_LAYER_ID, 'visibility', noiseEnabled ? 'visible' : 'none');
     }
   }, [map, mapLoaded, noiseContours, noiseEnabled]);
+
+  // Airport layer (session 23): markers always visible, name labels
+  // from LABEL_MIN_ZOOM to avoid clutter at the default NL view. Both
+  // layers render BELOW the aircraft symbols so aircraft stay on top.
+  useEffect((): void => {
+    if (!map || !mapLoaded) {
+      return;
+    }
+    registerAirportIcons(map);
+    if (!airports || airports.length === 0) {
+      if (map.getSource(AIRPORT_SOURCE_ID)) {
+        (map.getSource(AIRPORT_SOURCE_ID) as maplibregl.GeoJSONSource).setData({
+          type: 'FeatureCollection',
+          features: [],
+        });
+      }
+      return;
+    }
+    const { airportLayer } = airportLayerConfig();
+    const data = airportLayer(airports);
+    if (!map.getSource(AIRPORT_SOURCE_ID)) {
+      map.addSource(AIRPORT_SOURCE_ID, {
+        type: 'geojson',
+        data: data as unknown as maplibregl.GeoJSONSourceSpecification['data'],
+      });
+    } else {
+      (map.getSource(AIRPORT_SOURCE_ID) as maplibregl.GeoJSONSource).setData(
+        data as unknown as maplibregl.GeoJSONSourceSpecification['data'],
+      );
+    }
+    if (!map.getLayer(AIRPORT_MARKER_LAYER_ID)) {
+      map.addLayer(
+        {
+          id: AIRPORT_MARKER_LAYER_ID,
+          type: 'symbol',
+          source: AIRPORT_SOURCE_ID,
+          layout: {
+            'icon-image': [
+              'match',
+              ['get', 'statusCode'],
+              0, airportIconId(0),
+              1, airportIconId(1),
+              2, airportIconId(2),
+              airportIconId(0),
+            ],
+            'icon-allow-overlap': true,
+            'icon-ignore-placement': true,
+            'icon-size': 0.55,
+          },
+        },
+        AIRCRAFT_LAYER_ID,
+      );
+      map.on('click', AIRPORT_MARKER_LAYER_ID, (e: MapLayerMouseEvent) => {
+        const features = e.features;
+        if (features && features.length > 0 && onAirportClick) {
+          const props = (features[0] as { properties?: Record<string, unknown> }).properties;
+          if (props) {
+            onAirportClick({
+              icao: String(props['icao']),
+              name: String(props['name']),
+              status:
+                props['status'] === 'commercial' || props['status'] === 'military-shared' || props['status'] === 'planned'
+                  ? props['status']
+                  : null,
+            });
+          }
+        }
+      });
+      map.on('mouseenter', AIRPORT_MARKER_LAYER_ID, () => {
+        if (map.getCanvas()) {
+          map.getCanvas().style.cursor = 'pointer';
+        }
+      });
+      map.on('mouseleave', AIRPORT_MARKER_LAYER_ID, () => {
+        if (map.getCanvas()) {
+          map.getCanvas().style.cursor = '';
+        }
+      });
+    }
+    if (!map.getLayer(AIRPORT_LABEL_LAYER_ID)) {
+      map.addLayer(
+        {
+          id: AIRPORT_LABEL_LAYER_ID,
+          type: 'symbol',
+          source: AIRPORT_SOURCE_ID,
+          minzoom: AIRPORT_LABEL_MIN_ZOOM,
+          layout: {
+            'text-field': ['get', 'name'],
+            'text-font': [AIRPORT_FONT_STACK],
+            'text-size': 12,
+            'text-offset': [0, 1.1],
+            'text-anchor': 'top',
+            'text-optional': true,
+          },
+          paint: {
+            'text-color': '#3b352f',
+            'text-halo-color': '#ffffff',
+            'text-halo-width': 1.5,
+          },
+        },
+        AIRCRAFT_LAYER_ID,
+      );
+    }
+  }, [map, mapLoaded, airports, onAirportClick]);
 
   return (
     <div

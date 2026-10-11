@@ -28,6 +28,8 @@ VliegVuil.nl is a monorepo with three workspaces and a strict layering rule: `/c
 2. In production, Caddy reverse-proxies those requests to the adsb.fi open-data API with a ~5 s micro-cache, strips client IP/headers upstream, and rate-limits per IP. In dev, the Vite proxy stands in.
 3. Positions go through core's `PositionProvider` interface; `toDisplayAircraft` converts them for the UI, with dead-reckoning interpolation for smooth movement between updates.
 4. Noise lookup runs entirely client-side: the app fetches a small GeoJSON contour snapshot (built by `/data-build`) and uses core's point-in-polygon `lookupNoiseBand`.
+5. Airport markers and name labels (session 23) come from a lazily-fetched `airports.json` (large/medium airports only, status shown in plain language in the popup). Labels use self-hosted map glyphs: Space Grotesk (OFL 1.1) PBFs for Unicode ranges 0–511, generated with fontnik from the official upstream TTFs, served from our own origin (`/fonts/`), licence file next to the glyphs. No third-party font host; the CSP is unchanged.
+6. When the live feed lacks registration, type or operator, the telemetry display falls back to the aircraft database snapshot (`aircraft.json`, tar1090-db, ODC-By-1.0) by ICAO24 hex — lazily loaded, live values always win; see the Attribution page.
 
 ## Build-time data
 

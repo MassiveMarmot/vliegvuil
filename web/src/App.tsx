@@ -13,10 +13,15 @@ const Map = lazy(() => import('./components/Map'));
 import { useAircraftData } from './hooks';
 import { useSmoothedAircraft } from './movement/useSmoothedAircraft';
 import { useTranslation } from 'react-i18next';
-import { DEFAULT_POLLING_CONFIG } from './types';
+import { DEFAULT_POLLING_CONFIG, type DisplayAircraft } from './types';
 import type { NoiseContours } from '@vliegvuil/core';
 import noiseSources from '../../sources.json';
 import { loadUnits, type UnitSettings, DEFAULT_UNITS } from './units';
+import { loadAirports, type AirportData, type AirportStatus } from './airports/airports';
+import { iataFor } from './airports/airportLayer';
+import { enrichFleet } from './airports/aircraftSnapshot';
+const AirportPopup = lazy(() => import('./airports/AirportPopup'));
+import type { AirportPopupData } from './airports/airportLayer';
 
 /**
  * Main application component
@@ -85,9 +90,38 @@ function App(): React.ReactElement {
   const [attributionFocusSection, setAttributionFocusSection] = useState<string | undefined>(undefined);
   const [units, setUnits] = useState<UnitSettings>(DEFAULT_UNITS);
 
+  // Airport layer (session 23): fetch lazily once the app is up; the
+  // layer is on by default (no toggle) and airports.json is not in the
+  // service-worker precache.
+  const [airports, setAirports] = useState<AirportData[]>([]);
+  const [selectedAirport, setSelectedAirport] = useState<AirportPopupData | null>(null);
+
+  // Aircraft snapshot fallback (session 23): enrich the fleet with the
+  // lazily-loaded snapshot; live values always win, the snapshot only
+  // fills gaps. The snapshot fetch is cached, so this is a Map lookup
+  // per aircraft on every poll, not a refetch.
+  const [enrichedAircraft, setEnrichedAircraft] = useState<Map<string, DisplayAircraft> | null>(null);
+  useEffect((): void => {
+    void enrichFleet(aircraft).then((fleet): void => {
+      setEnrichedAircraft(fleet);
+    });
+  }, [aircraft]);
+
   // Load persisted settings on mount (spec §2: localStorage only)
   useEffect((): void => {
     setUnits(loadUnits());
+  }, []);
+
+  // Lazy-load the airport list once (session 23). A failed fetch
+  // resolves to an empty list: no airport layer, no error banner.
+  useEffect((): (() => void) => {
+    let cancelled = false;
+    void loadAirports().then((data): void => {
+      if (!cancelled) setAirports(data);
+    });
+    return (): void => {
+      cancelled = true;
+    };
   }, []);
 
   // Ref so the live region is addressable for testing
@@ -122,6 +156,22 @@ function App(): React.ReactElement {
 
   const handleCloseTelemetry = useCallback((): void => {
     setSelectedAircraftId(null);
+  }, []);
+
+  // Airport popup (session 23): map symbol layers are not focusable,
+  // so the popup is the keyboard/screen-reader path for airport info;
+  // it manages focus like the telemetry panel. Selection is announced
+  // to the live region for screen readers.
+  const handleAirportClick = useCallback(
+    (airport: AirportPopupData): void => {
+      setSelectedAirport(airport);
+      announce(t('airport.selected', '{{name}} geselecteerd', { name: airport.name }));
+    },
+    [announce, t],
+  );
+
+  const handleCloseAirport = useCallback((): void => {
+    setSelectedAirport(null);
   }, []);
 
   // Handle banner dismiss
@@ -265,11 +315,14 @@ function App(): React.ReactElement {
       <MapErrorBoundary t={t}>
         <Suspense fallback={<div className="map-container" role="status" aria-label={t('app.loading', 'Laden...')} />}>
           <Map
-            aircraft={smoothedPositions.size > 0 ? smoothedAircraft : aircraft}
+            aircraft={smoothedPositions.size > 0 ? smoothedAircraft : (enrichedAircraft ?? aircraft)}
+
             selectedAircraftId={selectedAircraftId}
             onAircraftClick={handleAircraftClick}
             noiseContours={noiseContours ? noiseContoursToGeoJson(noiseContours) : null}
             noiseEnabled={noiseEnabled}
+            airports={airports}
+            onAirportClick={handleAirportClick}
           />
         </Suspense>
       </MapErrorBoundary>
@@ -365,6 +418,19 @@ function App(): React.ReactElement {
           onSelect={handleAircraftSelect}
           onClose={handleToggleList}
         />
+      )}
+
+      {/* Airport popup (session 23); lazy so the main bundle stays small */}
+      {selectedAirport && (
+        <Suspense fallback={null}>
+          <AirportPopup
+            icao={selectedAirport.icao}
+            iata={iataFor(airports, selectedAirport.icao)}
+            name={selectedAirport.name}
+            status={selectedAirport.status as AirportStatus | null}
+            onClose={handleCloseAirport}
+          />
+        </Suspense>
       )}
 
       {/* Telemetry panel for selected aircraft */}

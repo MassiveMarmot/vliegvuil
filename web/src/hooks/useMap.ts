@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import maplibregl, { Map as MapLibreMap, LngLatBounds } from 'maplibre-gl';
 import type { MapConfig, MapStyle } from '../types';
 import { NETHERLANDS_BBOX, getBasemapUrl, PDOK_BRT_ATTRIBUTION } from '../types';
+import { AIRPORT_GLYPHS_URL } from '../airports/airportLayer';
 
 // Country context for bordering states: the PDOK BRT basemap renders only the
 // Netherlands (abroad is transparent by design), so neighbouring countries
@@ -49,6 +50,9 @@ export function useMap(config: MapConfig, _style?: MapStyle): UseMapReturn {
         container: mapContainer.current,
         style: {
           version: 8,
+          // Airport labels (session 23) use self-hosted glyphs from our
+          // own origin; no third-party font host (spec §5).
+          glyphs: AIRPORT_GLYPHS_URL,
           sources: {
             neighbours: {
               type: 'geojson',
