@@ -52,7 +52,9 @@
   },
   "search": {
     "placeholder": "Zoek op roepletters, registratie of ICAO24",
-    "noResults": "Geen resultaten gevonden"
+    "noResults": "Geen resultaten gevonden",
+    "open": "Zoekvlucht openen",
+    "close": "Zoeken sluiten"
   },
   "list": {
     "title": "Lijstweergave",

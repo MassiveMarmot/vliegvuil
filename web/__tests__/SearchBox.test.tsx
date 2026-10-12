@@ -82,19 +82,33 @@ describe('searchAircraft (pure function)', (): void => {
 
 describe('SearchBox (component)', (): void => {
   const onSelect = vi.fn();
-
   beforeEach((): void => {
     onSelect.mockClear();
   });
 
-  it('renders the search input with placeholder', (): void => {
+  function expand(): HTMLElement {
+    fireEvent.click(screen.getByRole('button', { name: 'search.open' }));
+    return screen.getByPlaceholderText('search.placeholder');
+  }
+
+  it('is collapsed by default: an icon button with aria-expanded=false, no input', (): void => {
     render(<SearchBox aircraft={aircraftMap} onSelect={onSelect} />);
-    expect(screen.getByPlaceholderText('search.placeholder')).toBeInTheDocument();
+    const toggle = screen.getByRole('button', { name: 'search.open' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveAttribute('aria-controls');
+    expect(screen.queryByPlaceholderText('search.placeholder')).not.toBeInTheDocument();
   });
 
-  it('shows matching results when typing', (): void => {
+  it('expands on click and focuses the input', (): void => {
     render(<SearchBox aircraft={aircraftMap} onSelect={onSelect} />);
-    const input = screen.getByPlaceholderText('search.placeholder');
+    const input = expand();
+    expect(input).toBeInTheDocument();
+    expect(screen.getByRole('search')).toHaveClass('expanded');
+  });
+
+  it('shows matching results when typing while expanded', (): void => {
+    render(<SearchBox aircraft={aircraftMap} onSelect={onSelect} />);
+    const input = expand();
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'KLM' } });
     expect(screen.getByText('KLM123')).toBeInTheDocument();
@@ -102,25 +116,54 @@ describe('SearchBox (component)', (): void => {
 
   it('shows no-results message when nothing matches', (): void => {
     render(<SearchBox aircraft={aircraftMap} onSelect={onSelect} />);
-    const input = screen.getByPlaceholderText('search.placeholder');
+    const input = expand();
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'ZZZZ' } });
     expect(screen.getByText('search.noResults')).toBeInTheDocument();
   });
 
-  it('clears results when query is cleared with Escape', (): void => {
+  it('collapses on Escape and returns focus to the icon button', (): void => {
     render(<SearchBox aircraft={aircraftMap} onSelect={onSelect} />);
-    const input = screen.getByPlaceholderText('search.placeholder');
+    const input = expand();
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'KLM' } });
-    expect(screen.getByText('KLM123')).toBeInTheDocument();
     fireEvent.keyDown(input, { key: 'Escape' });
     expect(screen.queryByText('KLM123')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('search.placeholder')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'search.open' })).toHaveFocus();
+  });
+
+  it('collapses on blur when the query is empty', (): void => {
+    render(<SearchBox aircraft={aircraftMap} onSelect={onSelect} />);
+    const input = expand();
+    fireEvent.focus(input);
+    fireEvent.blur(input);
+    expect(screen.queryByPlaceholderText('search.placeholder')).not.toBeInTheDocument();
+  });
+
+  it('stays expanded on blur when the query is not empty', (): void => {
+    render(<SearchBox aircraft={aircraftMap} onSelect={onSelect} />);
+    const input = expand();
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'KLM' } });
+    fireEvent.blur(input);
+    expect(screen.getByPlaceholderText('search.placeholder')).toBeInTheDocument();
+  });
+
+  it('collapses after a result is selected and refocuses the icon button', (): void => {
+    render(<SearchBox aircraft={aircraftMap} onSelect={onSelect} />);
+    const input = expand();
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'KLM' } });
+    fireEvent.submit(input.closest('form') as HTMLFormElement);
+    expect(onSelect).toHaveBeenCalledWith('a');
+    expect(screen.queryByPlaceholderText('search.placeholder')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'search.open' })).toHaveFocus();
   });
 
   it('selects the first result on form submit (Enter)', (): void => {
     render(<SearchBox aircraft={aircraftMap} onSelect={onSelect} />);
-    const input = screen.getByPlaceholderText('search.placeholder');
+    const input = expand();
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'KLM' } });
     fireEvent.submit(input.closest('form') as HTMLFormElement);
@@ -129,16 +172,17 @@ describe('SearchBox (component)', (): void => {
 
   it('selects an aircraft when a result button is pressed', (): void => {
     render(<SearchBox aircraft={aircraftMap} onSelect={onSelect} />);
-    const input = screen.getByPlaceholderText('search.placeholder');
+    const input = expand();
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'EZY' } });
     fireEvent.mouseDown(screen.getByRole('button', { name: /EZY789/ }));
     expect(onSelect).toHaveBeenCalledWith('c');
+    expect(screen.getByRole('button', { name: 'search.open' })).toHaveFocus();
   });
 
   it('does not call onSelect on submit with no results', (): void => {
     render(<SearchBox aircraft={aircraftMap} onSelect={onSelect} />);
-    const input = screen.getByPlaceholderText('search.placeholder');
+    const input = expand();
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'ZZZZ' } });
     fireEvent.submit(input.closest('form') as HTMLFormElement);
@@ -147,6 +191,7 @@ describe('SearchBox (component)', (): void => {
 
   it('hides results before typing', (): void => {
     render(<SearchBox aircraft={aircraftMap} onSelect={onSelect} />);
+    expand();
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
 });

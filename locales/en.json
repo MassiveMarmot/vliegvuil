@@ -52,7 +52,9 @@
   },
   "search": {
     "placeholder": "Search by callsign, registration or ICAO24",
-    "noResults": "No results found"
+    "noResults": "No results found",
+    "open": "Open flight search",
+    "close": "Close search"
   },
   "list": {
     "title": "List view",
