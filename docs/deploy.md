@@ -487,8 +487,9 @@ review and merge the PR, then deploy as in §7.
   `web/public/data/` and the server would diverge from git.
 - Roll back a bad refresh by reverting the data PR on GitHub, then §7.
 
-If you installed the retired systemd timer from an earlier version of this
-guide, remove it:
+The `deploy/` timer files were removed from the repository in session 22c
+(the workflows replaced them). If you installed them from an earlier
+version of this guide, remove them once:
 
 ```bash
 sudo systemctl disable --now vliegvuil-data-refresh.timer
@@ -498,9 +499,8 @@ sudo rm -f /etc/systemd/system/vliegvuil-data-check.service \
 sudo systemctl daemon-reload
 ```
 
-Until session 22c is merged, run `check` and `refresh` on your own machine,
-commit the result to a branch and open a PR by hand. See
-`docs/data-updates.md`.
+See `docs/data-updates.md` for how the two workflows work and what to
+check after the first real run (`workflow_dispatch` with `dry_run`).
 
 ## 9. Maintenance
 

@@ -101,11 +101,15 @@ Checks and refreshes run on GitHub's runners, not on the VPS (SPEC §4):
 - The workflows only open issues and pull requests. Nothing deploys from
   GitHub; you merge and then deploy on the VPS (`docs/deploy.md` §7).
 
-Until session 22c is merged, run the commands above on your own machine and
-open the PR by hand. GitHub disables scheduled workflows in a public
-repository after 60 days without repository activity (GitHub docs); merging
-the monthly data PRs counts as activity, but if you stop, re-enable the
-workflows in the Actions tab.
+Session 22c shipped the workflows (`.github/workflows/data-check.yml` and
+`data-refresh.yml`); the commands above still work locally for a manual run.
+The refresh workflow runs in two jobs: the job that runs project code
+(downloading untrusted upstream data) holds a read-only token; only the
+separate `open-pr` job — which runs no project code — can write, after
+re-validating the artifact against a path allowlist. GitHub disables
+scheduled workflows in a public repository after 60 days without repository
+activity (GitHub docs); merging the monthly data PRs counts as activity,
+but if you stop, re-enable the workflows in the Actions tab.
 
 ## When a manual source shows `update-available`
 

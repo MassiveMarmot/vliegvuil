@@ -17,6 +17,8 @@ coverage/
 # Data build: raw downloads and large outputs (rebuilt on the VPS)
 data-build/cache/
 data-build/tmp/
+# Local rollback copies (session 22c: git history is the rollback in CI)
+data-build/previous/
 *.pmtiles
 *.mbtiles
 

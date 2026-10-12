@@ -70,23 +70,33 @@ export const USER_AGENT = 'VliegVuil-data-check/0.1 (+https://github.com/Massive
 
 const TIMEOUT_MS = 15_000;
 
-/** Real fetcher: custom UA, timeout, one retry, no parallelism (callers loop) */
-export function makeFetcher(): Fetcher {
+/**
+ * Real fetcher: custom UA, timeout, one retry, no parallelism (callers
+ * loop). Session 22c: an optional GitHub token is sent as an
+ * Authorization header **only to api.github.com** (avoids shared-IP
+ * rate limits) and is never attached to any other host. The token is
+ * never logged.
+ */
+export function makeFetcher(token?: string): Fetcher {
   return async (url, options): Promise<FetchResponse> => {
     const run = async (): Promise<FetchResponse> => {
+      const headers: Record<string, string> = { 'User-Agent': USER_AGENT };
+      if (token !== undefined && new URL(url).hostname === 'api.github.com') {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(url, {
         method: options?.method ?? 'GET',
-        headers: { 'User-Agent': USER_AGENT },
+        headers,
         signal: AbortSignal.timeout(TIMEOUT_MS),
         redirect: 'follow',
       });
-      const headers: Record<string, string> = {};
+      const received: Record<string, string> = {};
       response.headers.forEach((value, key): void => {
-        headers[key] = value;
+        received[key] = value;
       });
       return {
         status: response.status,
-        headers,
+        headers: received,
         body: options?.method === 'HEAD' ? '' : await response.text(),
       };
     };

@@ -1,0 +1,70 @@
+# Weekly data check (session 22c): runs `check` against upstream metadata
+# and maintains ONE open issue when updates are available; closes it when
+# everything is up to date. Nothing deploys from GitHub.
+name: data-check
+
+on:
+  schedule:
+    # Weekly, off the hour to spread GitHub's scheduled load
+    - cron: '17 4 * * 2'
+  workflow_dispatch:
+
+# Least privilege (session 22c): read-only by default; only this job
+# gains issues: write to maintain the single issue.
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      # SHAs from `git ls-remote https://github.com/<repo> refs/tags/<tag>`
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: pnpm/action-setup@a15d269cd4658e1107c09f1fabf4cbd7bd1f308a # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Run the data check
+        env:
+          # makeFetcher sends this token ONLY to api.github.com hosts
+          # (unit-tested); it is never echoed or logged.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm --filter @vliegvuil/data-build run check
+      - name: Build the issue body from the status file
+        # Upstream strings never enter a run: script; the body is built
+        # in tested TypeScript and passed via a file.
+        run: pnpm --filter @vliegvuil/data-build exec tsx src/issue-body.ts ../data-build/status/data-status.json ../data-build/status/issue-body.md
+      - name: Create or update the single issue (or close when up to date)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STATUS_FILE: data-build/status/data-status.json
+          BODY_FILE: data-build/status/issue-body.md
+        run: |
+          # Pure bash + gh; no upstream data interpolated into this script.
+          label="data-updates"
+          title="Data updates available"
+          # Fail closed: if every source failed, the check step already failed.
+          if grep -q '"status": "update-available"\|"status": "review-due"' "$STATUS_FILE"; then
+            issue_url="$(gh issue list --label "$label" --state open --json url --jq '.[0].url')"
+            if [ -n "$issue_url" ]; then
+              gh issue edit "$issue_url" --body-file "$BODY_FILE"
+              echo "Updated existing issue: $issue_url"
+            else
+              gh issue create --title "$title" --label "$label" --body-file "$BODY_FILE"
+              echo "Created new issue"
+            fi
+          else
+            issue_url="$(gh issue list --label "$label" --state open --json url --jq '.[0].url')"
+            if [ -n "$issue_url" ]; then
+              gh issue close "$issue_url" --comment "All sources are up to date; closing. This issue reopens automatically when an update is detected."
+              echo "Closed issue: $issue_url"
+            else
+              echo "All sources up to date; no open issue to close."
+            fi
+          fi
