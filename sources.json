@@ -97,6 +97,19 @@
       }
     },
     {
+      "id": "pdok-brt-tiles",
+      "name": "PDOK BRT Achtergrondkaart (self-hosted tiles)",
+      "url": "https://service.pdok.nl/kadaster/brt-achtergrondkaart/wmts/v2_0?request=getcapabilities&service=wmts",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "dataType": "Basemap PNG tiles, EPSG:3857 standaard, z6-14 for the NL bbox, served from our own origin",
+      "updateFrequency": "yearly (Kadaster actualises the BRT-A in 5 phases per year)",
+      "lastUpdated": "2026-10-12",
+      "notes": "Self-hosted copy of the PDOK WMTS raster tiles (scripts/vps-tiles-update.js): the browser never contacts service.pdok.nl; the site does not depend on PDOK being reachable at request time. Download is manual (sudo systemd-run), strictly sequential, spread over ~24 h (PDOK Fair Use has no published numeric rate limit; verified 2026-10-12 on pdok.nl/copyright, pdok.nl/how-to-faq and the kadaster.nl product page: BRT-A is CC-BY 4.0, free use under the PDOK Fair Use service level). Attribution kept in the app: Kaartgegevens © PDOK / Kadaster.",
+      "cadence": "yearly",
+      "refresh": "manual"
+    },
+    {
       "id": "rivm-end-2021-noise",
       "name": "RIVM/CVGG — EU END 2021 noise contours (major airports)",
       "url": "https://data.overheid.nl/dataset/bc7703a1-9323-4e4f-9ce7-246ace877b59",

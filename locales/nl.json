@@ -13,7 +13,8 @@
     "noData": "Geen gegevens beschikbaar",
     "hideNoise": "Verberg geluidscontouren",
     "loadError": "De kaart kan niet worden geladen. Herlaad de pagina om de nieuwste versie te gebruiken.",
-    "reload": "Herlaad"
+    "reload": "Herlaad",
+    "tileError": "Kaartachtergrond kon niet geladen worden"
   },
   "noise": {
     "legendTitle": "Legenda geluidscontouren",

@@ -13,7 +13,8 @@
     "noData": "No data available",
     "hideNoise": "Hide noise contours",
     "loadError": "The map failed to load. Reload the page to get the latest version.",
-    "reload": "Reload"
+    "reload": "Reload",
+    "tileError": "The map background could not be loaded"
   },
   "noise": {
     "legendTitle": "Noise contours legend",

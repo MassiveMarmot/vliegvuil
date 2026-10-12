@@ -1,5 +1,7 @@
 // Tests for session 17: altitude-band icons and PDOK basemap URL
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   ALTITUDE_BANDS,
   SELECTED_ICON_ID,
@@ -73,18 +75,25 @@ describe('altitude band icons', () => {
 });
 
 describe('basemap', () => {
-  it('uses the PDOK BRT WMTS on service.pdok.nl in EPSG:3857', () => {
-    expect(PDOK_BRT_TILE_URL).toContain('https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/');
-    expect(PDOK_BRT_TILE_URL).toContain('EPSG:3857');
-    expect(PDOK_BRT_TILE_URL).toContain('{z}/{x}/{y}.png');
+  it('serves the BRT-A tiles from our own origin (self-hosted)', () => {
+    expect(PDOK_BRT_TILE_URL).toBe('/tiles/{z}/{x}/{y}.png');
+    // The browser must never contact the PDOK tile host
+    expect(PDOK_BRT_TILE_URL).not.toContain('service.pdok.nl');
     expect(PDOK_BRT_TILE_URL).not.toContain('nationaalgeoregister');
   });
-
-  it('defaults to the PDOK tiles when no override is configured', () => {
+  it('defaults to the self-hosted tiles when no override is configured', () => {
     expect(getBasemapUrl()).toBe(PDOK_BRT_TILE_URL);
   });
-
-  it('carries PDOK attribution', () => {
+  it('keeps the Kadaster attribution (BRT-A is CC-BY 4.0)', () => {
     expect(PDOK_BRT_ATTRIBUTION).toContain('PDOK');
+    expect(PDOK_BRT_ATTRIBUTION).toContain('Kadaster');
+  });
+  it('the shipped CSP no longer allows service.pdok.nl', () => {
+    // Regression: nothing should need the PDOK origin any more
+    const caddy = readFileSync(resolve(__dirname, '..', '..', 'Caddyfile'), 'utf8');
+    const csp = /Content-Security-Policy "([^"]+)"/.exec(caddy)?.[1] ?? '';
+    expect(csp).not.toContain('service.pdok.nl');
+    expect(csp).toContain("img-src 'self'");
+    expect(csp).toContain("connect-src 'self'");
   });
 });

@@ -4,6 +4,7 @@
 // Map component with aircraft rendering
 
 import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import maplibregl, { SymbolLayerSpecification, MapLayerMouseEvent } from 'maplibre-gl';
 import type { DisplayAircraft } from '../types';
 import { useMap } from '../hooks/useMap';
@@ -65,7 +66,7 @@ const NOISE_SOURCE_ID = 'noise-contours';
 const NOISE_LAYER_ID = 'noise-contours-fill';
 
 export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContours, noiseEnabled = false, airports, onAirportClick }: MapProps): React.ReactElement {
-  const { mapContainer, map, mapLoaded } = useMap(DEFAULT_MAP_CONFIG, PDOK_BRT_STYLE);
+  const { mapContainer, map, mapLoaded, tileError } = useMap(DEFAULT_MAP_CONFIG, PDOK_BRT_STYLE);
 
   // Update aircraft layer when data changes
   useEffect(() => {
@@ -297,12 +298,40 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
     }
   }, [map, mapLoaded, airports, onAirportClick]);
 
+  const { t } = useTranslation();
+
   return (
     <div
       ref={mapContainer}
       className="map-container"
       style={{ width: '100%', height: '100%', minHeight: '400px' }}
-    />
+    >
+      {/* Non-blocking notice when the self-hosted basemap tiles fail to
+          load; the aircraft layer keeps working (spec: planes unaffected) */}
+      {tileError && (
+        <div
+          role="status"
+          aria-live="polite"
+          data-testid="tile-error-notice"
+          style={{
+            position: 'absolute',
+            top: '4.5rem',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            backgroundColor: 'rgba(255, 245, 235, 0.95)',
+            color: '#7a4a1a',
+            padding: '0.35rem 0.75rem',
+            borderRadius: '0.375rem',
+            fontSize: '0.8125rem',
+            border: '1px solid #e5c9a8',
+            zIndex: 25,
+            pointerEvents: 'none',
+          }}
+        >
+          {t('map.tileError', 'Kaartachtergrond kon niet geladen worden')}
+        </div>
+      )}
+    </div>
   );
 }
 

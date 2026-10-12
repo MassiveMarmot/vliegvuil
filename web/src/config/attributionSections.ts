@@ -60,7 +60,7 @@ export const ATTRIBUTION_SECTIONS: readonly AttributionSectionConfig[] = [
     id: 'basemap',
     headingKey: 'attribution.sectionBasemap',
     headingDefault: 'Basemap',
-    sourceIds: ['pdok-brt', 'natural-earth-neighbours'],
+    sourceIds: ['pdok-brt', 'pdok-brt-tiles', 'natural-earth-neighbours'],
     caveatKey: 'attribution.caveatBasemap',
     caveatDefault:
       'The basemap shows the Netherlands in detail; abroad only country borders are shown. Borders are indicative, not a legal boundary.',
