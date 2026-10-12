@@ -385,6 +385,15 @@ sudo systemctl reload caddy
 - **System logs are a separate thing.** `sshd` logs administrator logins and
   the firewall logging is turned off in the baseline (`ufw logging off`).
 
+Observation from the live server (2026-10-12): Caddy serves the
+self-hosted map-glyph `.pbf` files without a `Content-Type` header
+(the `verify-caddy-headers.sh` check only asserts it is not HTML;
+MapLibre accepts the files regardless). TODO for a later Caddy
+update: map `.pbf` to an explicit content type, e.g.
+`header /fonts/* Content-Type application/octet-stream`, or register
+`application/vnd.mapbox-vector-tile` if the MapLibre docs recommend
+it — verify there first.
+
 Verify the header stripping at any time:
 
 ```bash
