@@ -13,6 +13,8 @@ Rows are in `docs/BUILD.md` section 4. Session 25 depends on session 18 (i18n cl
 **Header** (`<header>` landmark, replaces the floating ⚙ / "Lijst" / "i" buttons and the bottom-left name card):
 - Logo: small inline SVG plane glyph (`aria-hidden`) plus the visible site name as a link to the map for the current language. No image files, no icon library.
 - Search box moves into the header. At 320 px width it must stay reachable (second row, or a labelled button that expands it).
+  **Keep search as an icon button that expands on demand** (as implemented pre-session-25: collapsed by default, expands and takes focus, collapses on Esc / empty blur / selection) — no permanent search bar in the header.
+  Rationale: the information hierarchy puts the pollution and noise layers first and flight tracking second; search is a secondary tool, not a primary control.
 - A visible **List** button (the accessible alternative to the map should not be hidden in a menu) and a **Menu** (hamburger) button.
 
 **Menu** (`<nav aria-label>` opened by the hamburger):

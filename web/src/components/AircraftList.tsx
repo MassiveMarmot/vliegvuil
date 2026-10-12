@@ -127,6 +127,12 @@ export function AircraftList({
         </button>
       </header>
 
+      <div
+        className="aircraft-list-scroll"
+        tabIndex={0}
+        role="group"
+        aria-label={t('list.title')}
+      >
       <table className="aircraft-list-table">
         <caption className="visually-hidden">{t('list.title')}</caption>
         <thead>
@@ -186,6 +192,7 @@ export function AircraftList({
           })}
         </tbody>
       </table>
+      </div>
     </aside>
   );
 }
