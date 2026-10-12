@@ -34,4 +34,8 @@ Both stay on your device, are never transmitted, and can be cleared at any time 
 
 ## Contact
 
+Data updates for the site's snapshots run on GitHub's runners (GitHub
+Actions); they contact only public open-data hosts (OurAirports,
+raw.githubusercontent.com, data.overheid.nl) and involve no visitor data.
+
 Questions about privacy? Open an issue in this repository.

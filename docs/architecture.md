@@ -33,6 +33,13 @@ VliegVuil.nl is a monorepo with three workspaces and a strict layering rule: `/c
 
 ## Build-time data
 
+Data freshness (session 22c) runs on GitHub Actions: a weekly `data-check`
+workflow queries upstream metadata and maintains one issue; a monthly or
+manually dispatched `data-refresh` workflow runs the refresh in a
+read-only job and opens the PR from a separate write job that runs no
+project code. Nothing deploys from GitHub; the VPS only pulls, builds and
+serves. `deploy/` systemd timers were removed with it.
+
 `/data-build` scripts produce snapshots committed to the repo (or as release artifacts when large):
 
 - **Airports**: OurAirports trimmed to NL + a status overlay (commercial / military-shared / planned)

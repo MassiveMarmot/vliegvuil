@@ -37,7 +37,10 @@ function printTable(outcomes: readonly CheckOutcome[]): void {
 export async function runCheck(): Promise<number> {
   const raw = await readFile(SOURCES_PATH, 'utf8');
   const data = JSON.parse(raw) as SourcesFile;
-  const outcomes = await checkAllSources(data.sources, makeFetcher());
+  // Session 22c: in CI the GITHUB_TOKEN goes only to api.github.com
+  // (see makeFetcher); locally no token is available and none is sent.
+  const token = process.env['GITHUB_TOKEN'];
+  const outcomes = await checkAllSources(data.sources, makeFetcher(token));
   process.stdout.write(`checked ${outcomes.length} sources\n`);
   printTable(outcomes);
   const file: DataStatusFile = {

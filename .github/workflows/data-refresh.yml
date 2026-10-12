@@ -1,0 +1,180 @@
+# Data refresh (session 22c): runs `refresh` on GitHub's runner and opens
+# a reviewable pull request with the changed snapshots. Nothing deploys
+# from GitHub; you merge and deploy by hand (docs/deploy.md §7).
+#
+# Two jobs so the job that runs project code (untrusted upstream data!)
+# NEVER holds a write token:
+#   1. refresh  (contents: read)  — downloads, builds, validates, uploads
+#      a path-allowlisted artifact.
+#   2. open-pr  (contents: write, pull-requests: write) — downloads the
+#      artifact, re-validates the manifest against the allowlist, commits
+#      as github-actions[bot], pushes, opens the PR. Runs NO project code.
+name: data-refresh
+
+on:
+  schedule:
+    # Monthly, off the hour: the 3rd of the month at 05:23 UTC
+    - cron: '23 5 3 * *'
+  workflow_dispatch:
+    inputs:
+      source:
+        description: 'Source id or all-auto'
+        required: false
+        default: 'all-auto'
+        type: string
+      dry_run:
+        description: 'Refresh and report, open no PR'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: data-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      # Never interpolate inputs into run: scripts (session 22c rules);
+      # they are passed via env and files only.
+      SOURCE: ${{ inputs.source || 'all-auto' }}
+      DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+    steps:
+      # SHAs from `git ls-remote https://github.com/<repo> refs/tags/<tag>`
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: pnpm/action-setup@a15d269cd4658e1107c09f1fabf4cbd7bd1f308a # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm --filter @vliegvuil/data-build run check
+      - name: Refresh (fails closed on any gate failure)
+        run: pnpm --filter @vliegvuil/data-build run refresh -- "$SOURCE"
+      - name: Build the artifact manifest of the allowed output paths
+        run: |
+          set -eu
+          : > data-build/status/artifact-manifest.txt
+          for f in \
+            web/public/data/airports.json \
+            web/public/data/aircraft.json \
+            web/public/data/neighbours.geojson \
+            web/public/noise-contours.geojson \
+            sources.json \
+            data-build/status/refresh-report.json
+          do
+            printf '%s %s\n' "$f" "$(wc -c < "$f")" >> data-build/status/artifact-manifest.txt
+          done
+          cat data-build/status/artifact-manifest.txt
+      - name: Upload the changed files as an artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: refresh-output
+          path: |
+            web/public/data/airports.json
+            web/public/data/aircraft.json
+            web/public/data/neighbours.geojson
+            web/public/noise-contours.geojson
+            sources.json
+            data-build/status/refresh-report.json
+            data-build/status/artifact-manifest.txt
+          retention-days: 7
+          if-no-files-found: error
+
+  open-pr:
+    needs: refresh
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Only this job can write; it runs NO code from node_modules.
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+      SOURCE: ${{ inputs.source || 'all-auto' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # Ensure the branch can be created from the current main tip
+          ref: main
+      - name: Skip when dry run
+        if: ${{ env.DRY_RUN == '1' }}
+        run: |
+          echo "dry_run set: refresh report is in the artifacts; no PR opened." >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+      - uses: pnpm/action-setup@a15d269cd4658e1107c09f1fabf4cbd7bd1f308a # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Download the artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: refresh-output
+      - name: Skip when an open data PR already exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          existing="$(gh pr list --label data --state open --json number --jq '.[0].number')"
+          if [ -n "$existing" ]; then
+            echo "Open data PR #$existing already exists; skipping PR creation." >> "$GITHUB_STEP_SUMMARY"
+            echo "PR_EXISTS=1" >> "$GITHUB_ENV"
+          else
+            echo "PR_EXISTS=" >> "$GITHUB_ENV"
+          fi
+      - name: Validate the artifact manifest and build the PR body
+        if: ${{ env.PR_EXISTS != '1' }}
+        run: |
+          set -eu
+          if [ "$DRY_RUN" = "1" ]; then
+            echo "dry_run: not opening a PR (report artifact retained)." >> "$GITHUB_STEP_SUM"
+            exit 0
+          fi
+          pnpm --filter @vliegvuil/data-build exec tsx src/pr-body.ts \
+            ../data-build/status/refresh-report.json \
+            ../data-build/status/pr-body.md \
+            ../data-build/status/artifact-manifest.txt
+          # No changed output paths means no PR: git status must show a diff.
+          if git diff --quiet; then
+            echo "No changes; not opening a PR." >> "$GITHUB_STEP_SUM"
+            echo "NO_DIFF=1" >> "$GITHUB_ENV"
+          fi
+      - name: Commit, push and open the PR
+        if: ${{ env.PR_EXISTS != '1' && env.DRY_RUN != '1' && env.NO_DIFF != '1' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eu
+          date="$(date -u +%Y-%m-%d)"
+          if [ "$SOURCE" != "all-auto" ]; then
+            branch="data/refresh-$date-$SOURCE"
+          else
+            branch="data/refresh-$date"
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add web/public/data/airports.json web/public/data/aircraft.json \
+                  web/public/data/neighbours.geojson web/public/noise-contours.geojson \
+                  sources.json
+          git commit -m "data: refresh ($SOURCE) $date"
+          git push origin "$branch"
+          labels="data"
+          # Manual (noise) sources need a human review checklist
+          if [ "$SOURCE" = "rivm-end-2021-noise" ] || [ "$SOURCE" = "clo-nlr-regional" ]; then
+            labels="$labels,needs-human-review"
+          fi
+          gh pr create --head "$branch" --base main \
+            --title "data: refresh ($SOURCE) $date" \
+            --body-file data-build/status/pr-body.md --label "$labels"

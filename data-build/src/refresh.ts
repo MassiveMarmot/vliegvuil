@@ -19,6 +19,7 @@ import {
   noiseGeoJsonToJson,
 } from './noise';
 import { sha256, USER_AGENT } from './freshness';
+import type { RefreshReport, RefreshReportEntry } from './bodies';
 import type { NoiseContourFeature } from './types';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -59,6 +60,8 @@ export interface RefreshResult {
   readonly id: string;
   readonly ok: boolean;
   readonly detail: string;
+  readonly previousCount?: number;
+  readonly newCount?: number;
 }
 
 /** Download a full snapshot (used only by refresh, not by check); binary-safe */
@@ -126,7 +129,7 @@ async function refreshSource(id: string): Promise<RefreshResult> {
     await keepRollbackCopy(join(OUT_DIR, 'airports.json'));
     await writeFileAtomic(join(OUT_DIR, 'airports.json'), json);
     await updateSources(id, downloadResult.version, sha256(downloadResult.content));
-    return { id, ok: true, detail: `airports: ${entries} entries` };
+    return { id, ok: true, detail: `airports: ${entries} entries`, previousCount: prev ?? undefined, newCount: entries };
   }
 
   if (id === 'tar1090-db') {
@@ -143,7 +146,7 @@ async function refreshSource(id: string): Promise<RefreshResult> {
     await keepRollbackCopy(join(OUT_DIR, 'aircraft.json'));
     await writeFileAtomic(join(OUT_DIR, 'aircraft.json'), json);
     await updateSources(id, downloadResult.version, sha256(downloadResult.content));
-    return { id, ok: true, detail: `aircraft: ${entries} entries` };
+    return { id, ok: true, detail: `aircraft: ${entries} entries`, previousCount: prev ?? undefined, newCount: entries };
   }
 
   if (id === 'rivm-end-2021-noise') {
@@ -181,7 +184,7 @@ async function refreshSource(id: string): Promise<RefreshResult> {
     await keepRollbackCopy(NOISE_PATH);
     await writeFileAtomic(NOISE_PATH, json);
     await updateSources(id, downloadResult.version, sha256(downloadResult.content));
-    return { id, ok: true, detail: `noise: ${features.length} contours` };
+    return { id, ok: true, detail: `noise: ${features.length} contours`, newCount: features.length };
   }
 
   return { id, ok: false, detail: `no refresh procedure for source "${id}"` };
@@ -197,7 +200,10 @@ async function readPreviousCount(outputPath: string): Promise<number | null> {
 }
 
 export function validateRowCount(name: string, count: number, previous: number | null): string | undefined {
-  if (previous !== null && count < previous * ROW_DROP_TOLERANCE) {
+  if (count === 0) {
+    return `${name}: refresh produced 0 entries; refusing (upstream download likely failed)`;
+  }
+  if (previous !== null && previous > 0 && count < previous * ROW_DROP_TOLERANCE) {
     return `${name}: row count ${count} is a >50% drop from previous ${previous}; refusing`;
   }
   return undefined;
@@ -282,6 +288,8 @@ export async function runRefresh(target: string): Promise<number> {
     ids = [target];
   }
   let allOk = true;
+  const entries: RefreshReportEntry[] = [];
+  const sourcesForReport = await readSourcesForReport();
   for (const id of ids) {
     try {
       const result = await refreshSource(id);
@@ -289,19 +297,75 @@ export async function runRefresh(target: string): Promise<number> {
       if (!result.ok) {
         allOk = false;
       }
+      entries.push(reportEntry(result, sourcesForReport));
     } catch (error) {
       process.stdout.write(`${id}: FAILED - ${String(error)}\n`);
       allOk = false;
+      entries.push({
+        id,
+        ok: false,
+        detail: String(error),
+        ...(sourcesForReport.get(id) ?? {}),
+      });
     }
   }
+  await writeRefreshReport(target, entries);
   return allOk ? 0 : 1;
+}
+
+/** Sources.json fields the PR body reports (licence, reference year, url) */
+async function readSourcesForReport(): Promise<Map<string, Partial<RefreshReportEntry>>> {
+  const raw = await readFile(SOURCES_PATH, 'utf8');
+  const data = JSON.parse(raw) as SourcesFile & {
+    sources: (RefreshSource & Record<string, unknown>)[];
+  };
+  const map = new Map<string, Partial<RefreshReportEntry>>();
+  for (const source of data.sources) {
+    map.set(source.id, {
+      license: typeof source['license'] === 'string' ? String(source['license']) : undefined,
+      referenceYear: typeof source['referenceYear'] === 'number' ? Number(source['referenceYear']) : undefined,
+      url: typeof source['url'] === 'string' ? String(source['url']) : undefined,
+    });
+  }
+  return map;
+}
+
+function reportEntry(
+  result: RefreshResult,
+  sources: Map<string, Partial<RefreshReportEntry>>,
+): RefreshReportEntry {
+  return {
+    id: result.id,
+    ok: result.ok,
+    detail: result.detail,
+    previousCount: result.previousCount,
+    newCount: result.newCount,
+    ...(sources.get(result.id) ?? {}),
+  };
+}
+
+/** Session 22c: the workflow reads this to build the PR body */
+async function writeRefreshReport(target: string, entries: RefreshReportEntry[]): Promise<void> {
+  const report: RefreshReport = {
+    ranAt: new Date().toISOString(),
+    target,
+    dryRun: process.env['DRY_RUN'] === '1',
+    entries,
+  };
+  const reportPath = join(REPO_ROOT, 'data-build', 'status', 'refresh-report.json');
+  await mkdir(dirname(reportPath), { recursive: true });
+  await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`);
+  process.stdout.write(`wrote ${reportPath}\n`);
 }
 
 if (
   process.argv[1]?.endsWith('refresh.ts') === true ||
   process.argv[1]?.endsWith('refresh.js') === true
 ) {
-  const target = process.argv[2] ?? 'all-auto';
+  // `pnpm run refresh -- <id>` forwards the `--` separator as a literal
+  // argument; skip it so the documented invocation works as written.
+  const args = process.argv.slice(2).filter((a): boolean => a !== '--');
+  const target = args[0] ?? 'all-auto';
   runRefresh(target)
     .then((code): void => {
       process.exit(code);

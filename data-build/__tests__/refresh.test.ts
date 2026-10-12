@@ -110,3 +110,9 @@ describe('validateGeometryInNl', () => {
     expect(detail).toContain('outside the Netherlands bounding box');
   });
 });
+
+describe('validateRowCount zero-entry guard (session 22c)', () => {
+  it('refuses a refresh that produces 0 entries even without a previous file', (): void => {
+    expect(validateRowCount('airports', 0, null)).toMatch(/0 entries/);
+  });
+});
