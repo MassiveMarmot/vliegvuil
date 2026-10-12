@@ -64,6 +64,13 @@ pnpm --filter @vliegvuil/data-build run refresh -- ourairports
 Downloads to `data-build/tmp/`, transforms, validates, then atomically
 swaps into `web/public/data/` and updates `sources.json`
 (`retrievedAt`, `upstreamVersion`, `contentSha256`, `checkedAt`).
+`upstreamVersion` holds the SAME kind of signal `check` compares against
+(GitHub commit SHA / CKAN `metadata_modified`), fetched with check's own
+code path **before** the download — so a commit landing mid-refresh is
+flagged by the next check instead of being recorded. The download's HTTP
+ETag is kept separately as `downloadEtag` (diagnostics only). If the
+version signal cannot be fetched, the refresh fails closed for that
+source: no `sources.json` write, and the report says why.
 
 Refresh downloads from each source's `downloadUrl` in `sources.json`
 (the raw data file), never from `upstream.url` — that field is the

@@ -18,7 +18,7 @@ import {
   buildNoiseGeoJson,
   noiseGeoJsonToJson,
 } from './noise';
-import { sha256, USER_AGENT } from './freshness';
+import { checkSource, makeFetcher, sha256, USER_AGENT, type CheckOutcome, type FreshnessSource } from './freshness';
 import type { RefreshReport, RefreshReportEntry } from './bodies';
 import type { NoiseContourFeature } from './types';
 
@@ -63,10 +63,12 @@ export interface RefreshResult {
   readonly detail: string;
   readonly previousCount?: number;
   readonly newCount?: number;
+  /** The check-comparable version signal (commit SHA / CKAN timestamp) */
+  readonly upstreamVersion?: string;
 }
 
 /** Download a full snapshot (used only by refresh, not by check); binary-safe */
-async function download(url: string, isGzip: boolean): Promise<Download> {
+async function download(url: string, format: DownloadFormat): Promise<Download> {
   const response = await fetch(url, {
     headers: { 'User-Agent': USER_AGENT },
     signal: AbortSignal.timeout(60_000),
@@ -76,31 +78,72 @@ async function download(url: string, isGzip: boolean): Promise<Download> {
     throw new Error(`HTTP ${response.status} for ${url}`);
   }
   const buffer = Buffer.from(await response.arrayBuffer());
-  validateMagic(url, buffer, isGzip);
-  const content = isGzip ? gunzipSync(buffer).toString('utf8') : buffer.toString('utf8');
+  validateMagic(url, buffer, format);
+  const content = format === 'gzip' ? gunzipSync(buffer).toString('utf8') : buffer.toString('utf8');
   return { content, version: response.headers.get('etag') ?? '' };
 }
 
+/** Expected download format per source (drives the magic-byte gate) */
+export type DownloadFormat = 'csv' | 'gzip' | 'geojson';
+
 /**
  * Session 22c bugfix gate: the download's first bytes must match the
- * expected format. gzip magic is 1f 8b; non-gzip downloads must not be
+ * expected format. gzip magic is 1f 8b; a CSV download must not be
  * JSON (an error page or a commits-API response must never be parsed
- * as CSV/GeoJSON).
+ * as CSV); a GeoJSON download must be JSON.
  */
-export function validateMagic(url: string, buffer: Buffer, expectGzip: boolean): void {
+export function validateMagic(url: string, buffer: Buffer, format: DownloadFormat): void {
   if (buffer.length === 0) {
     throw new Error(`${url}: download is empty`);
   }
-  if (expectGzip) {
+  if (format === 'gzip') {
     if (!(buffer[0] === 0x1f && buffer[1] === 0x8b)) {
       throw new Error(`${url}: expected gzip (magic 1f 8b), got first bytes ${buffer.slice(0, 2).toString('hex')}`);
     }
     return;
   }
   const head = buffer.slice(0, 64).toString('utf8').trimStart();
-  if (head.startsWith('{') || head.startsWith('[')) {
+  const looksJson = head.startsWith('{') || head.startsWith('[');
+  if (format === 'csv' && looksJson) {
     throw new Error(`${url}: download looks like JSON, not the expected CSV - wrong URL (check signal used as data?)`);
   }
+  if (format === 'geojson' && !looksJson) {
+    throw new Error(`${url}: expected a JSON/GeoJSON download, got first bytes ${JSON.stringify(head.slice(0, 16))}`);
+  }
+}
+
+/**
+ * Session 22b/22c bugfix: after refresh, upstreamVersion must hold the
+ * SAME kind of value `check` compares against (GitHub commit SHA / CKAN
+ * metadata_modified), or check keeps reporting "update-available" and the
+ * data-updates issue never closes. The signal is fetched with check's own
+ * code path (checkSource) BEFORE the download, so a commit landing
+ * mid-refresh is flagged by the next check instead of being recorded.
+ * Fail closed: no signal, no sources.json write for this source.
+ */
+async function resolveUpstreamVersionBeforeDownload(
+  source: RefreshSource,
+): Promise<string> {
+  if (source.upstream === undefined) {
+    throw new Error(
+      `${source.id}: no upstream block in sources.json; cannot record the version signal check compares against`,
+    );
+  }
+  const token = process.env['GITHUB_TOKEN'];
+  const outcome: CheckOutcome | null = await checkSource(
+    source as unknown as FreshnessSource,
+    makeFetcher(token),
+  );
+  if (outcome === null) {
+    throw new Error(`${source.id}: checkSource returned no outcome for method ${source.upstream.method}`);
+  }
+  if (outcome.status === 'check-failed') {
+    throw new Error(`${source.id}: could not fetch the version signal: ${outcome.detail}`);
+  }
+  if (outcome.upstreamVersion === undefined || outcome.upstreamVersion.length === 0) {
+    throw new Error(`${source.id}: checkSource returned no upstream version for method ${source.upstream.method}`);
+  }
+  return outcome.upstreamVersion;
 }
 
 /**
@@ -165,8 +208,10 @@ async function refreshSource(id: string): Promise<RefreshResult> {
   await mkdir(TMP_DIR, { recursive: true });
 
   if (id === 'ourairports') {
+    // Version signal BEFORE the download (fail closed without it)
+    const upstreamVersion = await resolveUpstreamVersionBeforeDownload(source);
     const url = resolveDownloadUrl(source);
-    const downloadResult = await download(url, false);
+    const downloadResult = await download(url, 'csv');
     const result = buildAirports(downloadResult.content, date);
     const json = airportsToJson(result.airports);
     const prev = await readPreviousCount(join(OUT_DIR, 'airports.json'));
@@ -177,13 +222,15 @@ async function refreshSource(id: string): Promise<RefreshResult> {
     }
     await keepRollbackCopy(join(OUT_DIR, 'airports.json'));
     await writeFileAtomic(join(OUT_DIR, 'airports.json'), json);
-    await updateSources(id, downloadResult.version, sha256(downloadResult.content));
-    return { id, ok: true, detail: `airports: ${entries} entries`, previousCount: prev ?? undefined, newCount: entries };
+    await updateSources(id, upstreamVersion, sha256(downloadResult.content), downloadResult.version);
+    return { id, ok: true, detail: `airports: ${entries} entries`, previousCount: prev ?? undefined, newCount: entries , upstreamVersion };
   }
 
   if (id === 'tar1090-db') {
+    // Version signal BEFORE the download (fail closed without it)
+    const upstreamVersion = await resolveUpstreamVersionBeforeDownload(source);
     const url = resolveDownloadUrl(source);
-    const downloadResult = await download(url, true);
+    const downloadResult = await download(url, 'gzip');
     const result = buildAircraft(downloadResult.content, date, true);
     const json = aircraftToJson(result.aircraft);
     const prev = await readPreviousCount(join(OUT_DIR, 'aircraft.json'));
@@ -194,13 +241,15 @@ async function refreshSource(id: string): Promise<RefreshResult> {
     }
     await keepRollbackCopy(join(OUT_DIR, 'aircraft.json'));
     await writeFileAtomic(join(OUT_DIR, 'aircraft.json'), json);
-    await updateSources(id, downloadResult.version, sha256(downloadResult.content));
-    return { id, ok: true, detail: `aircraft: ${entries} entries`, previousCount: prev ?? undefined, newCount: entries };
+    await updateSources(id, upstreamVersion, sha256(downloadResult.content), downloadResult.version);
+    return { id, ok: true, detail: `aircraft: ${entries} entries`, previousCount: prev ?? undefined, newCount: entries , upstreamVersion };
   }
 
   if (id === 'rivm-end-2021-noise') {
+    // Version signal BEFORE the download (fail closed without it)
+    const upstreamVersion = await resolveUpstreamVersionBeforeDownload(source);
     const url = resolveDownloadUrl(source);
-    const downloadResult = await download(url, false);
+    const downloadResult = await download(url, 'geojson');
     const { contours, warnings } = endWfsToRawContours(
       JSON.parse(downloadResult.content) as Parameters<typeof endWfsToRawContours>[0],
       'RIVM/CVGG — EU END 2021 noise contours (major airports), via data.overheid.nl',
@@ -232,8 +281,8 @@ async function refreshSource(id: string): Promise<RefreshResult> {
     const json = noiseGeoJsonToJson(features);
     await keepRollbackCopy(NOISE_PATH);
     await writeFileAtomic(NOISE_PATH, json);
-    await updateSources(id, downloadResult.version, sha256(downloadResult.content));
-    return { id, ok: true, detail: `noise: ${features.length} contours`, newCount: features.length };
+    await updateSources(id, upstreamVersion, sha256(downloadResult.content), downloadResult.version);
+    return { id, ok: true, detail: `noise: ${features.length} contours`, newCount: features.length, upstreamVersion };
   }
 
   return { id, ok: false, detail: `no refresh procedure for source "${id}"` };
@@ -297,13 +346,18 @@ export function validateGeometryInNl(feature: NoiseContourFeature): string | und
   return undefined;
 }
 
-async function updateSources(id: string, upstreamVersion: string, contentSha256: string): Promise<void> {
+async function updateSources(id: string, upstreamVersion: string, contentSha256: string, downloadEtag?: string): Promise<void> {
   const raw = await readFile(SOURCES_PATH, 'utf8');
   const data = JSON.parse(raw) as SourcesFile & { sources: (RefreshSource & Record<string, unknown>)[] };
   for (const source of data.sources) {
     if (source.id === id) {
       source['retrievedAt'] = today();
       source['upstreamVersion'] = upstreamVersion;
+      // The download ETag is kept for diagnostics only; check never
+      // compares against it (session 22b/22c bugfix).
+      if (downloadEtag !== undefined && downloadEtag.length > 0) {
+        source['downloadEtag'] = downloadEtag;
+      }
       source['contentSha256'] = contentSha256;
       source['checkedAt'] = new Date().toISOString();
       if (id === 'rivm-end-2021-noise') {
@@ -389,6 +443,8 @@ function reportEntry(
     detail: result.detail,
     previousCount: result.previousCount,
     newCount: result.newCount,
+    // The real version signal, so the PR body shows it instead of n/a
+    ...(result.upstreamVersion !== undefined ? { upstreamVersion: result.upstreamVersion } : {}),
     ...(sources.get(result.id) ?? {}),
   };
 }
