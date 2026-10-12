@@ -134,22 +134,41 @@ jobs:
             echo "PR_EXISTS=" >> "$GITHUB_ENV"
           fi
       - name: Validate the artifact manifest and build the PR body
-        if: ${{ env.PR_EXISTS != '1' }}
+        # Never on a dry run: the manifest/PR body are only needed when a PR
+        # will be opened (the dry-run summary already said so).
+        if: ${{ env.PR_EXISTS != '1' && env.DRY_RUN != '1' }}
         run: |
           set -eu
-          if [ "$DRY_RUN" = "1" ]; then
-            echo "dry_run: not opening a PR (report artifact retained)." >> "$GITHUB_STEP_SUM"
-            exit 0
-          fi
           pnpm --filter @vliegvuil/data-build exec tsx src/pr-body.ts \
             ../data-build/status/refresh-report.json \
             ../data-build/status/pr-body.md \
             ../data-build/status/artifact-manifest.txt
           # No changed output paths means no PR: git status must show a diff.
           if git diff --quiet; then
-            echo "No changes; not opening a PR." >> "$GITHUB_STEP_SUM"
+            echo "No changes; not opening a PR." >> "$GITHUB_STEP_SUMMARY"
             echo "NO_DIFF=1" >> "$GITHUB_ENV"
           fi
+      - name: Ensure the data labels exist
+        # gh pr create --label fails when the label does not exist; create
+        # each only if missing. Same job (write token), same env: rule.
+        if: ${{ env.PR_EXISTS != '1' && env.DRY_RUN != '1' && env.NO_DIFF != '1' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eu
+          for label in data needs-human-review; do
+            if gh label list --search "$label" --json name --jq ".[].name" | grep -qx "$label"; then
+              echo "label '$label' already exists"
+            else
+              case "$label" in
+                data)              desc="Automated data refresh PR" ;;
+                needs-human-review) desc="Manual noise source refresh; check licence, bands, reference year, labels" ;;
+                *)                  desc="" ;;
+              esac
+              gh label create "$label" --description "$desc"
+              echo "created label '$label'"
+            fi
+          done
       - name: Commit, push and open the PR
         if: ${{ env.PR_EXISTS != '1' && env.DRY_RUN != '1' && env.NO_DIFF != '1' }}
         env:
