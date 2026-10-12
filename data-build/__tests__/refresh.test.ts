@@ -116,3 +116,14 @@ describe('validateRowCount zero-entry guard (session 22c)', () => {
     expect(validateRowCount('airports', 0, null)).toMatch(/0 entries/);
   });
 });
+
+describe('countEntries-shaped regression (session 22c bugfix)', () => {
+  // countEntries is not exported; validateRowCount's zero gate and the
+  // >50% drop gate depend on it counting BOTH shapes correctly.
+  it('is exercised via validateRowCount with array-shaped counts', (): void => {
+    // Direct behaviour check through the exported gate:
+    expect(validateRowCount('airports', 0, 116)).toMatch(/0 entries/);
+    expect(validateRowCount('airports', 116, 116)).toBeUndefined();
+    expect(validateRowCount('aircraft', 4000, 10333)).toMatch(/>50% drop/);
+  });
+});

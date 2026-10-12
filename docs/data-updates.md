@@ -64,6 +64,15 @@ pnpm --filter @vliegvuil/data-build run refresh -- ourairports
 Downloads to `data-build/tmp/`, transforms, validates, then atomically
 swaps into `web/public/data/` and updates `sources.json`
 (`retrievedAt`, `upstreamVersion`, `contentSha256`, `checkedAt`).
+
+Refresh downloads from each source's `downloadUrl` in `sources.json`
+(the raw data file), never from `upstream.url` — that field is the
+**check** signal only (commits API / CKAN metadata). A missing
+`downloadUrl` fails with a clear message, and every download must pass a
+magic-byte gate first: gzip files must start with `1f 8b`, and non-gzip
+downloads that look like JSON (an error page or a commits-API response)
+are rejected. Sources with `refresh: "auto"` must carry a `downloadUrl`
+(enforced by `sources.schema.json`).
 `all-auto` refreshes only sources marked `refresh: "auto"`. Manual
 sources are never touched unless named explicitly — and only after a
 human reviewed the new release's licence, band structure and year.
@@ -71,11 +80,14 @@ human reviewed the new release's licence, band structure and year.
 Validation gates (all must pass or the old data stays, exit non-zero):
 
 1. Schema/required fields — the existing builders throw on malformed input.
-2. Row count within tolerance: a drop of more than 50 % versus the
+2. Download magic bytes: gzip must start with `1f 8b`; a JSON payload
+   where CSV/GeoJSON is expected is rejected (wrong-URL protection).
+3. A refresh that produces 0 entries is refused (broken download).
+4. Row count within tolerance: a drop of more than 50 % versus the
    previous file fails (`refresh.ts` `ROW_DROP_TOLERANCE`).
-3. Noise geometries inside the Netherlands bounding box.
-4. File size under the ~2 MB cap (AGENTS.md).
-5. Noise band lower bounds within the set the app knows
+5. Noise geometries inside the Netherlands bounding box.
+6. File size under the ~2 MB cap (AGENTS.md).
+7. Noise band lower bounds within the set the app knows
    (48/55/56/60/65/70/75); an unknown band set fails and asks for a human.
 
 ## Rolling back
