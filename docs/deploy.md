@@ -431,8 +431,16 @@ and update `docs/privacy.md` to describe what is actually logged.
 
 | Zone | Key | Limit | Purpose |
 |------|-----|-------|---------|
-| `static_per_ip` | `{remote_host}` | 120 events / 1 min | Static assets |
+| `static_per_ip` | `{remote_host}` | 120 events / 1 min | SPA and its assets (catch-all only) |
 | `api_per_ip` | `{remote_host}` | 60 events / 1 min | `/api/*` proxy |
+| `tiles_per_ip` | `{remote_host}` | 600 events / 1 min | `/tiles/*` self-hosted basemap (generous ceiling; cheap cached PNGs) |
+
+The zones are scoped per route: the static zone lives inside the catch-all
+handle, so tile requests (dozens per map view) and API polls never eat the
+SPA's budget, and vice versa. Before the tiles existed this was not visible:
+the site-level zone counted every request, so a 404 flood from missing tiles
+could starve the `/api` aircraft poll (429s surfacing as the rate-limit
+banner).
 
 The `/api/*` responses are micro-cached for 5 s (`cache { ttl 5s }`, otter
 storage), which bounds upstream request pressure regardless of visitor
