@@ -33,16 +33,6 @@ vliegvuil.nl {
 		-X-XSS-Protection
 	}
 
-	# Per-IP rate limit for everything that is not the API (static assets).
-	# {remote_host} is the client IP as Caddy sees it (direct connection,
-	# no Cloudflare in front).
-	rate_limit {
-		zone static_per_ip {
-			key {remote_host}
-			events 120
-			window 1m
-		}
-	}
 
 	# Same-origin API proxy: /api/* -> https://opendata.adsb.fi/api/v2/*
 	# This removes CORS entirely: the browser only ever talks to vliegvuil.nl.
@@ -103,6 +93,16 @@ vliegvuil.nl {
 	# scripts/vps-tiles-update.js); long cache, no directory listing
 	# (file_server never lists), 404 for missing tiles.
 	handle /tiles/* {
+		# Cheap cached PNGs; a generous ceiling only (an abuser gains
+		# nothing: they are served from disk). NOT under static_per_ip —
+		# a legitimate panning visitor fires dozens of tile requests.
+		rate_limit {
+			zone tiles_per_ip {
+				key {remote_host}
+				events 600
+				window 1m
+			}
+		}
 		root * /srv/vliegvuil/tiles
 		file_server
 		header Cache-Control "public, max-age=604800"
@@ -118,6 +118,17 @@ vliegvuil.nl {
 	# handle blocks and would rewrite /api/* to /index.html, bypassing the
 	# proxy entirely.
 	handle {
+		# Per-IP rate limit for the SPA and its assets only. This zone is
+		# scoped to the catch-all so it never counts /api (own 60/min zone)
+		# or /tiles (own generous zone) requests — otherwise tile traffic
+		# could starve the aircraft poll of its budget (429s for /api).
+		rate_limit {
+			zone static_per_ip {
+				key {remote_host}
+				events 120
+				window 1m
+		}
+		}
 		try_files {path} /index.html
 		file_server
 	}
