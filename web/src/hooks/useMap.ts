@@ -129,6 +129,11 @@ export function useMap(config: MapConfig, _style?: MapStyle): UseMapReturn {
 
       // Basemap tile errors (self-hosted tiles): one non-blocking notice,
       // never spamming on repeated tile failures (state flips once).
+      // Verified against the MapLibre 4.7 source: 404 tiles fire NO error
+      // event at all (source_cache.ts deliberately suppresses them and
+      // falls back to parent tiles) — so this notice appears only for
+      // real failures (network errors, 5xx, malformed responses), where
+      // event.sourceId is attached by the style's evented parent.
       mapInstance.on('error', (event: { sourceId?: string }) => {
         if (event.sourceId === 'pdok-brt') {
           setTileError(true);

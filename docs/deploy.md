@@ -556,6 +556,14 @@ Rollback: `sudo rm -rf /srv/vliegvuil/tiles && sudo mv /srv/vliegvuil/tiles.old 
 Caddy serves `/tiles/*` with `Cache-Control: public, max-age=604800`, no
 directory listing; missing tiles return a quick 404 (no SPA fallback).
 
+Note on the in-app notice ("Kaartachtergrond kon niet geladen worden"):
+it appears only for real tile failures (network errors, 5xx), NOT for
+404s — MapLibre 4.7 deliberately fires no error event for a 404 tile and
+silently falls back to parent tiles (verified in the MapLibre source,
+`source_cache.ts`). So during the first download the map quietly shows
+the background colour and the planes layer keeps working; no banner
+appears until tiles actually fail to load for a non-404 reason.
+
 ## 9. Maintenance
 
 - **Caddy security updates.** `apt upgrade` updates only the packaged binary
