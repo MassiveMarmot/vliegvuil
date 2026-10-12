@@ -176,10 +176,14 @@ jobs:
         run: |
           set -eu
           date="$(date -u +%Y-%m-%d)"
+          # The run number makes the branch unique per dispatch, so a
+          # same-day re-run can never collide with a previously pushed
+          # branch (observed live: a second dispatch on the same date
+          # was rejected with "remote contains work that you do not have").
           if [ "$SOURCE" != "all-auto" ]; then
-            branch="data/refresh-$date-$SOURCE"
+            branch="data/refresh-$date-$SOURCE-r$GITHUB_RUN_NUMBER"
           else
-            branch="data/refresh-$date"
+            branch="data/refresh-$date-r$GITHUB_RUN_NUMBER"
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
