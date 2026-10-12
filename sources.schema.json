@@ -109,6 +109,10 @@
             "type": "string",
             "description": "Recorded upstream signal: commit sha, ETag, or dataset metadata date"
           },
+          "downloadEtag": {
+            "type": "string",
+            "description": "HTTP ETag of the last successful data download (diagnostics only; check never compares against it). Recorded by refresh."
+          },
           "contentSha256": {
             "type": "string",
             "description": "SHA-256 of the raw upstream payload at retrieval"

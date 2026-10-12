@@ -41,27 +41,35 @@ describe('validateMagic (recorded real responses)', () => {
     const gzHead = fixture('aircraft.csv.gz.head');
     expect(gzHead[0]).toBe(0x1f);
     expect(gzHead[1]).toBe(0x8b);
-    expect(() => validateMagic('https://…/aircraft.csv.gz', gzHead, true)).not.toThrow();
+    expect(() => validateMagic('https://…/aircraft.csv.gz', gzHead, 'gzip')).not.toThrow();
   });
   it('rejects the commits-API JSON body passed off as gzip', (): void => {
     const commitsJson = fixture('commits-api.json');
-    expect(() => validateMagic('https://api.github.com/…/commits/csv', commitsJson, true)).toThrow(
+    expect(() => validateMagic('https://api.github.com/…/commits/csv', commitsJson, 'gzip')).toThrow(
       /expected gzip \(magic 1f 8b\)/,
     );
   });
   it('accepts the real airports.csv head as CSV', (): void => {
     const csvHead = fixture('airports.csv.head');
     expect(csvHead.slice(0, 4).toString('utf8')).toBe('"id"');
-    expect(() => validateMagic('https://…/airports.csv', csvHead, false)).not.toThrow();
+    expect(() => validateMagic('https://…/airports.csv', csvHead, 'csv')).not.toThrow();
   });
   it('rejects a JSON payload where CSV is expected (the commits-API body)', (): void => {
     const commitsJson = fixture('commits-api.json');
-    expect(() => validateMagic('https://api.github.com/…/commits/main', commitsJson, false)).toThrow(
+    expect(() => validateMagic('https://api.github.com/…/commits/main', commitsJson, 'csv')).toThrow(
       /looks like JSON, not the expected CSV/,
     );
   });
+  it('accepts the real WFS GeoJSON download and rejects non-JSON for it', (): void => {
+    const geojson = Buffer.from('{\n  "type": "FeatureCollection",\n  "name": "NoiseContours"');
+    expect(() => validateMagic('https://…/wfs', geojson, 'geojson')).not.toThrow();
+    const notJson = Buffer.from('<html>error</html>');
+    expect(() => validateMagic('https://…/wfs', notJson, 'geojson')).toThrow(
+      /expected a JSON\/GeoJSON download/,
+    );
+  });
   it('rejects an empty download', (): void => {
-    expect(() => validateMagic('https://…/x.csv', Buffer.alloc(0), false)).toThrow(/download is empty/);
+    expect(() => validateMagic('https://…/x.csv', Buffer.alloc(0), 'csv')).toThrow(/download is empty/);
   });
 });
 
