@@ -74,6 +74,10 @@ printf 'pbf-fixture' > "$WORK/fonts/Space Grotesk Regular/0-255.pbf"
 # 3. Caddy site: same header_up/header_down directives as the real Caddyfile,
 #    but proxying to the local echo server.
 sed -e "s/__ECHO_PORT__/$ECHO_PORT/" > "$WORK/Caddyfile.test" <<'EOF'
+{
+	admin off
+}
+
 :__PROXY_PORT__ {
 	# Same /fonts/* handle as the real Caddyfile: no SPA fallback, so a
 	# missing glyph range is a 404, not index.html. __WORK__ is replaced
@@ -120,8 +124,13 @@ while time.time() < deadline:
     if ok:
         sys.exit(0)
     time.sleep(0.2)
-sys.exit('servers did not come up')
+sys.exit(1)
 EOF
+if [ "$?" -ne 0 ]; then
+    echo "FAIL: servers did not come up; caddy log:" >&2
+    cat "$WORK/caddy.log" >&2 || true
+    exit 1
+fi
 
 # 5. Request through the proxy with client-identifying headers set
 python3 - "$WORK/headers.json" "$PROXY_PORT" <<'EOF'
