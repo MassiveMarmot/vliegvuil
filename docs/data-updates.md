@@ -109,7 +109,9 @@ Checks and refreshes run on GitHub's runners, not on the VPS (SPEC §4):
 - **Refresh** (monthly, plus manual dispatch with a source id): runs
   `refresh`, then opens a pull request with the changed files in
   `web/public/data/` and `sources.json`. No change means no PR. Manual
-  (noise) sources only run when named in a manual dispatch.
+  (noise) sources only run when named in a manual dispatch. The workflow
+  creates the `data` and `needs-human-review` labels itself when they
+  are missing, so no one-time label setup is needed.
 - The workflows only open issues and pull requests. Nothing deploys from
   GitHub; you merge and then deploy on the VPS (`docs/deploy.md` §7).
 
