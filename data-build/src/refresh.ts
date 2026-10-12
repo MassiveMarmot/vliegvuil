@@ -45,6 +45,7 @@ interface RefreshSource {
   readonly id: string;
   readonly refresh?: 'auto' | 'manual';
   readonly upstream?: { readonly method: string; readonly url: string };
+  readonly downloadUrl?: string;
 }
 
 interface SourcesFile {
@@ -75,8 +76,46 @@ async function download(url: string, isGzip: boolean): Promise<Download> {
     throw new Error(`HTTP ${response.status} for ${url}`);
   }
   const buffer = Buffer.from(await response.arrayBuffer());
+  validateMagic(url, buffer, isGzip);
   const content = isGzip ? gunzipSync(buffer).toString('utf8') : buffer.toString('utf8');
   return { content, version: response.headers.get('etag') ?? '' };
+}
+
+/**
+ * Session 22c bugfix gate: the download's first bytes must match the
+ * expected format. gzip magic is 1f 8b; non-gzip downloads must not be
+ * JSON (an error page or a commits-API response must never be parsed
+ * as CSV/GeoJSON).
+ */
+export function validateMagic(url: string, buffer: Buffer, expectGzip: boolean): void {
+  if (buffer.length === 0) {
+    throw new Error(`${url}: download is empty`);
+  }
+  if (expectGzip) {
+    if (!(buffer[0] === 0x1f && buffer[1] === 0x8b)) {
+      throw new Error(`${url}: expected gzip (magic 1f 8b), got first bytes ${buffer.slice(0, 2).toString('hex')}`);
+    }
+    return;
+  }
+  const head = buffer.slice(0, 64).toString('utf8').trimStart();
+  if (head.startsWith('{') || head.startsWith('[')) {
+    throw new Error(`${url}: download looks like JSON, not the expected CSV - wrong URL (check signal used as data?)`);
+  }
+}
+
+/**
+ * Resolve the data URL for a source. upstream.url is the CHECK signal
+ * (commits API / CKAN metadata) and must never be downloaded as data;
+ * a missing downloadUrl fails with a clear message.
+ */
+export function resolveDownloadUrl(source: RefreshSource): string {
+  const url = source.downloadUrl;
+  if (url === undefined || url.length === 0) {
+    throw new Error(
+      `${source.id}: no downloadUrl in sources.json (upstream.url is the check signal, not the data file); add the raw file URL`,
+    );
+  }
+  return url;
 }
 
 async function writeFileAtomic(filePath: string, content: string | Buffer): Promise<void> {
@@ -100,8 +139,18 @@ function today(): string {
 }
 
 function countEntries(json: string): number {
-  const parsed = JSON.parse(json) as { entries?: unknown[]; features?: unknown[] };
-  return parsed.entries?.length ?? parsed.features?.length ?? 0;
+  const parsed: unknown = JSON.parse(json);
+  // Snapshot files are bare arrays (airports/aircraft); the noise file
+  // is a FeatureCollection. Both must count correctly or the
+  // row-drop gate is blind.
+  if (Array.isArray(parsed)) {
+    return parsed.length;
+  }
+  if (parsed !== null && typeof parsed === 'object') {
+    const obj = parsed as { entries?: unknown[]; features?: unknown[] };
+    return obj.entries?.length ?? obj.features?.length ?? 0;
+  }
+  return 0;
 }
 
 /** Validate and refresh one source; returns ok=false on any gate failure */
@@ -116,7 +165,7 @@ async function refreshSource(id: string): Promise<RefreshResult> {
   await mkdir(TMP_DIR, { recursive: true });
 
   if (id === 'ourairports') {
-    const url = source.upstream?.url ?? '';
+    const url = resolveDownloadUrl(source);
     const downloadResult = await download(url, false);
     const result = buildAirports(downloadResult.content, date);
     const json = airportsToJson(result.airports);
@@ -133,7 +182,7 @@ async function refreshSource(id: string): Promise<RefreshResult> {
   }
 
   if (id === 'tar1090-db') {
-    const url = source.upstream?.url ?? '';
+    const url = resolveDownloadUrl(source);
     const downloadResult = await download(url, true);
     const result = buildAircraft(downloadResult.content, date, true);
     const json = aircraftToJson(result.aircraft);
@@ -150,7 +199,7 @@ async function refreshSource(id: string): Promise<RefreshResult> {
   }
 
   if (id === 'rivm-end-2021-noise') {
-    const url = source.upstream?.url ?? '';
+    const url = resolveDownloadUrl(source);
     const downloadResult = await download(url, false);
     const { contours, warnings } = endWfsToRawContours(
       JSON.parse(downloadResult.content) as Parameters<typeof endWfsToRawContours>[0],

@@ -53,7 +53,13 @@
             "properties": {
               "method": {
                 "type": "string",
-                "enum": ["ckan-metadata", "http", "github", "wfs", "manual"],
+                "enum": [
+                  "ckan-metadata",
+                  "http",
+                  "github",
+                  "wfs",
+                  "manual"
+                ],
                 "description": "Metadata signal to query"
               },
               "url": {
@@ -62,11 +68,23 @@
                 "description": "URL to query for the signal"
               }
             },
-            "required": ["method", "url"]
+            "required": [
+              "method",
+              "url"
+            ]
+          },
+          "downloadUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL of the raw data file for refresh (session 22c bugfix); upstream.url is the check signal only. Required for sources with refresh: auto."
           },
           "cadence": {
             "type": "string",
-            "enum": ["monthly", "yearly", "multi-year"],
+            "enum": [
+              "monthly",
+              "yearly",
+              "multi-year"
+            ],
             "description": "How often the dataset is expected to change"
           },
           "reviewDueBy": {
@@ -76,7 +94,10 @@
           },
           "refresh": {
             "type": "string",
-            "enum": ["auto", "manual"],
+            "enum": [
+              "auto",
+              "manual"
+            ],
             "description": "Whether refresh may run automatically"
           },
           "retrievedAt": {
@@ -108,6 +129,22 @@
           "url",
           "license",
           "dataType"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "refresh": {
+                  "const": "auto"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "downloadUrl"
+              ]
+            }
+          }
         ]
       }
     }

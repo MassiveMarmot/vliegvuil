@@ -54,6 +54,7 @@
         "method": "github",
         "url": "https://api.github.com/repos/davidmegginson/ourairports-data/commits/main"
       },
+      "downloadUrl": "https://raw.githubusercontent.com/davidmegginson/ourairports-data/main/airports.csv",
       "contentSha256": "12b6fa265307bbc3cf73a1f672fe7e3b48d44e5158a504f9287f472b4ac70a4c"
     },
     {
@@ -75,6 +76,7 @@
         "method": "github",
         "url": "https://api.github.com/repos/wiedehopf/tar1090-db/commits/csv"
       },
+      "downloadUrl": "https://github.com/wiedehopf/tar1090-db/raw/refs/heads/csv/aircraft.csv.gz",
       "contentSha256": "65d40dd7d41961e6feb64289d717d12680bc27d17a3ccb11a29bbac11d48d325"
     },
     {
@@ -114,6 +116,7 @@
         "method": "ckan-metadata",
         "url": "https://data.overheid.nl/data/api/3/action/package_show?id=bc7703a1-9323-4e4f-9ce7-246ace877b59"
       },
+      "downloadUrl": "https://haleconnect.com/ows/services/org.1251.31fc0cfb-352e-4e97-8311-eab4fcd6c36b_wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAMES=gpkg%3ANoiseContours_majorAirportsIncludingAgglomeration_Lden&OUTPUTFORMAT=application%2Fjson",
       "contentSha256": "cd0769962947840db639d48ce9c9eebcfcc0428ad46cccd21d5a0cc8ff1b95b5"
     },
     {
