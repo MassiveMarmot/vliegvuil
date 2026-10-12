@@ -47,15 +47,15 @@
       "notes": "Verified 2026-09-29: 'All data is released to the Public Domain.' Download from https://raw.githubusercontent.com/davidmegginson/ourairports-data/main/airports.csv",
       "cadence": "monthly",
       "refresh": "auto",
-      "retrievedAt": "2026-09-30",
-      "upstreamVersion": "f31ef57d6e9b67764b3c2ec2336a10bcaa4e28b6",
-      "checkedAt": "2026-10-08T00:00:00.000Z",
+      "retrievedAt": "2026-10-12",
+      "upstreamVersion": "W/\"1aef147bd2cc2a4883665013a61c90fa7126d87c78fe630a547410f8a1665713\"",
+      "checkedAt": "2026-10-12T21:45:42.196Z",
       "upstream": {
         "method": "github",
         "url": "https://api.github.com/repos/davidmegginson/ourairports-data/commits/main"
       },
       "downloadUrl": "https://raw.githubusercontent.com/davidmegginson/ourairports-data/main/airports.csv",
-      "contentSha256": "12b6fa265307bbc3cf73a1f672fe7e3b48d44e5158a504f9287f472b4ac70a4c"
+      "contentSha256": "eb99a7ca14a63612b82d1c33694b2f8963b7cc42b7a6128142e8f1b9c5be23e5"
     },
     {
       "id": "tar1090-db",
@@ -69,15 +69,15 @@
       "notes": "Download: https://github.com/wiedehopf/tar1090-db/raw/refs/heads/csv/aircraft.csv.gz — derived from Mictronics/aircraft-database, whose exports are made available under the Open Data Commons Attribution License (ODC-By-1.0).",
       "cadence": "monthly",
       "refresh": "auto",
-      "retrievedAt": "2026-09-30",
-      "upstreamVersion": "655afe27950658a4124d15d75766538b1ae9ea3b",
-      "checkedAt": "2026-10-08T00:00:00.000Z",
+      "retrievedAt": "2026-10-12",
+      "upstreamVersion": "W/\"1a52c5cddfd01c7fd321f9965e039b8bb4dbb01b73874e7129b48cfac167207a\"",
+      "checkedAt": "2026-10-12T21:45:44.379Z",
       "upstream": {
         "method": "github",
         "url": "https://api.github.com/repos/wiedehopf/tar1090-db/commits/csv"
       },
       "downloadUrl": "https://github.com/wiedehopf/tar1090-db/raw/refs/heads/csv/aircraft.csv.gz",
-      "contentSha256": "65d40dd7d41961e6feb64289d717d12680bc27d17a3ccb11a29bbac11d48d325"
+      "contentSha256": "72fa4aeb462c8b2a3aa042e5f6a6b6a56180246291b807792474af851cc8b1e5"
     },
     {
       "id": "pdok-brt",
