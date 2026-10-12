@@ -502,6 +502,52 @@ sudo systemctl daemon-reload
 See `docs/data-updates.md` for how the two workflows work and what to
 check after the first real run (`workflow_dispatch` with `dry_run`).
 
+## 8b. Self-hosted basemap tiles (BRT-A)
+
+The map background is served from our own origin (`/tiles/{z}/{x}/{y}.png`);
+the browser never contacts `service.pdok.nl`. The tiles are a one-time copy
+of the PDOK BRT Achtergrondkaart WMTS (CC-BY 4.0, Kadaster; attribution
+stays in the app). Expected size: ~769 MB for the app's NL bbox, zoom 6-14
+(~80,000 tiles, dry-run sampled 2026-10-12).
+
+First run / refresh (manual, no timers):
+
+```bash
+# Estimate first (no full download):
+sudo -u vliegvuil node /srv/vliegvuil/scripts/vps-tiles-update.js --dry-run
+
+# Real run: survives an SSH disconnect via systemd-run; ~24 hours at the
+# default spread. Log and progress are written inside the tile dir.
+sudo systemd-run --unit=vliegvuil-tiles --working-directory=/srv/vliegvuil \
+  node /srv/vliegvuil/scripts/vps-tiles-update.js --spread-hours 24
+```
+
+Monitor and stop:
+
+```bash
+journalctl -u vliegvuil-tiles -f          # progress (also: tiles.new/.download.log)
+systemctl stop vliegvuil-tiles             # clean stop; rerun the same command to resume
+```
+
+The download is strictly sequential (one request at a time), spread with
+jitter, honours `Retry-After` on 429/503 and slows the rest of the run,
+retries with backoff, and aborts after 5 consecutive failures instead of
+hammering the server (PDOK Fair Use publishes no numeric rate limit). It is
+resumable: existing valid tiles are skipped, safe to Ctrl-C and rerun.
+
+When it finishes it atomically swaps `tiles.new` into `/srv/vliegvuil/tiles`
+(keeping `tiles.old` for rollback), then reload Caddy:
+
+```bash
+sudo systemctl reload caddy
+curl -sSI https://vliegvuil.nl/tiles/8/132/84.png   # 200 + image/png + Cache-Control
+```
+
+Rollback: `sudo rm -rf /srv/vliegvuil/tiles && sudo mv /srv/vliegvuil/tiles.old /srv/vliegvuil/tiles && sudo systemctl reload caddy`.
+
+Caddy serves `/tiles/*` with `Cache-Control: public, max-age=604800`, no
+directory listing; missing tiles return a quick 404 (no SPA fallback).
+
 ## 9. Maintenance
 
 - **Caddy security updates.** `apt upgrade` updates only the packaged binary

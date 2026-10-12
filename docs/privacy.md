@@ -15,10 +15,10 @@ VliegVuil.nl is privacy-first by design. This page documents what the site does 
 
 ## Third-party requests
 
-The app makes exactly one kind of third-party request: **PDOK basemap tiles** (`geodata.nationaalgeoregister.nl`), operated by the Dutch government. Map tile requests inherently reveal roughly where on the map you are looking to that server; this is standard for any slippy map. Self-hosted PMTiles basemaps are a planned drop-in replacement that would remove even this.
-
-The aircraft position requests go to our own origin (the Caddy proxy), not directly to any third party.
-
+**None.** The basemap tiles (PDOK BRT Achtergrondkaart) are self-hosted on
+our own server: the browser loads them from vliegvul.nl itself and never
+contacts service.pdok.nl. The site therefore does not depend on any
+third-party server being reachable at request time.
 ## Strict CSP
 
 The Content-Security-Policy only allows resources from our own origin and PDOK tiles. See `Caddyfile` and `docs/deploy.md` for the exact policy.

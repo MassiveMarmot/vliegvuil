@@ -25,7 +25,7 @@ vliegvuil.nl {
 	# Security headers (same origin only; the API is proxied below, so no
 	# third-party origins appear in connect-src and no CORS headers exist)
 	header {
-		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://service.pdok.nl; connect-src 'self' https://service.pdok.nl; font-src 'self'; worker-src 'self' blob:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; worker-src 'self' blob:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"
 		Referrer-Policy "strict-origin-when-cross-origin"
@@ -98,6 +98,15 @@ vliegvuil.nl {
 		}
 	}
 
+	# Self-hosted BRT-A basemap tiles (session: self-host PDOK tiles).
+	# Served from /srv/vliegvuil/tiles (swapped atomically by
+	# scripts/vps-tiles-update.js); long cache, no directory listing
+	# (file_server never lists), 404 for missing tiles.
+	handle /tiles/* {
+		root * /srv/vliegvuil/tiles
+		file_server
+		header Cache-Control "public, max-age=604800"
+	}
 	# Map glyph ranges are static binary files. They must NOT fall back to
 	# the SPA index.html (a 200 with HTML makes MapLibre's PBF parser fail);
 	# a missing range has to be a real 404.

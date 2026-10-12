@@ -97,10 +97,11 @@ export const DEFAULT_MAP_CONFIG: MapConfig = {
   bearing: 0,
 };
 
-// PDOK BRT Achtergrondkaart WMTS (verified against the GetCapabilities
-// document, EPSG:3857 tile matrix set; see session 17 PR for the excerpt)
-export const PDOK_BRT_TILE_URL =
-  'https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/standaard/EPSG:3857/{z}/{x}/{y}.png';
+// Self-hosted BRT-A tiles: the PNG tiles are downloaded once from the PDOK
+// WMTS (scripts/vps-tiles-update.js) and served from our own origin, so the
+// browser never contacts service.pdok.nl. Kept as the same {z}/{x}/{y}.png
+// layout. Kadaster attribution stays (BRT-A is CC-BY 4.0).
+export const PDOK_BRT_TILE_URL = '/tiles/{z}/{x}/{y}.png';
 
 export const PDOK_BRT_ATTRIBUTION = 'Kaartgegevens © PDOK / Kadaster';
 

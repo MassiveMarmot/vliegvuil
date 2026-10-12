@@ -28,6 +28,8 @@ export interface UseMapReturn {
   map: MapLibreMap | null;
   mapLoaded: boolean;
   mapError: string | null;
+  /** Non-blocking notice when basemap tiles fail to load (self-hosted tiles) */
+  tileError: boolean;
 }
 
 /**
@@ -38,6 +40,7 @@ export function useMap(config: MapConfig, _style?: MapStyle): UseMapReturn {
   const [map, setMap] = useState<MapLibreMap | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [tileError, setTileError] = useState(false);
 
   useEffect(() => {
     if (!mapContainer.current) {
@@ -124,6 +127,13 @@ export function useMap(config: MapConfig, _style?: MapStyle): UseMapReturn {
         setMapError(null);
       });
 
+      // Basemap tile errors (self-hosted tiles): one non-blocking notice,
+      // never spamming on repeated tile failures (state flips once).
+      mapInstance.on('error', (event: { sourceId?: string }) => {
+        if (event.sourceId === 'pdok-brt') {
+          setTileError(true);
+        }
+      });
       // Handle map errors
       mapInstance.on('error', (error: Error) => {
         setMapError(error.message);
@@ -144,6 +154,7 @@ export function useMap(config: MapConfig, _style?: MapStyle): UseMapReturn {
     mapContainer,
     map,
     mapLoaded,
+    tileError,
     mapError,
   };
 }

@@ -14,7 +14,8 @@ the stale-data banner); the browser never contacts upstream (spec §5).
 | `rivm-end-2021-noise` | multi-year | `ckan-metadata`: dataset `metadata_modified` — `https://data.overheid.nl/data/api/3/action/package_show?id=bc7703a1-9323-4e4f-9ce7-246ace877b59` | `manual` | `data-build/previous/noise-contours.geojson` |
 | `clo-nlr-regional` | multi-year | `manual` (no machine-readable signal; CLO publishes map images) | `manual` | n/a (not in build yet) |
 | `adsb-fi` | — | n/a (live API, not a snapshot) | n/a | n/a |
-| `pdok-brt` | — | n/a (basemap tiles) | n/a | n/a |
+| `pdok-brt` | — | n/a (superseded by the self-hosted copy) | n/a | n/a |
+| `pdok-brt-tiles` | yearly | `manual` (no machine-readable signal; the tiles are a static copy) | `manual` | `tiles.old` on the VPS (re-run the script to re-download) |
 
 Cadence and method were read from the official pages/APIs, not guessed:
 
@@ -119,6 +120,9 @@ Checks and refreshes run on GitHub's runners, not on the VPS (SPEC §4):
   (noise) sources only run when named in a manual dispatch. The workflow
   creates the `data` and `needs-human-review` labels itself when they
   are missing, so no one-time label setup is needed.
+- Basemap tiles are **not** part of the workflow: they are refreshed by hand on the
+  VPS with `scripts/vps-tiles-update.js` (docs/deploy.md §8b) — a ~24-hour,
+  strictly sequential download from the PDOK WMTS, kept outside the repo.
 - The workflows only open issues and pull requests. Nothing deploys from
   GitHub; you merge and then deploy on the VPS (`docs/deploy.md` §7).
 

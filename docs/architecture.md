@@ -24,6 +24,10 @@ VliegVuil.nl is a monorepo with three workspaces and a strict layering rule: `/c
 
 ## Runtime data flow
 
+0. The basemap is self-hosted: PNG tiles copied once from the PDOK BRT-A WMTS
+   (scripts/vps-tiles-update.js, ~769 MB on the VPS, outside the repo) and
+   served from our own origin; the browser never contacts service.pdok.nl
+   (CC-BY 4.0, Kadaster attribution kept).
 1. The web app polls its own origin every 5 s for aircraft positions (`useAircraftData`).
 2. In production, Caddy reverse-proxies those requests to the adsb.fi open-data API with a ~5 s micro-cache, strips client IP/headers upstream, and rate-limits per IP. In dev, the Vite proxy stands in.
 3. Positions go through core's `PositionProvider` interface; `toDisplayAircraft` converts them for the UI, with dead-reckoning interpolation for smooth movement between updates.
