@@ -167,9 +167,10 @@ fi
 
 # 5. Request through the proxy with client-identifying headers set
 python3 - "$WORK/headers.json" "$PROXY_PORT" <<'EOF'
-import json, sys, urllib.request
+import json, sys, urllib.request, urllib.error
 
 proxy_port = sys.argv[2]
+base = f'http://127.0.0.1:{proxy_port}'
 req = urllib.request.Request(
     f'http://127.0.0.1:{proxy_port}/api/point/52.1/5.3/50',
     headers={
@@ -212,7 +213,7 @@ with urllib.request.urlopen(
     response_headers = {k.lower(): v for k, v in r.headers.items()}
 must_strip = [
     'nel', 'report-to', 'reporting-endpoints', 'reporting-to',
-    'cf-ray', 'cf-cache-status', 'strict-transport-security', 'set-cookie',
+    'cf-ray', 'cf-cache-status', 'set-cookie',
     'via', 'x-powered-by',
 ]
 leaked_down = [h for h in must_strip if h in response_headers]
@@ -222,7 +223,7 @@ if leaked_down:
 if 'server' in response_headers and response_headers['server'] == 'cloudflare':
     print('FAIL: upstream Server header reached the client')
     sys.exit(1)
-print('OK: Cloudflare/reporting/HSTS/set-cookie headers are stripped from the response')
+print('OK: Cloudflare/reporting/set-cookie headers are stripped from the response')
 
 # Site-level HSTS: the site header block (not the /api header_down strip)
 # sets Strict-Transport-Security on every response of the site block,
@@ -283,8 +284,6 @@ for k, v in sorted(headers.items()):
     print(f'  {k}: {v}')
 
 # Glyph range checks (path contains a space: use the encoded form).
-import urllib.error
-base = f'http://127.0.0.1:{proxy_port}'
 missing = base + '/fonts/Space%20Grotesk%20Regular/512-767.pbf'
 try:
     urllib.request.urlopen(missing, timeout=10)
