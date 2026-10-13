@@ -26,7 +26,10 @@ const MAP_BACKGROUND_COLOR = '#b8c6cc';
 export interface UseMapReturn {
   mapContainer: React.RefObject<HTMLDivElement>;
   map: MapLibreMap | null;
+  /** True once the 'load' event fired (first fully rendered frame). */
   mapLoaded: boolean;
+  /** True once the style is loaded ('style.load') — independent of tiles. */
+  styleReady: boolean;
   mapError: string | null;
   /** Non-blocking notice when basemap tiles fail to load (self-hosted tiles) */
   tileError: boolean;
@@ -39,6 +42,7 @@ export function useMap(config: MapConfig, _style?: MapStyle): UseMapReturn {
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<MapLibreMap | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [styleReady, setStyleReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [tileError, setTileError] = useState(false);
 
@@ -121,7 +125,25 @@ export function useMap(config: MapConfig, _style?: MapStyle): UseMapReturn {
       // Store map instance
       setMap(mapInstance);
 
-      // Handle map load
+      // Style-ready signal for data layers: 'style.load' fires as soon as
+      // the style JSON is parsed and layers created (Style._load in the
+      // MapLibre source) — it does NOT wait for any tile. The 'load' event
+      // waits for the first fully rendered frame, which never arrives when
+      // every basemap tile 404s, so gating layers on it made the aircraft
+      // invisible until an interaction forced a render.
+      // Handle style load: layers/sources can be added from here on.
+      const onStyleLoad = (): void => {
+        setStyleReady(true);
+      };
+      if (mapInstance.isStyleLoaded()) {
+        // Style already loaded before this subscription ran.
+        setStyleReady(true);
+      } else {
+        mapInstance.on('style.load', onStyleLoad);
+      }
+
+      // Handle map load (first fully rendered frame; kept for consumers
+      // that genuinely need the rendered map).
       mapInstance.on('load', () => {
         setMapLoaded(true);
         setMapError(null);
@@ -147,6 +169,7 @@ export function useMap(config: MapConfig, _style?: MapStyle): UseMapReturn {
 
       // Cleanup function
       return (): void => {
+        mapInstance.off('style.load', onStyleLoad);
         mapInstance.remove();
       };
     } catch (error) {
@@ -159,6 +182,7 @@ export function useMap(config: MapConfig, _style?: MapStyle): UseMapReturn {
     mapContainer,
     map,
     mapLoaded,
+    styleReady,
     tileError,
     mapError,
   };
