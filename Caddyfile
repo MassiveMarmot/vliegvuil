@@ -47,7 +47,10 @@ vliegvuil.nl {
 		header Cache-Control "no-store"
 		@en header_regexp Accept-Language "^\s*en([-;,\s]|$)"
 		redir @en /en/ 302
-		redir /nl/ 302
+		# The * matcher is required: without it, Caddy parses "redir /nl/ 302"
+		# as path matcher /nl/ with target 302, which never matches and
+		# leaves / answering an empty 200 for non-English requests.
+		redir * /nl/ 302
 	}
 
 	# Same-origin API proxy: /api/* -> https://opendata.adsb.fi/api/v2/*
