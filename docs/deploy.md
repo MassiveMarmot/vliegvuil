@@ -443,8 +443,43 @@ banner).
 
 The `/api/*` responses are micro-cached for 5 s (`cache { ttl 5s }`, otter
 storage), which bounds upstream request pressure regardless of visitor
-count. Note the app polls roughly every few seconds per visitor; the 60/min
-zone leaves generous headroom while capping abuse.
+count. The upstream sends `Cache-Control: no-store`, which would make every
+response a cache miss (`Cache-Status: ...; detail=NO-STORE-DIRECTIVE`); the
+cache block therefore sets `mode bypass_response` so Souin ignores the
+upstream response's cache directives and stores each response for the
+5 s TTL (request-side RFC 7234 rules still apply). Note the app polls
+roughly every few seconds per visitor; the 60/min zone leaves generous
+headroom while capping abuse.
+
+Expected `/api` response headers (what the proxy lets through):
+
+- Kept: `Content-Type`, `Content-Length`, `Date` and Caddy's own headers
+  (`Server: Caddy`, the security headers from the site block).
+- Stripped (set by the upstream / Cloudflare, removed with `header_down`):
+  `nel`, `Report-To`, `Reporting-Endpoints`, `Reporting-To`, every `Cf-*`
+  header (`cf-ray`, `cf-cache-status`, ...), `Strict-Transport-Security`,
+  `Set-Cookie`, and the upstream's `Server`/`Via`/`X-Powered-By` (Caddy's
+  own `Server` header replaces it).
+- Added by the cache: `Cache-Status` with a HIT on the second request
+  within the 5 s TTL.
+
+TODO (decide separately): whether to add our own `Strict-Transport-Security`
+header on the site (and with what max-age). The upstream's
+`max-age=0; includeSubDomains` is stripped and NOT replaced in this change.
+
+Verify after deploy (GET, not HEAD: the upstream answers 405 to HEAD):
+
+```bash
+URL=https://vliegvuil.nl/api/lat/52.2500/lon/5.0000/dist/250
+# First request: expect no nel/report-to/reporting-/cf-*/strict-transport-security
+# or set-cookie, and a cache MISS in Cache-Status.
+curl -sS -D - -o /dev/null "$URL"
+# Second request within 5 s: same headers, and a cache HIT.
+curl -sS -D - -o /dev/null "$URL" | grep -iE 'cache-status|nel|report-to|reporting-|cf-|strict-transport-security|set-cookie'
+# The grep must print only the Cache-Status HIT line: none of the stripped
+# headers may appear. If nothing prints at all, Cache-Status was not sent
+# either; investigate before accepting the deploy.
+```
 
 ## 7. Updates
 

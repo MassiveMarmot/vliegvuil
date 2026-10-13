@@ -54,6 +54,19 @@ class Echo(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
         self.send_header('Content-Length', str(len(body)))
+        # Headers the real upstream sends (Cloudflare-fronted
+        # opendata.adsb.fi); the proxy must strip all of them.
+        self.send_header('nel', '1')
+        self.send_header('Report-To', '{"group":"cf","max_age":604800}')
+        self.send_header('Reporting-Endpoints', 'cfr=1')
+        self.send_header('Reporting-To', '{"group":"cfr"}')
+        self.send_header('Cf-Ray', '8f5e1a2b3c4d5e6f-AMS')
+        self.send_header('Cf-Cache-Status', 'DYNAMIC')
+        self.send_header('Strict-Transport-Security', 'max-age=0; includeSubDomains')
+        self.send_header('Set-Cookie', '__cf_bm=fixture; Path=/')
+        self.send_header('Server', 'cloudflare')
+        self.send_header('Via', '1.1 cloudflare')
+        self.send_header('X-Powered-By', 'fixture')
         self.end_headers()
         self.wfile.write(body)
 
@@ -95,6 +108,13 @@ sed -e "s/__ECHO_PORT__/$ECHO_PORT/" > "$WORK/Caddyfile.test" <<'EOF'
 			header_up -X-Forwarded-Host
 			header_up User-Agent "VliegVuil.nl/1.0 (+https://vliegvuil.nl)"
 			header_up Accept "application/json"
+			header_down -Nel
+			header_down -Report-To
+			header_down -Reporting-Endpoints
+			header_down -Reporting-To
+			header_down -Cf-*
+			header_down -Strict-Transport-Security
+			header_down -Set-Cookie
 			header_down -Server
 			header_down -Via
 			header_down -X-Powered-By
@@ -170,6 +190,26 @@ if ip_leaked:
 assert headers.get('User-Agent') == 'VliegVuil.nl/1.0 (+https://vliegvuil.nl)', headers.get('User-Agent')
 print('OK: no client IP or forwarding headers reached the upstream')
 print('OK: User-Agent was replaced with', headers['User-Agent'])
+
+# Response-side check: fetch through the proxy again and assert the
+# upstream headers listed above were stripped from the client response.
+with urllib.request.urlopen(
+    f'http://127.0.0.1:{proxy_port}/api/point/52.1/5.3/50', timeout=10
+) as r:
+    response_headers = {k.lower(): v for k, v in r.headers.items()}
+must_strip = [
+    'nel', 'report-to', 'reporting-endpoints', 'reporting-to',
+    'cf-ray', 'cf-cache-status', 'strict-transport-security', 'set-cookie',
+    'via', 'x-powered-by',
+]
+leaked_down = [h for h in must_strip if h in response_headers]
+if leaked_down:
+    print('FAIL: upstream headers reached the client:', leaked_down)
+    sys.exit(1)
+if 'server' in response_headers and response_headers['server'] == 'cloudflare':
+    print('FAIL: upstream Server header reached the client')
+    sys.exit(1)
+print('OK: Cloudflare/reporting/HSTS/set-cookie headers are stripped from the response')
 print('Upstream received these headers:')
 for k, v in sorted(headers.items()):
     print(f'  {k}: {v}')
