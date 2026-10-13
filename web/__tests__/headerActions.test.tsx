@@ -161,3 +161,55 @@ describe('header actions from non-map routes (session 25 fix)', () => {
     expect(document.querySelector('.settings-panel')).toBeNull();
   });
 });
+
+describe('Settings and List are mutually exclusive', () => {
+  afterEach((): void => {
+    cleanup();
+    setPath('/nl/');
+    vi.restoreAllMocks();
+  });
+
+  it('Settings open, click List: the list is open and Settings is closed', async (): Promise<void> => {
+    await renderAndWait('/nl/');
+    fireEvent.click(screen.getByRole('button', { name: /menu/i }));
+    fireEvent.click(screen.getByRole('button', { name: /instellingen/i }));
+    expect(document.querySelector('.settings-panel')).not.toBeNull();
+    // Open the list: Settings must close
+    fireEvent.click(screen.getByRole('button', { name: /^lijst$/i }));
+    expect(document.querySelector('.aircraft-list')).not.toBeNull();
+    expect(document.querySelector('.settings-panel')).toBeNull();
+  });
+
+  it('List open, choose Settings in the menu: Settings is open and the list is closed', async (): Promise<void> => {
+    await renderAndWait('/nl/');
+    fireEvent.click(screen.getByRole('button', { name: /^lijst$/i }));
+    expect(document.querySelector('.aircraft-list')).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /menu/i }));
+    fireEvent.click(screen.getByRole('button', { name: /instellingen/i }));
+    expect(document.querySelector('.settings-panel')).not.toBeNull();
+    expect(document.querySelector('.aircraft-list')).toBeNull();
+  });
+
+  it('opening and closing each one alone behaves as before', async (): Promise<void> => {
+    await renderAndWait('/nl/');
+    // Settings alone
+    fireEvent.click(screen.getByRole('button', { name: /menu/i }));
+    fireEvent.click(screen.getByRole('button', { name: /instellingen/i }));
+    expect(document.querySelector('.settings-panel')).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /sluiten/i }));
+    expect(document.querySelector('.settings-panel')).toBeNull();
+    // List alone: open then close
+    fireEvent.click(screen.getByRole('button', { name: /^lijst$/i }));
+    expect(document.querySelector('.aircraft-list')).not.toBeNull();
+    // The list's own close button
+    const closeButton = document.querySelector('.aircraft-list-close') as HTMLElement | null;
+    if (closeButton) {
+      fireEvent.click(closeButton);
+    } else {
+      fireEvent.click(screen.getByRole('button', { name: /^lijst$/i }));
+    }
+    expect(document.querySelector('.aircraft-list')).toBeNull();
+    // Nothing opened
+    expect(document.querySelector('.settings-panel')).toBeNull();
+  });
+});

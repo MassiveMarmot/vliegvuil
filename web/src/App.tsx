@@ -253,10 +253,13 @@ function App(): React.ReactElement {
   // Settings (session 25 fix): opening settings from a non-map route
   // navigates to the map first, so the panel is actually visible instead
   // of leaving a stale showSettings that pops open on the next map visit.
+  // Settings and the list are mutually exclusive: opening one closes the
+  // other (the list unmounts, so it cannot steal focus back).
   const handleOpenSettings = useCallback((): void => {
     if (route !== 'map') {
       navigate(pagePath(language, 'map'));
     }
+    setShowList(false);
     setShowSettings(true);
   }, [route, navigate, language]);
 
@@ -266,12 +269,18 @@ function App(): React.ReactElement {
   const handleToggleList = useCallback((): void => {
     if (route !== 'map') {
       navigate(pagePath(language, 'map'));
+      setShowSettings(false);
       setShowList(true);
       announce(t('list.opened', 'Lijstweergave geopend'));
       return;
     }
     setShowList((prev) => {
       const next = !prev;
+      // Opening the list closes Settings (mutually exclusive); closing the
+      // list leaves Settings alone.
+      if (next) {
+        setShowSettings(false);
+      }
       announce(
         next
           ? t('list.opened', 'Lijstweergave geopend')
