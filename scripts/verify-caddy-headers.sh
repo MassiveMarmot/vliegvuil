@@ -211,10 +211,13 @@ with urllib.request.urlopen(
     f'http://127.0.0.1:{proxy_port}/api/point/52.1/5.3/50', timeout=10
 ) as r:
     response_headers = {k.lower(): v for k, v in r.headers.items()}
+    # Keep every Via line (a dict would collapse duplicates; Caddy appends
+    # its own Via next to any unstripped upstream value).
+    via_values = r.headers.get_all('Via') or []
 must_strip = [
     'nel', 'report-to', 'reporting-endpoints', 'reporting-to',
     'cf-ray', 'cf-cache-status', 'set-cookie',
-    'via', 'x-powered-by',
+    'x-powered-by',
 ]
 leaked_down = [h for h in must_strip if h in response_headers]
 if leaked_down:
@@ -223,7 +226,15 @@ if leaked_down:
 if 'server' in response_headers and response_headers['server'] == 'cloudflare':
     print('FAIL: upstream Server header reached the client')
     sys.exit(1)
-print('OK: Cloudflare/reporting/set-cookie headers are stripped from the response')
+# Via is special: with Caddy v2.11.7, reverse_proxy appends its own
+# "Via: 1.0 Caddy" response header AFTER header_down -Via has removed the
+# upstream's value, so "via is absent" can never hold. Assert the thing
+# that matters instead: the upstream's Via value (the echo server sends
+# "1.1 cloudflare") is gone. Any remaining Via is Caddy's own.
+if any('cloudflare' in v.lower() for v in via_values):
+    print('FAIL: upstream Via value reached the client:', via_values)
+    sys.exit(1)
+print('OK: Cloudflare/reporting/set-cookie headers are stripped from the response (upstream Via gone; Via is Caddy own)')
 
 # Site-level HSTS: the site header block (not the /api header_down strip)
 # sets Strict-Transport-Security on every response of the site block,
