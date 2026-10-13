@@ -791,13 +791,33 @@ appears until tiles actually fail to load for a non-404 reason.
     would change the Caddyfile. The script and the CI job should build the
     same Caddy version: CI is the reproducibility and formatting gate, so
     when you bump the pins in `ci.yml`, rebuild the VPS binary with the
-    same pinned versions in the same sitting (pass them to the `xcaddy
-    build` line here), or vice versa when a rebuild reveals the pins need
-    moving. Today the script still builds `@latest`, so the deployed
+    same pinned versions in the same PR (pass them to the `xcaddy build`
+    line here), or vice versa when a rebuild reveals the pins need moving —
+    either way, the pins and the deployed binary change together, never in
+    separate PRs. Today the script still builds `@latest`, so the deployed
     version can be newer than the CI pins; check `/var/log/caddy-versions.log`
     for what is actually deployed.
   - This is a small piece of infrastructure you own: keep it simple, and
     update it in the same sitting whenever the module set or paths change.
+- **Version-lag check.** `apt upgrade` updates `/usr/bin/caddy.default`
+  only, so the packaged and custom binaries can drift. To see how far:
+  ```bash
+  caddy version
+  /usr/bin/caddy.default version
+  caddy list-modules | grep -E 'rate_limit|cache|otter'
+  ```
+  `caddy` resolves through `update-alternatives` to the custom binary;
+  `caddy list-modules` tells stock from custom in one glance (the custom
+  build lists `rate_limit`, `cache` and `otter`; a stock binary does not).
+  If `caddy.default` reports a newer version than the custom binary, run
+  `sudo scripts/vps-caddy-update.sh` to rebuild the custom binary from the
+  repo (it also re-copies the Caddyfile, validates and reloads).
+- **Do not `apt-mark hold caddy`.** The apt package must keep updating:
+  it delivers `caddy.default` and Caddy's systemd service files, which the
+  custom binary does not replace. The custom binary is updated by the
+  script above, not by apt, so holding the package would only freeze the
+  fallback binary and the service definitions, defeating the point of
+  having both.
 - **Reading memory usage.** Judge memory by the `available` column of
   `free -h` (`MemAvailable`), not by `used` or `free`. Linux fills spare RAM
   with reclaimable page cache by design, so a 4 GB VPS that shows only a few
