@@ -1,11 +1,11 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
-// Settings panel: language (NL/EN) and units (ft/m, kt/km/h), persisted in
-// localStorage only (spec §2, §6). Managed focus, Esc to close.
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+// Settings panel: units (ft/m, kt/km/h), persisted in localStorage only
+// (spec §2, §6). Managed focus, Esc to close. Session 25: language
+// moved from this panel to the URL path (menu language switcher).
+import React, { useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { setLanguage, DEFAULT_LANGUAGE } from '../i18n';
 import { type UnitSettings, saveUnits } from '../units';
 
 export interface SettingsPanelProps {
@@ -20,12 +20,9 @@ export interface SettingsPanelProps {
  * and returns on close (button or Esc), consistent with the telemetry panel.
  */
 export function SettingsPanel({ open, onClose, units, onUnitsChange }: SettingsPanelProps): React.ReactElement | null {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const panelRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<Element | null>(null);
-  const [language, setLang] = useState<'nl' | 'en'>(
-    (i18n.language === 'en' ? 'en' : DEFAULT_LANGUAGE) as 'nl' | 'en',
-  );
 
   useEffect((): void => {
     if (!open) return;
@@ -50,10 +47,6 @@ export function SettingsPanel({ open, onClose, units, onUnitsChange }: SettingsP
     [onClose],
   );
 
-  const handleLanguage = useCallback((next: 'nl' | 'en'): void => {
-    setLang(next);
-    setLanguage(next);
-  }, []);
 
   const handleAltitude = useCallback(
     (altitude: UnitSettings['altitude']): void => {
@@ -95,30 +88,6 @@ export function SettingsPanel({ open, onClose, units, onUnitsChange }: SettingsP
           ×
         </button>
       </header>
-
-      <div className="settings-group">
-        <h3 className="settings-label">{t('settings.language', 'Taal')}</h3>
-        <label className="settings-option">
-          <input
-            type="radio"
-            name="settings-language"
-            value="nl"
-            checked={language === 'nl'}
-            onChange={(): void => handleLanguage('nl')}
-          />
-          Nederlands
-        </label>
-        <label className="settings-option">
-          <input
-            type="radio"
-            name="settings-language"
-            value="en"
-            checked={language === 'en'}
-            onChange={(): void => handleLanguage('en')}
-          />
-          English
-        </label>
-      </div>
 
       <div className="settings-group">
         <h3 className="settings-label">{t('settings.units', 'Eenheden')}</h3>
