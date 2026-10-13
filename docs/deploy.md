@@ -296,72 +296,123 @@ standard distribution rejects the `rate_limit` and `cache` directives. On
 the first start Caddy obtains the TLS certificate automatically; this needs
 the DNS record from the prerequisites and ports 80/443 open.
 
-### Temporary preview before the domain is registered
+### Staging (optional, not set up yet)
 
-The reload above cannot succeed until the domain is registered and its DNS
-records point at the server (Caddy cannot obtain a certificate without it).
-To preview the built app before that, append a temporary plain-HTTP site
-block for the provider hostname (here `<vps-hostname>`, e.g.
-`vps-xxxxxxx.vps.ovh.net`) to the running Caddyfile:
+Staging does not exist today. This section is a plan for when a change needs
+testing against real Caddy behaviour that a local preview cannot provide
+(the root redirect, `try_files` deep links, response headers, a generated
+sitemap/robots.txt; the first candidate is session 25b). Plain UI work is
+tested locally (next section), not on staging.
 
-```bash
-sudo tee -a /etc/caddy/Caddyfile >/dev/null <<'CONF'
+Convention: a staging subdomain (`staging.vliegvuil.nl`) on the same VPS.
 
-# TEMPORARY: preview on the provider hostname until the domain is
-# registered. Remove this block after the domain go-live (see below).
-http://<vps-hostname> {
-	root * /srv/vliegvuil/web/dist
+- **DNS**: A and AAAA records for the staging hostname pointing at the same
+  VPS. Caddy then obtains and renews the certificate automatically: a site
+  address with a hostname activates automatic HTTPS, which provisions
+  certificates and redirects HTTP to HTTPS
+  (<https://caddyserver.com/docs/automatic-https>, "Effects"). No manual
+  certificate step is needed.
+- **Separate web root**: build the branch under test to its own root (for
+  example `/srv/vliegvuil-staging/web/dist`), never the production root
+  (`/srv/vliegvuil/web/dist`), so a staging deploy cannot overwrite
+  production files.
+- **Access control**: the staging block must be behind HTTP Basic
+  Authentication. Caddy's directive is `basic_auth` (renamed from
+  `basicauth` in v2.8.0;
+  <https://caddyserver.com/docs/caddyfile/directives/basic_auth>). Hashes,
+  never plaintext: generate with `caddy hash-password` and put the hash in
+  the config.
+- **Not indexed**: serve `X-Robots-Tag: noindex` on every response (a plain
+  `header X-Robots-Tag "noindex"` per
+  <https://caddyserver.com/docs/caddyfile/directives/header>) plus a
+  disallow-all `robots.txt` from the staging root.
+- **Why access control is required**: every certificate Caddy obtains from a
+  public CA is submitted to Certificate Transparency logs, and those logs
+  are crawled by bots that discover hostnames. Let's Encrypt documents
+  this: "After successful validation, your certificate will be submitted to
+  numerous Certificate Transparency (CT) logs ... automated CT crawling bots
+  will be able to discover your domain, attempt to access it, and generate
+  further traffic in your webserver logs."
+  (<https://letsencrypt.org/docs/faq/>). A staging hostname is therefore
+  discoverable by anyone, not secret.
+- **HSTS**: the production site currently sends no HSTS header at all (see
+  the HSTS TODO above), and even when enabled it will start without
+  `includeSubDomains` — so the apex header would not cover staging. Do not
+  add a HSTS header to the staging block; staging is not a place to make
+  that decision (see the HSTS and Subdomains plan in this file).
+- **Shared resources — decide, do not assume**:
+  - *Tiles*: share `/srv/vliegvuil/tiles` (symlink or read-only bind) or
+    run a second 24 h tile download for a fully isolated copy. Both cost
+    something (coupling vs disk and another Fair-Use download) — decide
+    before setting staging up.
+  - */api proxy*: staging would be a second consumer of adsb.fi's 1 req/s
+    public limit, and the micro-cache keys include the request host
+    (Souin cache keys include the host unless disabled; see the cache
+    handler's `key.disable_host` option,
+    <https://github.com/caddyserver/cache-handler>), so staging requests
+    are not served from production's cache. Prefer running staging with
+    mock data (`VITE_MOCK=1`) and not proxying `/api` at all.
+  - *Rate-limit zones*: rate-limit zones are identified by name across the
+    whole Caddy instance ("rate limit zones, which have a unique name of
+    your choosing", <https://github.com/mholt/caddy-ratelimit>); a second
+    site block must use its own zone names, or it will share limits with
+    production.
+  - *Analytics*: GoatCounter (session 25c) must not count staging traffic;
+    decide the exclusion (separate site id or blocked script) when 25c is
+    implemented.
+- **Maintenance cost**: staging is one more build step, one more
+  certificate and a wider patch surface. Keep it off when not in use:
+  remove the DNS record and the site block, then reload Caddy (the normal
+  validate/reload sequence from the sections above).
+
+**UNTESTED TEMPLATE** — never run, not validated; a starting point only.
+Kept `caddy fmt`-formatted (tabs, single blank lines). Omit the `/api`
+proxy unless deliberately testing it (mock data instead); no rate-limit or
+cache directives (own zones would be needed, see above); no HSTS. The
+disallow-all `robots.txt` is a plain file in the staging root, not a Caddy
+directive.
+
+```
+staging.vliegvuil.nl {
+	basic_auth {
+		# caddy hash-password
+		staging <hashed-password>
+	}
+	root * /srv/vliegvuil-staging/web/dist
 	try_files {path} /index.html
 	file_server
 	encode zstd gzip
-
-	handle /api/* {
-		uri strip_prefix /api
-		reverse_proxy https://opendata.adsb.fi {
-			header_up -X-Forwarded-For
-			header_up -X-Real-IP
-			header_up -X-Forwarded-Proto
-			header_up -X-Forwarded-Host
-			header_up User-Agent "VliegVuil.nl/1.0 (+https://vliegvuil.nl)"
-			header_up Accept "application/json"
-			header_down -Server
-			header_down -Via
-			header_down -X-Powered-By
-		}
-	}
+	header X-Robots-Tag "noindex"
 }
-CONF
-
-sudo caddy validate --config /etc/caddy/Caddyfile
-sudo systemctl reload caddy
 ```
 
-The preview is then reachable at `http://<vps-hostname>`. Notes:
+The template has not been run or validated in this repo's CI (CI validates
+the production Caddyfile only). Run `caddy validate` with the custom binary
+on the VPS before reloading, per the normal update sequence.
 
-- The `http://` prefix forces plain HTTP, so Caddy does not attempt any
-  certificate issuance for the provider hostname; the browser shows a
-  "not secure" warning, which is expected for a preview.
-- The block deliberately omits `rate_limit`, `cache` and the security
-  headers: rate-limit zones are global in caddy-ratelimit (re-declaring
-  them in a second block can conflict), and the headers matter for the
-  real site, not the preview.
-- The API proxy is included so the map loads live aircraft.
-- `caddy validate` may warn that the Caddyfile input is not formatted; that
-  comes from appending to a file and is cosmetic. Do not run
-  `caddy fmt --overwrite` here — it would reformat the whole file.
-- While this block exists the app is publicly reachable at the provider
-  hostname over HTTP. That is usually acceptable (the repository is
-  public), but the preview is not private.
+### Local preview
 
-**Remove the temporary block at the domain go-live** by copying the repo's
-Caddyfile back over it — the normal §4 install sequence, which also picks up
-the certificate on the reload:
+For plain UI work, run the Vite dev server locally — no VPS or Caddy
+needed:
 
 ```bash
-sudo cp /srv/vliegvuil/Caddyfile /etc/caddy/Caddyfile
-sudo caddy validate --config /etc/caddy/Caddyfile
-sudo systemctl reload caddy
+pnpm install
+VITE_MOCK=1 pnpm --filter @vliegvuil/web dev
 ```
+
+`VITE_MOCK=1` matters: there is no dev-server proxy for `/api`
+(`web/vite.config.ts` configures none; `useAircraftData.ts` falls back to
+the mock module only when `VITE_MOCK=1`), so without it the aircraft poll
+fails and the stale/error banner shows. Other local limitations:
+
+- `/tiles/` returns 404 locally, so the basemap is empty (the aircraft
+  layer still renders — it is independent of basemap tiles).
+- The service worker only exists after `pnpm build` and only acts under
+  `vite preview` (a build preview), not the dev server.
+- What a local preview cannot test: Caddy deep links and `try_files`, the
+  real `/api` proxy (headers, micro-cache, rate limiting), the real tile
+  serving and headers, and the production response headers. Those need
+  staging or the production server.
 
 ## 5. Privacy properties (what to expect)
 

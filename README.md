@@ -32,7 +32,8 @@ pnpm install
 pnpm lint        # ESLint across all workspaces
 pnpm typecheck   # builds core, then tsc across workspaces
 pnpm test        # Vitest across all workspaces
-pnpm dev         # Vite dev server
+pnpm dev         # Vite dev server (use VITE_MOCK=1 for mock aircraft data;
+                 # no local /api proxy — see docs/deploy.md "Local preview")
 ```
 
 ## Deployment
