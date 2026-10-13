@@ -80,7 +80,11 @@ Task: session 25, "UI shell". Scope is only that session; do not start 25b or ot
 Add no new dependencies. No theme toggle. No hard-coded domain or site name.
 Do not invent URLs, handles or claims: Bluesky and donation stay null, and every
 privacy statement on the About page must be checked against the code and
-Caddyfile with the evidence listed in the PR description. Update docs/SPEC.md
+Caddyfile with the evidence listed in the PR description. Do not mention
+HSTS on the About page (or any user-facing text: README, privacy.md) until
+it is actually enabled — the site currently sends no HSTS header (the /api
+handler strips the upstream's, and no site-level header is set); the
+decision plan is in docs/BUILD.md §6. Update docs/SPEC.md
 where language storage changes. If anything is ambiguous, ask me before coding.
 Run lint, typecheck, tests and build, and open a pull request with the results and
 screenshots of header, open menu and About page at 320 px and 1280 px width in both
