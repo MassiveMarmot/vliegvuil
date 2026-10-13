@@ -92,10 +92,30 @@ jobs:
         with:
           go-version: '1.24'
           cache: false
+      # Pinned so the fmt gate below cannot drift when a new Caddy release
+      # changes canonical formatting, and so validate runs against the same
+      # version the VPS builds (keep in sync with scripts/vps-caddy-update.sh
+      # and docs/deploy.md 9). Latest releases at pin time:
+      # caddy https://github.com/caddyserver/caddy/releases/latest (v2.11.7)
+      # caddy-ratelimit https://github.com/mholt/caddy-ratelimit/tags (v0.1.0, only tag)
+      # cache-handler https://github.com/caddyserver/cache-handler/releases/latest (v0.17.0)
+      # storages https://github.com/darkweak/storages/releases (v0.0.20)
       - run: go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
-      - run: xcaddy build
-          --with github.com/mholt/caddy-ratelimit
-          --with github.com/caddyserver/cache-handler
-          --with github.com/darkweak/storages/otter/caddy
+      - run: xcaddy build v2.11.7
+          --with github.com/mholt/caddy-ratelimit@v0.1.0
+          --with github.com/caddyserver/cache-handler@v0.17.0
+          --with github.com/darkweak/storages/otter/caddy@v0.0.20
           --output ./caddy-custom
       - run: ./caddy-custom validate --config Caddyfile
+      # Formatting gate: fail when caddy fmt would change the Caddyfile.
+      # Per the caddy fmt docs, the command "will exit with code 1 if there
+      # are any differences"; --diff prefixes every line (two spaces for
+      # unchanged, -/+ for changed), so its output is non-empty even when
+      # the file is already formatted - gate on the exit code, and print
+      # the diff in the job log on failure. Never use --overwrite in CI.
+      - run: |
+          if ! ./caddy-custom fmt --diff Caddyfile; then
+            echo "::error::Caddyfile formatting drift detected; run 'caddy fmt --overwrite Caddyfile' locally and commit the result"
+            exit 1
+          fi
+          echo "Caddyfile formatting OK"
