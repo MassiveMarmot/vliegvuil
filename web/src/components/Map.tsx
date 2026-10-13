@@ -66,11 +66,14 @@ const NOISE_SOURCE_ID = 'noise-contours';
 const NOISE_LAYER_ID = 'noise-contours-fill';
 
 export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContours, noiseEnabled = false, airports, onAirportClick }: MapProps): React.ReactElement {
-  const { mapContainer, map, mapLoaded, tileError } = useMap(DEFAULT_MAP_CONFIG, PDOK_BRT_STYLE);
+  // styleReady ('style.load') gates the data layers, not mapLoaded ('load'):
+  // with every basemap tile 404ing, 'load' never fires (it requires the first
+  // fully rendered frame) and aircraft stayed invisible until a click.
+  const { mapContainer, map, styleReady, tileError } = useMap(DEFAULT_MAP_CONFIG, PDOK_BRT_STYLE);
 
   // Update aircraft layer when data changes
   useEffect(() => {
-    if (!map || !mapLoaded) {
+    if (!map || !styleReady) {
       return;
     }
     // Register the altitude-band icons (session 17)
@@ -158,11 +161,11 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
       });
     }
 
-  }, [map, mapLoaded, aircraft, selectedAircraftId, onAircraftClick]);
+  }, [map, styleReady, aircraft, selectedAircraftId, onAircraftClick]);
 
   // Noise overlay layer (session 10): fill below aircraft symbols
   useEffect((): void => {
-    if (!map || !mapLoaded || !noiseContours) {
+    if (!map || !styleReady || !noiseContours) {
       return;
     }
     const noiseData = noiseContours as unknown as maplibregl.GeoJSONSourceSpecification['data'];
@@ -192,13 +195,13 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
     } else {
       map.setLayoutProperty(NOISE_LAYER_ID, 'visibility', noiseEnabled ? 'visible' : 'none');
     }
-  }, [map, mapLoaded, noiseContours, noiseEnabled]);
+  }, [map, styleReady, noiseContours, noiseEnabled]);
 
   // Airport layer (session 23): markers always visible, name labels
   // from LABEL_MIN_ZOOM to avoid clutter at the default NL view. Both
   // layers render BELOW the aircraft symbols so aircraft stay on top.
   useEffect((): void => {
-    if (!map || !mapLoaded) {
+    if (!map || !styleReady) {
       return;
     }
     registerAirportIcons(map);
@@ -296,7 +299,7 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
         AIRCRAFT_LAYER_ID,
       );
     }
-  }, [map, mapLoaded, airports, onAirportClick]);
+  }, [map, styleReady, airports, onAirportClick]);
 
   const { t } = useTranslation();
 
