@@ -47,9 +47,14 @@ vliegvuil.nl {
 		}
 
 		# ~5s micro-cache to reduce load on adsb.fi (their public limit
-		# is 1 req/s; our poll rate is 1 req/5s)
+		# is 1 req/s; our poll rate is 1 req/5s). The upstream sends
+		# `Cache-Control: no-store`, which in Souin's default strict mode
+		# would make every response NO-STORE-DIRECTIVE and never cached.
+		# `bypass_response` ignores the upstream response's cache
+		# directives only; request-side RFC 7234 rules still apply.
 		cache {
 			ttl 5s
+			mode bypass_response
 			otter {
 				configuration {
 					size 10000
@@ -80,6 +85,17 @@ vliegvuil.nl {
 				# Present ourselves instead of the client
 				header_up User-Agent "VliegVuil.nl/1.0 (+https://vliegvuil.nl)"
 				header_up Accept "application/json"
+				# Privacy/opsec: the upstream (opendata.adsb.fi) sits behind
+				# Cloudflare; strip its reporting/CF headers so nothing about the
+				# upstream stack or a Cloudflare reporting endpoint reaches
+				# visitors. The suffix match catches every Cf-* passthrough.
+				header_down -Nel
+				header_down -Report-To
+				header_down -Reporting-Endpoints
+				header_down -Reporting-To
+				header_down -Cf-*
+				header_down -Strict-Transport-Security
+				header_down -Set-Cookie
 				# Do not reveal upstream server details to the client
 				header_down -Server
 				header_down -Via
