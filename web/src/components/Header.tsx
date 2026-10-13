@@ -79,7 +79,14 @@ export function Header({ language, route, onNavigate, onOpenSettings, onToggleLi
   useEffect((): (() => void) => {
     if (!menuOpen) return (): void => undefined;
     const onPointerDown = (event: PointerEvent): void => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      // Ignore the Menu button itself: its onClick toggles the menu, so a
+      // pointerdown on it must not close here first (close-then-reopen
+      // made the button unable to close the menu). Only a pointerdown
+      // outside both the panel and the button closes directly.
+      const target = event.target as Node;
+      const insidePanel = menuRef.current?.contains(target) ?? false;
+      const insideButton = menuButtonRef.current?.contains(target) ?? false;
+      if (!insidePanel && !insideButton) {
         setMenuOpen(false);
       }
     };
