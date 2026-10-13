@@ -13,7 +13,7 @@ VliegVuil.nl shows live ADS-B aircraft positions on a full-screen map, with offi
 - **Settings**: NL (default) / EN, units ft/m and kt/km/h — stored in localStorage only
 - **Attribution page**: every data source with its licence, generated from `sources.json`
 - **Accessibility**: semantic landmarks, managed focus, ARIA live announcements, reduced-motion support, colour-independent legends
-- **Privacy**: no analytics, no third-party scripts/fonts, no access logs, no client IPs forwarded upstream; the only third-party request is PDOK basemap tiles (Dutch government infra)
+- **Privacy**: no analytics, no third-party scripts/fonts, no access logs, no client IPs forwarded upstream; the site makes no third-party requests (PDOK BRT-A, CC-BY 4.0, is attribution only)
 
 ## Repository layout
 
