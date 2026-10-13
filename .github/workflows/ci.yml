@@ -108,14 +108,14 @@ jobs:
           --output ./caddy-custom
       - run: ./caddy-custom validate --config Caddyfile
       # Formatting gate: fail when caddy fmt would change the Caddyfile.
-      # Gated on the diff being empty (not on an exit code: fmt exits 0
-      # either way); the diff is printed in the job log on failure.
-      # Never use --overwrite in CI.
+      # Per the caddy fmt docs, the command "will exit with code 1 if there
+      # are any differences"; --diff prefixes every line (two spaces for
+      # unchanged, -/+ for changed), so its output is non-empty even when
+      # the file is already formatted - gate on the exit code, and print
+      # the diff in the job log on failure. Never use --overwrite in CI.
       - run: |
-          DIFF="$(./caddy-custom fmt --diff Caddyfile)"
-          if [ -n "$DIFF" ]; then
-            echo "Caddyfile formatting drift detected; run 'caddy fmt' locally:"
-            echo "$DIFF"
+          if ! ./caddy-custom fmt --diff Caddyfile; then
+            echo "::error::Caddyfile formatting drift detected; run 'caddy fmt --overwrite Caddyfile' locally and commit the result"
             exit 1
           fi
-          echo "Caddyfile formatting OK (no diff)"
+          echo "Caddyfile formatting OK"
