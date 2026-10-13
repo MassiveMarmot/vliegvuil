@@ -33,7 +33,6 @@ vliegvuil.nl {
 		-X-XSS-Protection
 	}
 
-
 	# Same-origin API proxy: /api/* -> https://opendata.adsb.fi/api/v2/*
 	# This removes CORS entirely: the browser only ever talks to vliegvuil.nl.
 	handle /api/* {
@@ -143,7 +142,7 @@ vliegvuil.nl {
 				key {remote_host}
 				events 120
 				window 1m
-		}
+			}
 		}
 		try_files {path} /index.html
 		file_server
