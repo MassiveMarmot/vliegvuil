@@ -151,6 +151,32 @@ describe('menu keyboard behaviour', () => {
     expect(menuButton.getAttribute('aria-expanded')).toBe('false');
     expect(document.activeElement).toBe(menuButton);
   });
+
+  it('clicking the Menu button while open closes it (pointerdown then click)', (): void => {
+    // Regression: the outside-pointerdown handler used to close the menu
+    // on the button's own pointerdown, and the onClick toggle then
+    // reopened it — the button could never close the menu.
+    render(<App />);
+    const menuButton = screen.getByRole('button', { name: /menu/i });
+    fireEvent.click(menuButton);
+    expect(menuButton.getAttribute('aria-expanded')).toBe('true');
+    // Real browsers fire pointerdown before click on the same target
+    fireEvent.pointerDown(menuButton);
+    fireEvent.click(menuButton);
+    expect(menuButton.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByRole('navigation', { name: /hoofdmenu/i })).toBeNull();
+  });
+
+  it('a pointerdown outside both the button and the panel still closes the menu', (): void => {
+    render(<App />);
+    const menuButton = screen.getByRole('button', { name: /menu/i });
+    fireEvent.click(menuButton);
+    expect(menuButton.getAttribute('aria-expanded')).toBe('true');
+    // pointerdown on the document body (outside panel and button)
+    fireEvent.pointerDown(document.body);
+    expect(menuButton.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByRole('navigation', { name: /hoofdmenu/i })).toBeNull();
+  });
 });
 
 describe('About page content and links', () => {
