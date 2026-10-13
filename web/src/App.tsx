@@ -186,9 +186,16 @@ function App(): React.ReactElement {
     setLiveMessage(message);
   }, []);
 
-  // Handle aircraft selection (map click, search result, list row)
+  // Handle aircraft selection (map click, search result, list row).
+  // On a non-map route the result is invisible, so navigate to the map
+  // first and select in the same batched update: the route-change effect
+  // only resets overlays when the new route is NOT the map, so it does
+  // not undo the selection.
   const handleAircraftSelect = useCallback(
     (id: string): void => {
+      if (route !== 'map') {
+        navigate(pagePath(language, 'map'));
+      }
       setSelectedAircraftId(id);
       const ac = aircraft.get(id);
       announce(
@@ -197,7 +204,7 @@ function App(): React.ReactElement {
           : ''
       );
     },
-    [aircraft, announce, t]
+    [route, navigate, language, aircraft, announce, t]
   );
 
   const handleAircraftClick = useCallback(
@@ -243,8 +250,26 @@ function App(): React.ReactElement {
     refreshAircraft();
   }, [refreshAircraft]);
 
-  // List view toggle with announcement (spec §6: layer/panel toggles announced)
+  // Settings (session 25 fix): opening settings from a non-map route
+  // navigates to the map first, so the panel is actually visible instead
+  // of leaving a stale showSettings that pops open on the next map visit.
+  const handleOpenSettings = useCallback((): void => {
+    if (route !== 'map') {
+      navigate(pagePath(language, 'map'));
+    }
+    setShowSettings(true);
+  }, [route, navigate, language]);
+
+  // List view toggle with announcement (spec §6: layer/panel toggles
+  // announced). On a non-map route the list is invisible: navigate to the
+  // map and OPEN the list (never toggle closed from a page).
   const handleToggleList = useCallback((): void => {
+    if (route !== 'map') {
+      navigate(pagePath(language, 'map'));
+      setShowList(true);
+      announce(t('list.opened', 'Lijstweergave geopend'));
+      return;
+    }
     setShowList((prev) => {
       const next = !prev;
       announce(
@@ -254,7 +279,7 @@ function App(): React.ReactElement {
       );
       return next;
     });
-  }, [announce, t]);
+  }, [route, navigate, language, announce, t]);
 
   // Noise overlay toggle with announcement (spec §6)
   const handleToggleNoise = useCallback(
@@ -351,7 +376,7 @@ function App(): React.ReactElement {
         language={language}
         route={route}
         onNavigate={navigate}
-        onOpenSettings={(): void => setShowSettings(true)}
+        onOpenSettings={handleOpenSettings}
         onToggleList={handleToggleList}
         search={<SearchBox aircraft={aircraft} onSelect={handleAircraftSelect} />}
         skipTargetId="map-region"
