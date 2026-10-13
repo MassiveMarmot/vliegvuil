@@ -21,7 +21,7 @@ contacts service.pdok.nl. The site therefore does not depend on any
 third-party server being reachable at request time.
 ## Strict CSP
 
-The Content-Security-Policy only allows resources from our own origin and PDOK tiles. See `Caddyfile` and `docs/deploy.md` for the exact policy.
+The Content-Security-Policy only allows resources from our own origin — `service.pdok.nl` is no longer listed anywhere in the policy. See `Caddyfile` and `docs/deploy.md` for the exact policy.
 
 ## Local storage
 

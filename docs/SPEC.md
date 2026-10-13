@@ -11,7 +11,7 @@ Aircraft type/registration	tar1090-db or the OpenSky aircraft CSV	Build-time sna
 Country of registration	Static ICAO24 address-block table	Build-time
 Airports	OurAirports, trimmed to NL and nearby, plus a hand-maintained status overlay (commercial / military-shared / planned)	Build-time snapshot
 Aviation noise	Schiphol: EU END 2021 contours (RIVM/CVGG via data.overheid.nl, CC-0), 5 dB Lden bands 55–75, "actual traffic 2021 (EU END)". Regional airports (incl. Eindhoven civil Lden): CLO/NLR 2018 & 2024 contours exist as maps only; vector data pending a maintainer request to RIVM/NLR	Build-time: simplify to small GeoJSON for point-in-polygon; PMTiles on the VPS
-Basemap	PDOK BRT Achtergrondkaart (default)	Behind a config URL. PMTiles on the VPS is the drop-in replacement later
+Basemap	PDOK BRT Achtergrondkaart, self-hosted as PNG tiles on our own origin at /tiles/{z}/{x}/{y}.png (one-time copy, CC-BY 4.0, attribution only — no live PDOK dependency). A config URL can point elsewhere; PMTiles on the VPS is the drop-in replacement later
 
 All snapshots are versioned in the repo or release artifacts, with source, license and date recorded in a machine-readable sources.json.
 
@@ -60,7 +60,7 @@ API base URL is configurable; no critical feature depends on a service worker.
 Native MapLibre is a later option, since /core is UI-independent.
 5. Privacy
 No analytics, no third-party scripts, self-hosted fonts and assets.
-Strict CSP. Only third-party request is PDOK tiles (Dutch government infra); self-hosted PMTiles removes even that later.
+Strict CSP; the site makes no third-party requests (the PDOK BRT basemap is self-hosted; PDOK is attribution only, CC-BY 4.0).
 The proxy hides the user's IP from the ADS-B provider.
 No accounts, no geolocation prompt in v0.
 Noise lookup runs client-side against local GeoJSON.
@@ -82,7 +82,7 @@ Ultrafine particles — current national inventory: TNO 2026 R10578, "Particle n
 Leefbaarometer, as context only (its inputs already include noise/air quality — not evidence of an aviation effect)
 External safety contours
 Natura 2000
-PMTiles basemap on the VPS — full international basemap under the NL-only PDOK BRT layer. Options compared 2026-10-10 (borders-context layer shipped first: bundled Natural Earth clip, public domain, same origin, no third-party request): (a) self-hosted Protomaps extract via `pmtiles extract` from the daily planet build, served as one static PMTiles file by Caddy — keeps the "PDOK only" third-party rule intact, OSM attribution required, estimated tens of MB at z<=10 for NL+neighbours (measure with `--dry-run`); build artifact on the VPS, not committed (2 MB cap); (b) OpenFreeMap (tiles.openfreemap.org) — free, unlimited, no key/registration/cookies, OSM data under ODbL, Positron style; donation-funded two-server project, so keep the inline style (never make their style JSON the root style), use their TileJSON URL, and tolerate source errors quietly; adds a second third-party origin to CSP connect-src; (c) CARTO basemaps — requires an API key (public in the client, quota-metered 5M/month non-commercial), fallback only. Ruled out: tile.openstreetmap.org (usage policy forbids production sites), CARTO raster without key (watermarked since 2026-09).
+PMTiles basemap on the VPS — full international basemap under the NL-only self-hosted PDOK BRT layer. Options compared 2026-10-10 (borders-context layer shipped first: bundled Natural Earth clip, public domain, same origin, no third-party request): (a) self-hosted Protomaps extract via `pmtiles extract` from the daily planet build, served as one static PMTiles file by Caddy — fits the "no third-party requests" rule, OSM attribution required, estimated tens of MB at z<=10 for NL+neighbours (measure with `--dry-run`); build artifact on the VPS, not committed (2 MB cap); (b) OpenFreeMap (tiles.openfreemap.org) — free, unlimited, no key/registration/cookies, OSM data under ODbL, Positron style; donation-funded two-server project, so keep the inline style (never make their style JSON the root style), use their TileJSON URL, and tolerate source errors quietly; adds a second third-party origin to CSP connect-src; (c) CARTO basemaps — requires an API key (public in the client, quota-metered 5M/month non-commercial), fallback only. Ruled out: tile.openstreetmap.org (usage policy forbids production sites), CARTO raster without key (watermarked since 2026-09).
 CO₂/emissions layer — Climate TRACE API (satellite/ML-derived, per-facility and per-flight aviation sector, free, no auth) as primary; Google Travel Impact Model API (per-passenger, CC BY-SA 4.0, future commercial flights only) as a complementary passenger-footprint feature
 Airspace structure layer (NL) — LVNL Geoportaal official airspace polygons (CTR, TMA, CTA, TSA/TRA, danger/restricted areas; free GeoJSON download for the Dutch FIR EHAA); openAIP (CC BY-NC) and open flightmaps as alternatives. Same build-time pipeline as the noise contours: simplify → GeoJSON → maplibre fill layer
 ATS route network (Europe) — published airways; EUROCONTROL DDR/NM B2B data is registration-restricted to ATM stakeholders, so this depends on openAIP's airway coverage or an access request; revisit availability

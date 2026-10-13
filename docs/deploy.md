@@ -375,11 +375,10 @@ sudo systemctl reload caddy
   `User-Agent: VliegVuil.nl/1.0 (+https://vliegvuil.nl)`. adsb.fi never
   learns the visitor IP.
 - **Same-origin API.** The app makes no third-party API calls and no CORS
-  headers exist. `connect-src` allows `https://service.pdok.nl` in addition
-  to `'self'` because MapLibre GL loads raster tiles via `fetch()`, which is
-  governed by `connect-src`, not `img-src`.
-- **Third-party requests from the browser:** only PDOK tiles
-  (`https://service.pdok.nl`), allowed in both `img-src` and `connect-src`.
+  headers exist. `connect-src` is `'self'` only.
+- **Third-party requests from the browser:** none. The basemap tiles are
+  self-hosted at `/tiles/{z}/{x}/{y}.png`; `service.pdok.nl` appears in no
+  CSP directive.
   `worker-src 'self' blob:` permits the PWA service worker (`/sw.js`,
   same-origin script) plus MapLibre's blob workers.
 - **System logs are a separate thing.** `sshd` logs administrator logins and
