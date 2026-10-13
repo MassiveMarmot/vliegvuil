@@ -23,7 +23,7 @@ vliegvuil.nl {
 	encode zstd gzip
 
 	# Security headers (same origin only; the API is proxied below, so no
-	# third-party origins appear in connect-src and no CORS headers exist)
+	# third-party origins appear in connect-src and no CORS headers exist).
 	header {
 		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; worker-src 'self' blob:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"
 		X-Content-Type-Options "nosniff"
@@ -31,6 +31,14 @@ vliegvuil.nl {
 		Referrer-Policy "strict-origin-when-cross-origin"
 		Permissions-Policy "geolocation=(), microphone=(), camera=()"
 		-X-XSS-Protection
+		# HSTS (PR decision, docs/BUILD.md §6 "Before 25b"): one-day first
+		# step of the ramp-up. No includeSubDomains (stats. must serve valid
+		# HTTPS before that is ever considered), no preload. This site-level
+		# header applies to every response of the block, /api included; the
+		# /api handler's header_down -Strict-Transport-Security strips the
+		# upstream's header only (it runs in the reverse_proxy transport, not
+		# here).
+		Strict-Transport-Security "max-age=86400"
 	}
 
 	# Root redirect: / has no language segment, so the app would show its

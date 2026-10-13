@@ -551,44 +551,41 @@ Expected `/api` response headers (what the proxy lets through):
 - Added by the cache: `Cache-Status` with a HIT on the second request
   within the 5 s TTL.
 
-TODO (decide separately): whether to add our own `Strict-Transport-Security`
-header on the site (and with what max-age). The upstream's
-`max-age=0; includeSubDomains` is stripped and NOT replaced in this change,
-so **the site currently sends no HSTS header at all** — this is a status
-record, not a pending accident. Decision plan (docs/BUILD.md §6, "Before 25b"):
+HSTS: enabled at the first ramp-up step, `max-age=86400` (one day), via a
+`Strict-Transport-Security "max-age=86400"` line in the site-level `header`
+block of the `vliegvuil.nl` Caddy site.
 
-- Start with `Strict-Transport-Security: max-age=86400` (one day), no
-  `includeSubDomains`, no preload. Rationale: HSTS is sticky; a broken
-  certificate or reload locks browsers out until the max-age ends.
-- Implementation when decided: one `header` directive in the main site
-  block (syntax per <https://caddyserver.com/docs/caddyfile/directives/header>:
-  `header Strict-Transport-Security "max-age=86400"`), as a separate small
-  PR with a verification curl in the PR — not bundled into another session.
-  Caddy does not add HSTS by default; automatic HTTPS redirects HTTP to
-  HTTPS but sets no HSTS header
-  (<https://caddyserver.com/docs/automatic-https>).
-- Ramp-up: 1 day, then 1 week, then 1 month, then 1 year — raise to the next
-  step only after a week without TLS problems at each step. Record the
-  current max-age here when it changes.
-- `includeSubDomains`: re-decide only after every subdomain in use (www,
-  the GoatCounter dashboard host) is HTTPS-only (docs/BUILD.md §6,
-  "After 25c"). Preload is out of scope until the maintainer explicitly
-  decides.
+- **Current value and why**: one day is the deliberate first step of the
+  ramp-up (docs/BUILD.md section 6, "Before 25b"). HSTS is sticky: a broken
+  certificate or a bad reload locks browsers out until the max-age ends,
+  so the first step is short enough to survive a day of mistakes.
+- **includeSubDomains and preload are intentionally off.** Future
+  subdomains (for example `stats.` for the GoatCounter dashboard, session
+  25c) must serve valid HTTPS over their whole lifetime before
+  includeSubDomains is ever considered; with it, a subdomain that drops
+  HTTPS becomes unreachable for HSTS-pinned visitors. Preload is out of
+  scope until the maintainer explicitly decides.
+- **Ramp-up** (a later explicit decision each time, recorded here when it
+  changes): 1 week, then 1 month, then longer - raise one step only
+  after a clean period without TLS problems at the previous step.
+- The site-level header applies to every response of the site block,
+  `/api` included (Caddy `header` directives at site level run for all
+  requests; the `/api` handler's `header_down -Strict-Transport-Security`
+  strips the *upstream's* header inside `reverse_proxy` and does not undo
+  the site-level one).
 
-Verification recipe once enabled (GET, not HEAD — the upstream answers 405
-to HEAD; GET works everywhere):
+Verification (GET, not HEAD - the upstream answers 405 to HEAD):
 
 ```bash
-curl -sS -D- -o /dev/null https://<host>/ | grep -i strict-transport
+curl -sS -D- -o /dev/null https://vliegvuil.nl/ | grep -i strict-transport
+curl -sS -D- -o /dev/null https://vliegvuil.nl/nl/ | grep -i strict-transport
+curl -sS -D- -o /dev/null https://vliegvuil.nl/api/lat/52.25/lon/5.0/dist/250 | grep -i strict-transport
 ```
 
-Expect exactly one `Strict-Transport-Security` header line on the site
-responses. On `/api` responses the upstream's own HSTS header is stripped
-(PR #74); note that a site-level `header` directive without a matcher
-applies to every response of the site block, `/api` included — so if HSTS
-must NOT appear on `/api`, the directive needs a matcher (or a `-Strict-
-Transport-Security` removal in the `/api` handler). Check the header scope
-when enabling, with the same curl against an `/api` path.
+Expect exactly one `Strict-Transport-Security: max-age=86400` line per
+response. (A `/tiles/` URL should carry it too; the tile download is
+still in progress, so missing tile files are expected - check a tile
+that exists once the tile run completes.)
 
 Verify after deploy (GET, not HEAD: the upstream answers 405 to HEAD):
 
