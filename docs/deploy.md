@@ -699,6 +699,18 @@ appears until tiles actually fail to load for a non-404 reason.
     bookkeeping is needed. The trade-off is that each rebuild silently jumps
     to the newest Caddy and module versions; if you ever need change
     control, pin versions in the `xcaddy build` command instead.
+  - **CI pins what this script does not.** The `validate-caddyfile` job in
+    `.github/workflows/ci.yml` builds a pinned Caddy and module set
+    (currently Caddy v2.11.7, caddy-ratelimit v0.1.0, cache-handler v0.17.0,
+    storages/otter v0.0.20) and fails the build when `caddy fmt --diff`
+    would change the Caddyfile. The script and the CI job should build the
+    same Caddy version: CI is the reproducibility and formatting gate, so
+    when you bump the pins in `ci.yml`, rebuild the VPS binary with the
+    same pinned versions in the same sitting (pass them to the `xcaddy
+    build` line here), or vice versa when a rebuild reveals the pins need
+    moving. Today the script still builds `@latest`, so the deployed
+    version can be newer than the CI pins; check `/var/log/caddy-versions.log`
+    for what is actually deployed.
   - This is a small piece of infrastructure you own: keep it simple, and
     update it in the same sitting whenever the module set or paths change.
 - **Reading memory usage.** Judge memory by the `available` column of
