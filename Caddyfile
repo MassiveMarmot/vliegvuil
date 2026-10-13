@@ -33,6 +33,23 @@ vliegvuil.nl {
 		-X-XSS-Protection
 	}
 
+	# Root redirect: / has no language segment, so the app would show its
+	# not-found page. Send visitors to the right language immediately:
+	# 302 (not 301, so browser/language changes are not sticky), no-store
+	# so proxies never cache a personal redirect, and Vary so caches key
+	# on the request language. en only when the FIRST Accept-Language tag
+	# is English (q-values are not parsed; a leading en-US, en-GB etc.
+	# counts, anything else - including de, nl, no header - falls back
+	# to the default language nl).
+	@root path /
+	handle @root {
+		header Vary Accept-Language
+		header Cache-Control "no-store"
+		@en header_regexp Accept-Language "^\s*en([-;,\s]|$)"
+		redir @en /en/ 302
+		redir /nl/ 302
+	}
+
 	# Same-origin API proxy: /api/* -> https://opendata.adsb.fi/api/v2/*
 	# This removes CORS entirely: the browser only ever talks to vliegvuil.nl.
 	handle /api/* {

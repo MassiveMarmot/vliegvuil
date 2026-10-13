@@ -414,6 +414,43 @@ fails and the stale/error banner shows. Other local limitations:
   serving and headers, and the production response headers. Those need
   staging or the production server.
 
+### Root redirect ( / -> /{lang}/ )
+
+`/` has no language segment, so the app itself would render the not-found
+view. The Caddyfile's `vliegvuil.nl` block therefore has a `handle` for
+exactly `/` (a named matcher, placed before the other handle blocks) that:
+
+- sets `Vary: Accept-Language` and `Cache-Control: no-store` (the redirect
+  is language-dependent, so caches must key on the request language and
+  must not store it), then
+- redirects with **302** (deliberately not 301: browser- or
+  language-preference changes must not be remembered) to `/en/` when the
+  request's `Accept-Language` header starts with an English tag
+  (`header_regexp ^\s*en([-;,\s]|$)`), otherwise to `/nl/` (the default).
+
+The first-listed tag decides: `en-US,en;q=0.9` goes to `/en/`, and `nl`,
+`de` or no header go to `/nl/`. **q-values are not parsed** — a header like
+`de;q=1.0, en;q=0.9` starts with `de` and therefore goes to `/nl/`, even
+though the q-values say otherwise. That is the accepted trade-off: it keeps
+the rule a single regex with no q-value parsing in Caddy config.
+
+Verify after deploy:
+
+```bash
+# English-first header: 302 to /en/
+curl -sSI -H 'Accept-Language: en-US,en;q=0.9' https://vliegvuil.nl/ | grep -iE 'HTTP/|location|vary|cache-control'
+# Dutch, German and no header: 302 to /nl/
+curl -sSI -H 'Accept-Language: nl-NL,nl;q=0.9' https://vliegvuil.nl/ | grep -i location
+curl -sSI -H 'Accept-Language: de-DE,de;q=0.9,en;q=0.5' https://vliegvuil.nl/ | grep -i location
+curl -sSI https://vliegvuil.nl/ | grep -i location
+```
+
+Expected: every response is `302` with `Location: /en/` or `Location: /nl/`,
+carries `Vary: Accept-Language` and `Cache-Control: no-store`, and `/nl/`
+or `/en/` (the SPA routes) still serve the app as before. The status quo
+before this change — `/` showing the in-app not-found page — is the bug
+this fixes.
+
 ## 5. Privacy properties (what to expect)
 
 - **No access logs.** Caddy does not write access logs unless one is
