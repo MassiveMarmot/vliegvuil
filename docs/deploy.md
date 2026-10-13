@@ -465,7 +465,42 @@ Expected `/api` response headers (what the proxy lets through):
 
 TODO (decide separately): whether to add our own `Strict-Transport-Security`
 header on the site (and with what max-age). The upstream's
-`max-age=0; includeSubDomains` is stripped and NOT replaced in this change.
+`max-age=0; includeSubDomains` is stripped and NOT replaced in this change,
+so **the site currently sends no HSTS header at all** — this is a status
+record, not a pending accident. Decision plan (docs/BUILD.md §6, "Before 25b"):
+
+- Start with `Strict-Transport-Security: max-age=86400` (one day), no
+  `includeSubDomains`, no preload. Rationale: HSTS is sticky; a broken
+  certificate or reload locks browsers out until the max-age ends.
+- Implementation when decided: one `header` directive in the main site
+  block (syntax per <https://caddyserver.com/docs/caddyfile/directives/header>:
+  `header Strict-Transport-Security "max-age=86400"`), as a separate small
+  PR with a verification curl in the PR — not bundled into another session.
+  Caddy does not add HSTS by default; automatic HTTPS redirects HTTP to
+  HTTPS but sets no HSTS header
+  (<https://caddyserver.com/docs/automatic-https>).
+- Ramp-up: 1 day, then 1 week, then 1 month, then 1 year — raise to the next
+  step only after a week without TLS problems at each step. Record the
+  current max-age here when it changes.
+- `includeSubDomains`: re-decide only after every subdomain in use (www,
+  the GoatCounter dashboard host) is HTTPS-only (docs/BUILD.md §6,
+  "After 25c"). Preload is out of scope until the maintainer explicitly
+  decides.
+
+Verification recipe once enabled (GET, not HEAD — the upstream answers 405
+to HEAD; GET works everywhere):
+
+```bash
+curl -sS -D- -o /dev/null https://<host>/ | grep -i strict-transport
+```
+
+Expect exactly one `Strict-Transport-Security` header line on the site
+responses. On `/api` responses the upstream's own HSTS header is stripped
+(PR #74); note that a site-level `header` directive without a matcher
+applies to every response of the site block, `/api` included — so if HSTS
+must NOT appear on `/api`, the directive needs a matcher (or a `-Strict-
+Transport-Security` removal in the `/api` handler). Check the header scope
+when enabling, with the same curl against an `/api` path.
 
 Verify after deploy (GET, not HEAD: the upstream answers 405 to HEAD):
 

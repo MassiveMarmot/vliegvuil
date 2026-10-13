@@ -61,6 +61,7 @@ Native MapLibre is a later option, since /core is UI-independent.
 5. Privacy
 No analytics, no third-party scripts, self-hosted fonts and assets.
 Strict CSP; the site makes no third-party requests (the PDOK BRT basemap is self-hosted; PDOK is attribution only, CC-BY 4.0).
+HSTS is not enabled yet; the decision plan and ramp-up are tracked in docs/BUILD.md §6 (human checkpoints).
 The proxy hides the user's IP from the ADS-B provider.
 No accounts, no geolocation prompt in v0.
 Noise lookup runs client-side against local GeoJSON.
