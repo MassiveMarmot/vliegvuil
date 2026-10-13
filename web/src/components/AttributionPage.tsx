@@ -168,7 +168,6 @@ function LayerSection({
 }
 
 export interface AttributionPageProps {
-  onClose?: () => void;
   sourcesFile?: SourcesFile;
   /** When set, the page scrolls the section with this id into view */
   focusSectionId?: string;
@@ -180,7 +179,6 @@ export interface AttributionPageProps {
  * grouped per map layer for deep links from legends and badges.
  */
 export function AttributionPage({
-  onClose,
   sourcesFile,
   focusSectionId,
 }: AttributionPageProps): React.ReactElement {
@@ -212,24 +210,8 @@ export function AttributionPage({
   }, [focusSectionId]);
 
   return (
-    <section
-      className="attribution-page"
-      role="region"
-      aria-label={t('attribution.title', 'Bronvermelding')}
-    >
-      <header className="attribution-header">
-        <h2 className="attribution-title">{t('attribution.title', 'Bronvermelding')}</h2>
-        {onClose && (
-          <button
-            type="button"
-            className="attribution-close"
-            onClick={onClose}
-            aria-label={t('telemetry.close', 'Sluiten')}
-          >
-            ×
-          </button>
-        )}
-      </header>
+    <main id={'main'} className="about-page attribution-page" tabIndex={-1}>
+      <h1>{t('attribution.title', 'Bronvermelding')}</h1>
       {ATTRIBUTION_SECTIONS.map((section): React.ReactElement | null => {
         const sectionEntries = bySection.get(section.id) ?? [];
         if (sectionEntries.length === 0) return null;
@@ -259,7 +241,7 @@ export function AttributionPage({
       <p className="attribution-live">
         {t('attribution.liveData', 'Live aircraft data from adsb.fi — adsb.fi open-data API, reused under its published API terms.')}
       </p>
-    </section>
+    </main>
   );
 }
 

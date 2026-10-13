@@ -164,6 +164,13 @@ function App(): React.ReactElement {
     };
     document.title = titles[route] ?? titles['map'] ?? '';
     if (route !== 'map') {
+      // Session 25 fix: no overlay survives into a page without a map.
+      // The overlays are also unmounted on non-map routes (see render),
+      // so they leave the tab order and the a11y tree entirely.
+      setShowSettings(false);
+      setShowList(false);
+      setSelectedAircraftId(null);
+      setSelectedAirport(null);
       mainRef.current?.focus();
     }
   }, [language, route, t]);
@@ -267,11 +274,6 @@ function App(): React.ReactElement {
   const handleOpenNoiseSources = useCallback((): void => {
     setAttributionFocusSection('noise');
     navigate(pagePath(language, 'attribution'));
-  }, [language, navigate]);
-  // Close the attribution view: back to the map route
-  const handleCloseAttribution = useCallback((): void => {
-    setAttributionFocusSection(undefined);
-    navigate(pagePath(language, 'map'));
   }, [language, navigate]);
 
   // Load the noise contour snapshot (built by data-build, spec §5)
@@ -418,31 +420,39 @@ function App(): React.ReactElement {
           </MapErrorBoundary>
         </div>
 
-        {/* Noise overlay toggle + legend (session 10; compact legend follow-up) */}
-        <NoiseOverlay
-          enabled={noiseEnabled}
-          onToggle={handleToggleNoise}
-          contours={noiseContours}
-          onOpenSources={handleOpenNoiseSources}
-        />
+        {/* Map chrome (session 25 fix): only on the map route. On About,
+            Attribution and not-found the map is covered and none of these
+            controls render — not focusable, not in the a11y tree. */}
+        {route === 'map' && (
+          <>
+            {/* Noise overlay toggle + legend (session 10) */}
+            <NoiseOverlay
+              enabled={noiseEnabled}
+              onToggle={handleToggleNoise}
+              contours={noiseContours}
+              onOpenSources={handleOpenNoiseSources}
+            />
 
-        {/* Aircraft count + last update (status line, part of the map view) */}
-        <div className="map-status">
-          <div>{t('info.aircraftCount', 'Vliegtuigen: {{count}}', { count: aircraft.size })}</div>
-          <div>
-            {t('info.lastUpdate', 'Laatste update: {{time}}', {
-              time:
-                lastUpdate != null
-                  ? new Date(lastUpdate).toLocaleTimeString(
-                      i18n.language === 'en' ? 'en-GB' : 'nl-NL'
-                    )
-                  : '—',
-            })}
-          </div>
-        </div>
+            {/* Aircraft count + last update (status line) */}
+            <div className="map-status">
+              <div>{t('info.aircraftCount', 'Vliegtuigen: {{count}}', { count: aircraft.size })}</div>
+              <div>
+                {t('info.lastUpdate', 'Laatste update: {{time}}', {
+                  time:
+                    lastUpdate != null
+                      ? new Date(lastUpdate).toLocaleTimeString(
+                          i18n.language === 'en' ? 'en-GB' : 'nl-NL'
+                        )
+                      : '—',
+                })}
+              </div>
+            </div>
+          </>
+        )}
 
-        {/* Aircraft list view (keyboard/screen-reader alternative) */}
-        {showList && (
+        {/* Aircraft list view (keyboard/screen-reader alternative);
+            route-gated so it never survives a route change */}
+        {route === 'map' && showList && (
           <AircraftList
             aircraft={aircraft}
             selectedAircraftId={selectedAircraftId}
@@ -452,7 +462,7 @@ function App(): React.ReactElement {
         )}
 
         {/* Airport popup (session 23); lazy so the main bundle stays small */}
-        {selectedAirport && (
+        {route === 'map' && selectedAirport && (
           <Suspense fallback={null}>
             <AirportPopup
               icao={selectedAirport.icao}
@@ -465,7 +475,7 @@ function App(): React.ReactElement {
         )}
 
         {/* Telemetry panel for selected aircraft */}
-        {selectedAircraft && (
+        {route === 'map' && selectedAircraft && (
           <TelemetryPanel
             aircraft={selectedAircraft}
             onClose={handleCloseTelemetry}
@@ -476,18 +486,17 @@ function App(): React.ReactElement {
 
         {/* Settings panel (session 11) */}
         <SettingsPanel
-          open={showSettings}
+          open={route === 'map' && showSettings}
           onClose={(): void => setShowSettings(false)}
           units={units}
           onUnitsChange={setUnits}
         />
 
-        {/* Attribution page (routed, session 25); focusSection deep-links to a layer section */}
+        {/* Attribution page (routed, session 25 fix: a real page like
+            About — no close button, no floating panel); focusSection
+            deep-links to a layer section */}
         {route === 'attribution' && (
-          <AttributionPage
-            onClose={handleCloseAttribution}
-            focusSectionId={attributionFocusSection}
-          />
+          <AttributionPage focusSectionId={attributionFocusSection} />
         )}
         {/* About page (routed, session 25) */}
         {route === 'about' && <AboutPage language={language} onNavigate={navigate} />}

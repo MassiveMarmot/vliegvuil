@@ -8,6 +8,7 @@
 // blur when empty, and after a selection; focus returns to the button.
 // Spec §2: "Search: callsign, registration or ICAO24."
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useTranslation } from 'react-i18next';
 import type { DisplayAircraft } from '../types';
 
@@ -60,6 +61,11 @@ const SEARCH_RESULTS_ID = 'search-results';
  */
 export function SearchBox({ aircraft, onSelect }: SearchBoxProps): React.ReactElement {
   const { t } = useTranslation();
+  // Wide viewports (>= 768px, the single breakpoint, defined here and
+  // mirrored once in styles) render the input always expanded so there is
+  // no layout shift on focus; narrow viewports keep the expanding icon
+  // button (spec hierarchy: pollution layers first, search secondary).
+  const wideViewport = useMediaQuery('(min-width: 768px)');
   const [query, setQuery] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -79,7 +85,8 @@ export function SearchBox({ aircraft, onSelect }: SearchBoxProps): React.ReactEl
     (): DisplayAircraft[] => searchAircraft(aircraft, query).slice(0, MAX_RESULTS),
     [aircraft, query],
   );
-  const showResults = isExpanded && isFocused && query.trim().length > 0;
+  const expandedNow = wideViewport || isExpanded;
+  const showResults = expandedNow && isFocused && query.trim().length > 0;
 
   const collapseAndRefocus = useCallback((): void => {
     setIsExpanded(false);
@@ -119,24 +126,35 @@ export function SearchBox({ aircraft, onSelect }: SearchBoxProps): React.ReactEl
   // when the query is empty (a typed query stays for re-focus).
   const handleBlur = useCallback((): void => {
     setIsFocused(false);
-    if (query.trim().length === 0) {
+    if (!wideViewport && query.trim().length === 0) {
       setIsExpanded(false);
     }
-  }, [query]);
+  }, [query, wideViewport]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent): void => {
       if (e.key === 'Escape') {
         e.stopPropagation();
+        if (wideViewport) {
+          // Wide mode: the input stays; Esc clears the query and closes
+          // the results popup (blur handler hides it).
+          setQuery('');
+          setIsFocused(false);
+          return;
+        }
         collapseAndRefocus();
       }
     },
-    [collapseAndRefocus],
+    [collapseAndRefocus, wideViewport],
   );
 
   return (
-    <div className={isExpanded ? "search-box expanded" : "search-box"} role="search" onKeyDown={handleKeyDown}>
-      {!isExpanded ? (
+    <div
+      className={expandedNow ? "search-box expanded" : "search-box"}
+      role="search"
+      onKeyDown={handleKeyDown}
+    >
+      {!expandedNow ? (
         <button
           ref={iconButtonRef}
           type="button"
