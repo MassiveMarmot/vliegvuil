@@ -119,5 +119,60 @@
     "statusMilitaryShared": "Military, partly civil aviation",
     "statusPlanned": "Planned",
     "selected": "{{name}} selected"
+  },
+  "nav": {
+    "skip": "Skip to the map",
+    "map": "Map",
+    "about": "About",
+    "attribution": "Sources",
+    "settings": "Settings",
+    "list": "List",
+    "menu": "Menu",
+    "menuLabel": "Main menu",
+    "language": "Language",
+    "donate": "Donate",
+    "opensNewTab": "opens in a new tab",
+    "contact": "Contact"
+  },
+  "title": {
+    "map": "VliegVuil.nl — live air traffic and noise contours",
+    "about": "About — VliegVuil.nl",
+    "attribution": "Sources — VliegVuil.nl",
+    "notFound": "Page not found — VliegVuil.nl"
+  },
+  "about": {
+    "title": "About {{site}}",
+    "what": {
+      "title": "What is this site?",
+      "body": "This site shows live aircraft movements over the Netherlands together with official noise contours around Dutch airports. It is an independent, non-commercial project. Coverage is currently limited to the Netherlands."
+    },
+    "principle": {
+      "title": "Measurements, not causes",
+      "body": "This site shows measurements: what is in the air and where the noise contours are. No medical claims and no statements about causes unless an official study is cited. Noise contours are annual averages of the sound load — not live noise."
+    },
+    "sources": {
+      "title": "Data sources",
+      "body": "All data comes from public sources with open licences. See the complete list of sources, dates and licences on the <1>sources page</1>."
+    },
+    "privacy": {
+      "title": "Privacy",
+      "body": "This site uses no analytics, no cookies and no tracking. No access logs are kept and your IP address is not forwarded to the aircraft position data provider. The site asks your browser only for the app itself, the basemap and the aircraft data — no third party is contacted. The only thing stored locally is your unit preference (in your own browser, never sent)."
+    },
+    "license": {
+      "title": "Licence",
+      "body": "The code is licensed under the <1>{{license}}</1>. Copyright (c) {{year}} {{holder}}."
+    },
+    "contact": {
+      "title": "Contact",
+      "body": "Report problems or ideas via <1>GitHub Issues</1>.",
+      "githubIssues": "GitHub Issues",
+      "bluesky": "Bluesky"
+    },
+    "backToMap": "← Back to the map"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "body": "This page does not exist. The link may be outdated or mistyped.",
+    "backToMap": "Go to the map"
   }
 }

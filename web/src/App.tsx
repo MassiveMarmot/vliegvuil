@@ -4,7 +4,19 @@
 // Main application component
 
 import React, { useEffect, useState, useCallback, useRef, useMemo, lazy, Suspense } from 'react';
-import { SimpleBanner, TelemetryPanel, SearchBox, AircraftList, NoiseOverlay, SettingsPanel, AttributionPage } from './components';
+import {
+  SimpleBanner,
+  TelemetryPanel,
+  SearchBox,
+  AircraftList,
+  NoiseOverlay,
+  SettingsPanel,
+  AttributionPage,
+} from './components';
+import { Header } from './components/Header';
+import { AboutPage } from './components/AboutPage';
+import { NotFoundPage } from './components/NotFoundPage';
+import { useRouter, pagePath } from './hooks/useRouter';
 import MapErrorBoundary from './components/MapErrorBoundary';
 // MapLibre is the heaviest dependency (~1 MB); load it in its own chunk.
 // The direct module path keeps the components barrel (which re-exports Map)
@@ -28,24 +40,29 @@ import type { AirportPopupData } from './airports/airportLayer';
  * Displays map with aircraft, telemetry panel, search, list view, and status banners
  */
 /** Convert core contours back into the GeoJSON FeatureCollection the map layer needs */
-type NoiseGeoJson = { type: 'FeatureCollection'; features: Array<{ type: 'Feature'; geometry: unknown; properties: Record<string, unknown> }> };
+type NoiseGeoJson = {
+  type: 'FeatureCollection';
+  features: Array<{ type: 'Feature'; geometry: unknown; properties: Record<string, unknown> }>;
+};
 
 function noiseContoursToGeoJson(contours: NoiseContours): NoiseGeoJson {
   return {
     type: 'FeatureCollection',
-    features: contours.contours.map((c): { type: 'Feature'; geometry: unknown; properties: Record<string, unknown> } => ({
-      type: 'Feature',
-      geometry: c.geometry,
-      properties: {
-        airport: c.airport,
-        bandLowerDb: c.bandLowerDb,
-        metric: c.metric,
-        kind: c.kind,
-        year: c.year,
-        source: c.properties.source,
-        license: c.properties.license,
-      },
-    })),
+    features: contours.contours.map(
+      (c): { type: 'Feature'; geometry: unknown; properties: Record<string, unknown> } => ({
+        type: 'Feature',
+        geometry: c.geometry,
+        properties: {
+          airport: c.airport,
+          bandLowerDb: c.bandLowerDb,
+          metric: c.metric,
+          kind: c.kind,
+          year: c.year,
+          source: c.properties.source,
+          license: c.properties.license,
+        },
+      })
+    ),
   };
 }
 
@@ -86,8 +103,9 @@ function App(): React.ReactElement {
   const [noiseEnabled, setNoiseEnabled] = useState(false);
   const [noiseContours, setNoiseContours] = useState<NoiseContours | null>(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [showAttribution, setShowAttribution] = useState(false);
-  const [attributionFocusSection, setAttributionFocusSection] = useState<string | undefined>(undefined);
+  const [attributionFocusSection, setAttributionFocusSection] = useState<string | undefined>(
+    undefined
+  );
   const [units, setUnits] = useState<UnitSettings>(DEFAULT_UNITS);
 
   // Airport layer (session 23): fetch lazily once the app is up; the
@@ -100,7 +118,9 @@ function App(): React.ReactElement {
   // lazily-loaded snapshot; live values always win, the snapshot only
   // fills gaps. The snapshot fetch is cached, so this is a Map lookup
   // per aircraft on every poll, not a refetch.
-  const [enrichedAircraft, setEnrichedAircraft] = useState<Map<string, DisplayAircraft> | null>(null);
+  const [enrichedAircraft, setEnrichedAircraft] = useState<Map<string, DisplayAircraft> | null>(
+    null
+  );
   useEffect((): void => {
     void enrichFleet(aircraft).then((fleet): void => {
       setEnrichedAircraft(fleet);
@@ -126,6 +146,27 @@ function App(): React.ReactElement {
 
   // Ref so the live region is addressable for testing
   const liveRegionRef = useRef<HTMLDivElement>(null);
+  // Routing (session 25): language from the URL path, pages via the
+  // History API; the map view keeps polling, the about/attribution views
+  // are static content over a plain background.
+  const { state: routeState, navigate } = useRouter();
+  const { language, route } = routeState;
+  const mainRef = useRef<HTMLElement>(null);
+  // Route change: document.title, <html lang>, focus to the page h1,
+  // announce via the live region (spec section 6).
+  useEffect((): void => {
+    document.documentElement.lang = language;
+    const titles: Record<string, string> = {
+      map: t('title.map', 'VliegVuil.nl - live vliegverkeer en geluidscontouren'),
+      about: t('title.about', 'Over - VliegVuil.nl'),
+      attribution: t('title.attribution', 'Bronnen - VliegVuil.nl'),
+      'not-found': t('title.notFound', 'Pagina niet gevonden - VliegVuil.nl'),
+    };
+    document.title = titles[route] ?? titles['map'] ?? '';
+    if (route !== 'map') {
+      mainRef.current?.focus();
+    }
+  }, [language, route, t]);
 
   // Start polling on mount
   useEffect((): (() => void) => {
@@ -139,20 +180,36 @@ function App(): React.ReactElement {
   }, []);
 
   // Handle aircraft selection (map click, search result, list row)
-  const handleAircraftSelect = useCallback((id: string): void => {
-    setSelectedAircraftId(id);
-    const ac = aircraft.get(id);
-    announce(ac ? t('aria.selected', '{{callsign}} geselecteerd', { callsign: ac.callsign ?? ac.icao24 }) : '');
-  }, [aircraft, announce, t]);
-
-  const handleAircraftClick = useCallback((id: string): void => {
-    setSelectedAircraftId(prev => {
-      const next = prev === id ? null : id;
+  const handleAircraftSelect = useCallback(
+    (id: string): void => {
+      setSelectedAircraftId(id);
       const ac = aircraft.get(id);
-      announce(next && ac ? t('aria.selected', '{{callsign}} geselecteerd', { callsign: ac.callsign ?? ac.icao24 }) : '');
-      return next;
-    });
-  }, [aircraft, announce, t]);
+      announce(
+        ac
+          ? t('aria.selected', '{{callsign}} geselecteerd', { callsign: ac.callsign ?? ac.icao24 })
+          : ''
+      );
+    },
+    [aircraft, announce, t]
+  );
+
+  const handleAircraftClick = useCallback(
+    (id: string): void => {
+      setSelectedAircraftId((prev) => {
+        const next = prev === id ? null : id;
+        const ac = aircraft.get(id);
+        announce(
+          next && ac
+            ? t('aria.selected', '{{callsign}} geselecteerd', {
+                callsign: ac.callsign ?? ac.icao24,
+              })
+            : ''
+        );
+        return next;
+      });
+    },
+    [aircraft, announce, t]
+  );
 
   const handleCloseTelemetry = useCallback((): void => {
     setSelectedAircraftId(null);
@@ -167,7 +224,7 @@ function App(): React.ReactElement {
       setSelectedAirport(airport);
       announce(t('airport.selected', '{{name}} geselecteerd', { name: airport.name }));
     },
-    [announce, t],
+    [announce, t]
   );
 
   const handleCloseAirport = useCallback((): void => {
@@ -181,36 +238,56 @@ function App(): React.ReactElement {
 
   // List view toggle with announcement (spec §6: layer/panel toggles announced)
   const handleToggleList = useCallback((): void => {
-    setShowList(prev => {
+    setShowList((prev) => {
       const next = !prev;
-      announce(next ? t('list.opened', 'Lijstweergave geopend') : t('list.closed', 'Lijstweergave gesloten'));
+      announce(
+        next
+          ? t('list.opened', 'Lijstweergave geopend')
+          : t('list.closed', 'Lijstweergave gesloten')
+      );
       return next;
     });
   }, [announce, t]);
 
   // Noise overlay toggle with announcement (spec §6)
-  const handleToggleNoise = useCallback((enabled: boolean): void => {
-    setNoiseEnabled(enabled);
-    announce(enabled ? t('noise.opened', 'Geluidscontouren getoond') : t('noise.closed', 'Geluidscontouren verborgen'));
-  }, [announce, t]);
+  const handleToggleNoise = useCallback(
+    (enabled: boolean): void => {
+      setNoiseEnabled(enabled);
+      announce(
+        enabled
+          ? t('noise.opened', 'Geluidscontouren getoond')
+          : t('noise.closed', 'Geluidscontouren verborgen')
+      );
+    },
+    [announce, t]
+  );
 
-  // Open the Attribution page at the noise layer section (App owns navigation;
-  // session 25 can swap this for a route plus #anchor)
+  // Open the Attribution page at the noise layer section: navigation is a
+  // route now (session 25); the focus section travels as state.
   const handleOpenNoiseSources = useCallback((): void => {
     setAttributionFocusSection('noise');
-    setShowAttribution(true);
-  }, []);
+    navigate(pagePath(language, 'attribution'));
+  }, [language, navigate]);
+  // Close the attribution view: back to the map route
+  const handleCloseAttribution = useCallback((): void => {
+    setAttributionFocusSection(undefined);
+    navigate(pagePath(language, 'map'));
+  }, [language, navigate]);
 
   // Load the noise contour snapshot (built by data-build, spec §5)
   useEffect((): (() => void) => {
     let cancelled = false;
     fetch('/noise-contours.geojson')
-      .then((res): Promise<unknown> => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
+      .then((res): Promise<unknown> =>
+        res.ok ? res.json() : Promise.reject(new Error(String(res.status)))
+      )
       .then((data: unknown): void => {
         if (cancelled) return;
         const fc = data as { type?: string; features?: unknown[] };
         if (fc?.type !== 'FeatureCollection' || !Array.isArray(fc.features)) return;
-        const contours = (fc.features as Array<{ geometry?: unknown; properties?: Record<string, unknown> }>)
+        const contours = (
+          fc.features as Array<{ geometry?: unknown; properties?: Record<string, unknown> }>
+        )
           .filter((f): boolean => f.geometry !== undefined && f.properties !== undefined)
           .map((f): { geometry: unknown; properties: Record<string, unknown> } => ({
             geometry: f.geometry,
@@ -224,14 +301,18 @@ function App(): React.ReactElement {
             const metric = p['metric'];
             const kind = p['kind'];
             if (
-              typeof bandLowerDb !== 'number' || typeof airport !== 'string' ||
-              typeof year !== 'number' || typeof metric !== 'string'
-            ) return null;
+              typeof bandLowerDb !== 'number' ||
+              typeof airport !== 'string' ||
+              typeof year !== 'number' ||
+              typeof metric !== 'string'
+            )
+              return null;
             if (kind !== 'actual' && kind !== 'permitted') return null;
             // The legend year must agree with the recorded state in sources.json
             // (session 22b); features from a different reference year are dropped.
-            const recordedYear = (noiseSources as { sources: Array<{ id: string; referenceYear?: number }> })
-              .sources.find((s): boolean => s.id === 'rivm-end-2021-noise')?.referenceYear;
+            const recordedYear = (
+              noiseSources as { sources: Array<{ id: string; referenceYear?: number }> }
+            ).sources.find((s): boolean => s.id === 'rivm-end-2021-noise')?.referenceYear;
             if (recordedYear !== undefined && year !== recordedYear) return null;
             return {
               airport,
@@ -260,207 +341,159 @@ function App(): React.ReactElement {
     };
   }, []);
 
-  const selectedAircraft = selectedAircraftId
-    ? aircraft.get(selectedAircraftId) ?? null
-    : null;
+  const selectedAircraft = selectedAircraftId ? (aircraft.get(selectedAircraftId) ?? null) : null;
 
   return (
-    <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
-      {/* Status Banner */}
-      {isLoading && (
-        <SimpleBanner
-          type="info"
-          message={t('banner.loading', 'Laden...')}
-          visible={true}
-        />
-      )}
-
-      {error && (
-        <SimpleBanner
-          type="error"
-          message={error}
-          visible={true}
-          onDismiss={handleDismissBanner}
-        />
-      )}
-
-      {showStaleBanner && staleMessage && (
-        <SimpleBanner
-          type="warning"
-          message={staleMessage}
-          visible={true}
-          onDismiss={handleDismissBanner}
-        />
-      )}
-
-      {/* ARIA live region for selection and toggle announcements */}
-      <div
-        ref={liveRegionRef}
-        role="status"
-        aria-live="polite"
-        className="visually-hidden"
-        data-testid="aria-live"
-      >
-        {liveMessage}
-      </div>
-
-      {/* Search */}
-      <SearchBox
-        aircraft={aircraft}
-        onSelect={handleAircraftSelect}
+    <div className="app-shell">
+      <Header
+        language={language}
+        route={route}
+        onNavigate={navigate}
+        onOpenSettings={(): void => setShowSettings(true)}
+        onToggleList={handleToggleList}
+        search={<SearchBox aircraft={aircraft} onSelect={handleAircraftSelect} />}
+        skipTargetId="map-region"
       />
+      <div className="app-body">
+        {/* Status Banner */}
+        {isLoading && (
+          <SimpleBanner type="info" message={t('banner.loading', 'Laden...')} visible={true} />
+        )}
 
-      {/* Map (lazy-loaded MapLibre chunk); the boundary catches a 404 on
+        {error && (
+          <SimpleBanner
+            type="error"
+            message={error}
+            visible={true}
+            onDismiss={handleDismissBanner}
+          />
+        )}
+
+        {showStaleBanner && staleMessage && (
+          <SimpleBanner
+            type="warning"
+            message={staleMessage}
+            visible={true}
+            onDismiss={handleDismissBanner}
+          />
+        )}
+
+        {/* ARIA live region for selection and toggle announcements */}
+        <div
+          ref={liveRegionRef}
+          role="status"
+          aria-live="polite"
+          className="visually-hidden"
+          data-testid="aria-live"
+        >
+          {liveMessage}
+        </div>
+
+        {/* Map (lazy-loaded MapLibre chunk); the boundary catches a 404 on
           the old hashed chunk right after a deploy (session 24) */}
-      <MapErrorBoundary t={t}>
-        <Suspense fallback={<div className="map-container" role="status" aria-label={t('app.loading', 'Laden...')} />}>
-          <Map
-            aircraft={smoothedPositions.size > 0 ? smoothedAircraft : (enrichedAircraft ?? aircraft)}
+        <div id={'map-region'} className={route === 'map' ? 'map-view' : 'map-view map-view-hidden'}>
+          <MapErrorBoundary t={t}>
+            <Suspense
+              fallback={
+                <div
+                  className="map-container"
+                  role="status"
+                  aria-label={t('app.loading', 'Laden...')}
+                />
+              }
+            >
+              <Map
+                aircraft={
+                  smoothedPositions.size > 0 ? smoothedAircraft : (enrichedAircraft ?? aircraft)
+                }
 
+                selectedAircraftId={selectedAircraftId}
+                onAircraftClick={handleAircraftClick}
+                noiseContours={noiseContours ? noiseContoursToGeoJson(noiseContours) : null}
+                noiseEnabled={noiseEnabled}
+                airports={airports}
+                onAirportClick={handleAirportClick}
+              />
+            </Suspense>
+          </MapErrorBoundary>
+        </div>
+
+        {/* Noise overlay toggle + legend (session 10; compact legend follow-up) */}
+        <NoiseOverlay
+          enabled={noiseEnabled}
+          onToggle={handleToggleNoise}
+          contours={noiseContours}
+          onOpenSources={handleOpenNoiseSources}
+        />
+
+        {/* Aircraft count + last update (status line, part of the map view) */}
+        <div className="map-status">
+          <div>{t('info.aircraftCount', 'Vliegtuigen: {{count}}', { count: aircraft.size })}</div>
+          <div>
+            {t('info.lastUpdate', 'Laatste update: {{time}}', {
+              time:
+                lastUpdate != null
+                  ? new Date(lastUpdate).toLocaleTimeString(
+                      i18n.language === 'en' ? 'en-GB' : 'nl-NL'
+                    )
+                  : '—',
+            })}
+          </div>
+        </div>
+
+        {/* Aircraft list view (keyboard/screen-reader alternative) */}
+        {showList && (
+          <AircraftList
+            aircraft={aircraft}
             selectedAircraftId={selectedAircraftId}
-            onAircraftClick={handleAircraftClick}
-            noiseContours={noiseContours ? noiseContoursToGeoJson(noiseContours) : null}
-            noiseEnabled={noiseEnabled}
-            airports={airports}
-            onAirportClick={handleAirportClick}
+            onSelect={handleAircraftSelect}
+            onClose={handleToggleList}
           />
-        </Suspense>
-      </MapErrorBoundary>
+        )}
 
-      {/* Noise overlay toggle + legend (session 10; compact legend follow-up) */}
-      <NoiseOverlay
-        enabled={noiseEnabled}
-        onToggle={handleToggleNoise}
-        contours={noiseContours}
-        onOpenSources={handleOpenNoiseSources}
-      />
+        {/* Airport popup (session 23); lazy so the main bundle stays small */}
+        {selectedAirport && (
+          <Suspense fallback={null}>
+            <AirportPopup
+              icao={selectedAirport.icao}
+              iata={iataFor(airports, selectedAirport.icao)}
+              name={selectedAirport.name}
+              status={selectedAirport.status as AirportStatus | null}
+              onClose={handleCloseAirport}
+            />
+          </Suspense>
+        )}
 
-      {/* Info overlay */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: '1rem',
-          left: '1rem',
-          backgroundColor: 'rgba(255, 255, 255, 0.9)',
-          padding: '0.75rem 1rem',
-          borderRadius: '0.25rem',
-          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-          fontFamily: 'system-ui, -apple-system, sans-serif',
-          fontSize: '0.875rem',
-          zIndex: 10,
-        }}
-      >
-        <div><strong>{t('app.title', 'VliegVuil.nl')}</strong></div>
-        <div>{t('info.aircraftCount', 'Vliegtuigen: {{count}}', { count: aircraft.size })}</div>
-        <div>{t('info.lastUpdate', 'Laatste update: {{time}}', {
-          time: lastUpdate != null
-            ? new Date(lastUpdate).toLocaleTimeString(i18n.language === 'en' ? 'en-GB' : 'nl-NL')
-            : '—',
-        })}</div>
-      </div>
-
-      {/* Settings toggle (session 11) */}
-      <button
-        type="button"
-        className="settings-toggle"
-        onClick={(): void => setShowSettings(prev => !prev)}
-        aria-expanded={showSettings}
-        aria-controls="settings-panel"
-        style={{
-          position: 'absolute',
-          top: '1rem',
-          right: '5rem',
-          zIndex: 20,
-        }}
-      >
-        ⚙
-      </button>
-
-      {/* Attribution link (session 11) */}
-      <button
-        type="button"
-        className="attribution-toggle"
-        onClick={(): void => setShowAttribution(prev => !prev)}
-        aria-expanded={showAttribution}
-        aria-controls="attribution-region"
-        style={{
-          position: 'absolute',
-          bottom: '5.5rem',
-          left: '1rem',
-          zIndex: 20,
-        }}
-      >
-        i
-      </button>
-
-      {/* List view toggle */}
-      <button
-        type="button"
-        className="aircraft-list-toggle"
-        onClick={handleToggleList}
-        aria-expanded={showList}
-        aria-controls="aircraft-list-region"
-        style={{
-          position: 'absolute',
-          top: '1rem',
-          right: '1rem',
-          zIndex: 20,
-        }}
-      >
-        Lijst
-      </button>
-
-      {/* Aircraft list view (keyboard/screen-reader alternative) */}
-      {showList && (
-        <AircraftList
-          aircraft={aircraft}
-          selectedAircraftId={selectedAircraftId}
-          onSelect={handleAircraftSelect}
-          onClose={handleToggleList}
-        />
-      )}
-
-      {/* Airport popup (session 23); lazy so the main bundle stays small */}
-      {selectedAirport && (
-        <Suspense fallback={null}>
-          <AirportPopup
-            icao={selectedAirport.icao}
-            iata={iataFor(airports, selectedAirport.icao)}
-            name={selectedAirport.name}
-            status={selectedAirport.status as AirportStatus | null}
-            onClose={handleCloseAirport}
+        {/* Telemetry panel for selected aircraft */}
+        {selectedAircraft && (
+          <TelemetryPanel
+            aircraft={selectedAircraft}
+            onClose={handleCloseTelemetry}
+            noiseContours={noiseContours}
+            units={units}
           />
-        </Suspense>
-      )}
+        )}
 
-      {/* Telemetry panel for selected aircraft */}
-      {selectedAircraft && (
-        <TelemetryPanel
-          aircraft={selectedAircraft}
-          onClose={handleCloseTelemetry}
-          noiseContours={noiseContours}
+        {/* Settings panel (session 11) */}
+        <SettingsPanel
+          open={showSettings}
+          onClose={(): void => setShowSettings(false)}
           units={units}
+          onUnitsChange={setUnits}
         />
-      )}
 
-      {/* Settings panel (session 11) */}
-      <SettingsPanel
-        open={showSettings}
-        onClose={(): void => setShowSettings(false)}
-        units={units}
-        onUnitsChange={setUnits}
-      />
-
-      {/* Attribution page (session 11); focusSection deep-links to a layer section */}
-      {showAttribution && (
-        <AttributionPage
-          onClose={(): void => {
-            setShowAttribution(false);
-            setAttributionFocusSection(undefined);
-          }}
-          focusSectionId={attributionFocusSection}
-        />
-      )}
+        {/* Attribution page (routed, session 25); focusSection deep-links to a layer section */}
+        {route === 'attribution' && (
+          <AttributionPage
+            onClose={handleCloseAttribution}
+            focusSectionId={attributionFocusSection}
+          />
+        )}
+        {/* About page (routed, session 25) */}
+        {route === 'about' && <AboutPage language={language} onNavigate={navigate} />}
+        {/* Not-found view (session 25) */}
+        {route === 'not-found' && <NotFoundPage language={language} onNavigate={navigate} />}
+      </div>
     </div>
   );
 }

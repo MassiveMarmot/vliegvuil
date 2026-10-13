@@ -119,5 +119,60 @@
     "statusMilitaryShared": "Militair, deels burgerluchtvaart",
     "statusPlanned": "Gepland",
     "selected": "{{name}} geselecteerd"
+  },
+  "nav": {
+    "skip": "Naar de kaart",
+    "map": "Kaart",
+    "about": "Over",
+    "attribution": "Bronnen",
+    "settings": "Instellingen",
+    "list": "Lijst",
+    "menu": "Menu",
+    "menuLabel": "Hoofdmenu",
+    "language": "Taal",
+    "donate": "Doneren",
+    "opensNewTab": "opent in een nieuw tabblad",
+    "contact": "Contact"
+  },
+  "title": {
+    "map": "VliegVuil.nl — live vliegverkeer en geluidscontouren",
+    "about": "Over — VliegVuil.nl",
+    "attribution": "Bronnen — VliegVuil.nl",
+    "notFound": "Pagina niet gevonden — VliegVuil.nl"
+  },
+  "about": {
+    "title": "Over {{site}}",
+    "what": {
+      "title": "Wat is deze site?",
+      "body": "Deze site toont live vliegtuigbewegingen boven Nederland samen met officiële geluidscontouren rondom Nederlandse luchthavens. Het is een onafhankelijk, niet-commercieel project. De dekking is momenteel beperkt tot Nederland."
+    },
+    "principle": {
+      "title": "Metingen, geen oorzaken",
+      "body": "Deze site toont metingen: wat er in de lucht is en waar de geluidscontouren liggen. Geen medische claims en geen uitspraken over oorzaken, tenzij een officiële studie wordt aangehaald. Geluidscontouren zijn jaargemiddelden van de geluidsbelasting — geen live geluid."
+    },
+    "sources": {
+      "title": "Gegevensbronnen",
+      "body": "Alle gegevens komen van openbare bronnen met een open licentie. Bekijk de complete lijst met bronnen, data en licenties op de <1>bronnenpagina</1>."
+    },
+    "privacy": {
+      "title": "Privacy",
+      "body": "Deze site gebruikt geen analytics, geen cookies en geen tracking. Er worden geen toegangslogs bijgehouden en je IP-adres wordt niet doorgestuurd naar de databron voor vliegtuigposities. De site vraagt je browser alleen om de app zelf, de kaartachtergrond en de vliegtuigdata — geen enkele derde partij wordt benaderd. Het enige dat lokaal wordt opgeslagen, is je voorkeur voor eenheden (in je eigen browser, nooit verstuurd)."
+    },
+    "license": {
+      "title": "Licentie",
+      "body": "De code is gelicentieerd onder de <1>{{license}}</1>. Copyright (c) {{year}} {{holder}}."
+    },
+    "contact": {
+      "title": "Contact",
+      "body": "Meld problemen of ideeën via <1>GitHub Issues</1>.",
+      "githubIssues": "GitHub Issues",
+      "bluesky": "Bluesky"
+    },
+    "backToMap": "← Naar de kaart"
+  },
+  "notFound": {
+    "title": "Pagina niet gevonden",
+    "body": "Deze pagina bestaat niet. Misschien is de link verouderd of verkeerd getypt.",
+    "backToMap": "Naar de kaart"
   }
 }

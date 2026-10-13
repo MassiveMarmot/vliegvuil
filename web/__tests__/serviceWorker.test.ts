@@ -49,9 +49,14 @@ describe('service worker precache manifest (app shell only)', () => {
   it('navigation fallback serves the app shell and denies /api', () => {
     if (!existsSync(swPath)) return;
     const sw = readSw();
-    // generateSW compiles navigateFallbackDenylist into a denylist regex
-    // on the NavigationRoute; the literal /^\/api\// must appear.
-    expect(sw).toContain('denylist:[/^\\/api\\//]');
+    // generateSW compiles navigateFallbackDenylist into denylist regexes
+    // on the NavigationRoute. Session 25: the app shell serves /{lang}/...
+    // deep links but never the API, tiles, fonts, data files or any
+    // extension-suffixed (static asset) path.
+    expect(sw).toContain('denylist:[');
+    for (const seg of ['\\/api\\/', '\\/tiles\\/', '\\/fonts\\/', '\\/data\\/', 'noise-contours']) {
+      expect(sw).toContain(seg);
+    }
     const fallback = /createHandlerBoundToURL\("([^"]+)"\)/.exec(sw);
     expect(fallback, 'no navigation fallback handler found').not.toBeNull();
     if (fallback) {

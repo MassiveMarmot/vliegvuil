@@ -997,3 +997,259 @@ body {
 .attribution-license {
   color: var(--vv-muted);
 }
+
+/* ===== Session 25: app shell (header, menu, routed pages) ===== */
+/* Tokens are defined above on :root; a later dark theme is a token swap. */
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  color-scheme: light;
+}
+
+.app-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Skip link: first focusable element, visible on focus */
+.skip-link {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 100;
+  padding: 0.5rem 1rem;
+  background: var(--vv-ink);
+  color: #fff;
+  border-radius: var(--vv-radius-sm);
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+
+.skip-link:focus-visible {
+  transform: none;
+  outline: 2px solid var(--vv-accent);
+  outline-offset: 2px;
+}
+
+/* Header */
+.app-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  background: var(--vv-cream);
+  border-bottom: 1px solid var(--vv-border);
+  z-index: 40;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--vv-ink);
+  font-weight: 700;
+  font-size: 1rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.brand:focus-visible,
+.header-button:focus-visible {
+  outline: 2px solid var(--vv-accent);
+  outline-offset: 2px;
+}
+
+.header-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* The search box lives inside the header; keep its absolute positioning
+   relative to the header (it drops down from its button). */
+.header-tools .search-box {
+  position: static;
+}
+
+.header-button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 0.75rem;
+  border: 1px solid var(--vv-border);
+  border-radius: var(--vv-radius-sm);
+  background: var(--vv-surface);
+  color: var(--vv-ink);
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.header-button:hover {
+  border-color: var(--vv-accent);
+}
+
+/* Menu panel */
+.site-menu {
+  position: absolute;
+  top: 100%;
+  right: 0.5rem;
+  min-width: 220px;
+  padding: 0.75rem;
+  background: var(--vv-surface);
+  border: 1px solid var(--vv-border);
+  border-radius: var(--vv-radius-md);
+  box-shadow: var(--vv-shadow-soft);
+  z-index: 50;
+}
+
+.site-menu ul {
+  list-style: none;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.site-menu a,
+.site-menu button {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-radius: var(--vv-radius-sm);
+  background: none;
+  color: var(--vv-ink);
+  font-family: inherit;
+  font-size: 0.95rem;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.site-menu a:hover,
+.site-menu button:hover {
+  background: var(--vv-sand);
+}
+
+.site-menu a:focus-visible,
+.site-menu button:focus-visible {
+  outline: 2px solid var(--vv-accent);
+  outline-offset: 2px;
+}
+
+.site-menu .language-switch {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--vv-border);
+}
+
+.site-menu .language-switch a[aria-current='true'] {
+  font-weight: 700;
+}
+
+/* Routed pages (about, attribution, not-found) */
+.about-page,
+.not-found-page,
+[attribution] .about-page {
+  position: relative;
+  z-index: 30;
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+  background: var(--vv-cream);
+  overflow-y: auto;
+  height: 100%;
+}
+
+.about-page:focus-visible,
+.not-found-page:focus-visible {
+  outline: none;
+}
+
+.about-page h1,
+.not-found-page h1 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.about-page h2 {
+  font-size: 1.05rem;
+  margin: 1.25rem 0 0.4rem;
+}
+
+.about-page p {
+  line-height: 1.55;
+  color: var(--vv-ink);
+}
+
+.about-page a,
+.not-found-page a,
+.back-to-map {
+  color: var(--vv-accent);
+}
+
+/* The attribution page component renders its own region; align it with
+   the routed layout. */
+.app-body [role='region'][aria-label] {
+  z-index: 30;
+}
+
+/* Map view stays mounted across routes; hidden (covered) on other pages */
+.map-view {
+  position: absolute;
+  inset: 0;
+}
+
+.map-view.map-view-hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Map status line (aircraft count + last update), replaces the old card */
+.map-status {
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  z-index: 10;
+  padding: 0.5rem 0.75rem;
+  background: var(--vv-surface);
+  border-radius: var(--vv-radius-sm);
+  font-size: 0.8rem;
+  color: var(--vv-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 320 px: header wraps; the search button keeps its size */
+@media (max-width: 400px) {
+  .app-header {
+    flex-wrap: wrap;
+  }
+
+  .header-tools {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .site-menu {
+    animation: menu-in 120ms var(--vv-ease);
+  }
+
+  @keyframes menu-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}

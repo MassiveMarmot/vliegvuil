@@ -46,7 +46,17 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,svg,woff2,png}'],
         // App shell only: never touch /api or PDOK tile traffic.
-        navigateFallbackDenylist: [/^\/api\//],
+        // Session 25: real paths. The navigation fallback serves the app
+        // shell for /{lang}/... deep links but never for the API, the
+        // self-hosted tiles, the map glyphs or other static asset paths.
+        navigateFallbackDenylist: [
+          /^\/api\//,
+          /^\/tiles\//,
+          /^\/fonts\//,
+          /^\/data\//,
+          /^\/noise-contours\.geojson$/,
+          /\.[a-z0-9]+$/i,
+        ],
         runtimeCaching: [],
       },
     }),
