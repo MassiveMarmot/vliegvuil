@@ -135,7 +135,11 @@ vliegvuil.nl {
 	# Served from /srv/vliegvuil/tiles (swapped atomically by
 	# scripts/vps-tiles-update.js); long cache, no directory listing
 	# (file_server never lists), 404 for missing tiles.
-	handle /tiles/* {
+	# handle_path strips the /tiles/ prefix before file_server maps the
+	# remaining path onto the root: /tiles/8/132/84.png -> /srv/vliegvuil/
+	# tiles/8/132/84.png. A plain handle + root would resolve the FULL
+	# request path under the root (/srv/vliegvuil/tiles/tiles/...) and 404.
+	handle_path /tiles/* {
 		# Cheap cached PNGs; a generous ceiling only (an abuser gains
 		# nothing: they are served from disk). NOT under static_per_ip —
 		# a legitimate panning visitor fires dozens of tile requests.
