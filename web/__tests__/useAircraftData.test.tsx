@@ -178,10 +178,15 @@ describe('useAircraftData', () => {
     expect(fetchPositions.mock.calls.length).toBe(callsAtUnmount);
   });
 
-  it('toDisplayAircraft keeps heading 0 as 0 (north)', () => {
+  it('toDisplayAircraft keeps heading 0 as 0 (north) and offsets the icon rotation', () => {
     const ac = toDisplayAircraft(position({ heading: 0 }));
     expect(ac.track).toBe(0);
-    expect(ac.symbolRotate).toBe(0);
+    // The Lucide plane nose points NE (45), so icon-rotate = heading - 45
+    expect(ac.symbolRotate).toBe(315);
+    const ne = toDisplayAircraft(position({ heading: 45 }));
+    expect(ne.symbolRotate).toBe(0);
+    const east = toDisplayAircraft(position({ heading: 90 }));
+    expect(east.symbolRotate).toBe(45);
   });
   it('does not show the loading banner during routine background refreshes', async () => {
     fetchPositions.mockResolvedValue([position()]);

@@ -53,6 +53,43 @@ function today(): string {
  * VLIEGVUIL_NO_CACHE is not set, reuse it. Returns the file contents
  * (decompressed if gzip).
  */
+// Upstream WFS endpoints (haleconnect) intermittently answer 404/500 for
+// minutes at a time; a single flaky response must not fail the whole CI
+// build. Retry transient failures (404/5xx/network) with backoff.
+async function fetchWithRetry(url: string, attempts = 4): Promise<Response> {
+  let lastError: Error | null = null;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        return response;
+      }
+      if (response.status === 404 || response.status >= 500) {
+        lastError = new Error(`HTTP ${response.status} for ${url}`);
+        if (attempt === attempts) {
+          return response;
+        }
+      } else {
+        return response;
+      }
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (attempt === attempts) {
+        throw lastError;
+      }
+    }
+    const delay = attempt * 30_000;
+    process.stdout.write(
+      `attempt ${attempt} failed (${lastError?.message ?? 'unknown'}), retrying in ${delay / 1000}s
+`,
+    );
+    await new Promise((r): void => {
+      setTimeout(r, delay);
+    });
+  }
+  throw lastError ?? new Error(`download failed for ${url}`);
+}
+
 async function fetchCached(
   url: string,
   cacheFile: string,
@@ -66,7 +103,7 @@ async function fetchCached(
       process.stdout.write(`cache hit: ${cacheFile}\n`);
     } catch {
       process.stdout.write(`downloading: ${url}\n`);
-      const response = await fetch(url);
+      const response = await fetchWithRetry(url);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status} for ${url}`);
       }
@@ -76,7 +113,7 @@ async function fetchCached(
     }
   } else {
     process.stdout.write(`downloading: ${url}\n`);
-    const response = await fetch(url);
+    const response = await fetchWithRetry(url);
     if (!response.ok) {
       throw new Error(`HTTP ${response.status} for ${url}`);
     }
@@ -150,13 +187,33 @@ export async function runBuild(noCache: boolean): Promise<void> {
 
   // 3. Noise contours (session 22)
   process.stdout.write('\n-- noise (EU END 2021 Schiphol Lden contours, CC-0) --\n');
-  const noiseWfs = await fetchCached(
-    NOISE_END_WFS_URL,
-    join(CACHE_DIR, 'noise-end-2021-lden.json'),
-    false,
-    noCache,
-  );
-  const noiseWfsJson = JSON.parse(noiseWfs) as Parameters<typeof endWfsToRawContours>[0];
+  // The committed noise-contours.geojson is the deployed source of truth;
+  // this build step only regenerates the same file. If the WFS is down
+  // despite the retries, keep the committed output instead of failing the
+  // whole build (a stale-but-identical file beats a red CI for a flaky
+  // third-party endpoint).
+  let noiseWfsJson: Parameters<typeof endWfsToRawContours>[0] | null = null;
+  try {
+    const noiseWfs = await fetchCached(
+      NOISE_END_WFS_URL,
+      join(CACHE_DIR, 'noise-end-2021-lden.json'),
+      false,
+      noCache,
+    );
+    noiseWfsJson = JSON.parse(noiseWfs) as Parameters<typeof endWfsToRawContours>[0];
+  } catch (err) {
+    process.stdout.write(
+      `noise download failed (${err instanceof Error ? err.message : String(err)}); ` +
+        'keeping the committed noise-contours.geojson\n',
+    );
+  }
+  if (noiseWfsJson === null) {
+    const committed = await readFile(join(REPO_ROOT, 'web', 'public', 'noise-contours.geojson'), 'utf8');
+    process.stdout.write(`noise: using committed noise-contours.geojson (${committed.length} B)\n`);
+    await writeFileAtomic(join(OUT_DIR, 'airports.json'), airportsJson);
+    await writeFileAtomic(join(OUT_DIR, 'aircraft.json'), aircraftJson);
+    return;
+  }
   const { contours: rawContours, warnings: endWarnings } = endWfsToRawContours(
     noiseWfsJson,
     NOISE_SOURCE_NAME,

@@ -6,6 +6,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import type { DisplayAircraft, AppState } from '../types';
 import { DEFAULT_POLLING_CONFIG } from '../types';
+import { planeRotationForHeading } from '../mapIconRenderer';
 import type { AircraftPosition, PositionProvider } from '@vliegvuil/core';
 import { createAdsbfiProvider, RateLimitError } from '@vliegvuil/core';
 import i18n from '../i18n';
@@ -32,9 +33,11 @@ export function toDisplayAircraft(
   const now = Date.now();
   const heading = position.heading ?? 0;
 
-  // MapLibre uses degrees clockwise from north (0 = north, 90 = east)
-  // ADS-B heading is also degrees clockwise from north
-  const symbolRotate = heading;
+  // MapLibre icon-rotate is degrees clockwise from north (0 = north).
+  // ADS-B heading is also degrees clockwise from north, but the Lucide
+  // plane glyph's nose points north-east (45), so the icon rotates by
+  // heading - 45 to align the nose with the flight direction.
+  const symbolRotate = planeRotationForHeading(heading);
 
   // Check if data is stale (older than polling interval * 2)
   const isStale =
