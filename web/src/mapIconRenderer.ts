@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // Pure helpers for the canvas-based Lucide map icons. No maplibre import
 // here (per the repo rule for pure helpers); no canvas use either — the
-// drawing lives in mapIconCanvas.ts so the maths stays testable in jsdom.
+// drawing lives in mapIconDraw.ts (build-time generator only) so the maths stays testable in jsdom.
 
 /**
  * The Lucide plane icon's nose points north-east (45 degrees clockwise

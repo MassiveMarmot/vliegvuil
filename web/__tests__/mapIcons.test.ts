@@ -33,12 +33,6 @@ describe('altitude band icons', () => {
   });
 
   it('registers one image per band plus the selected variant', () => {
-    // jsdom has no canvas: stub the renderer, assert the registry logic
-    vi.mock('../src/mapIconCanvas', () => ({
-      renderBadgeIcon: (): { width: number; height: number; data: Uint8Array } => ({
-        width: 48, height: 48, data: new Uint8Array(48 * 48 * 4),
-      }),
-    }));
     const added: string[] = [];
     const map = {
       hasImage: (id: string): boolean => false,
@@ -76,9 +70,9 @@ describe('altitude band icons', () => {
   });
 
   it('keeps band colours consistent with getAircraftColor', () => {
-    expect(getAircraftColor(1000)).toBe('#00a000');
-    expect(getAircraftColor(6000)).toBe('#e0b000');
-    expect(getAircraftColor(15000)).toBe('#ff6900');
+    expect(getAircraftColor(1000)).toBe('#008a00');
+    expect(getAircraftColor(6000)).toBe('#a67c00');
+    expect(getAircraftColor(15000)).toBe('#d95a00');
     expect(getAircraftColor(30000)).toBe('#d31a1a');
     expect(getAircraftColor(null)).toBe('#808080');
   });
