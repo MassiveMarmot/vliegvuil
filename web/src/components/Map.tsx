@@ -38,7 +38,10 @@ const SYMBOL_LAYOUT: SymbolLayerSpecification['layout'] = {
   'icon-rotation-alignment': 'map',
   'icon-allow-overlap': true,
   'icon-ignore-placement': true,
-  'icon-size': 0.5,
+  // The registered images render at 2x (pixelRatio: 2, 48px for a 24px badge);
+  // icon-size 1.0 shows them at their intended display size (~24px). The old
+  // 0.5 halved the badge to ~12px, too small on the live map.
+  'icon-size': 1.0,
 };
 
 const SYMBOL_PAINT: SymbolLayerSpecification['paint'] = {
@@ -247,7 +250,7 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
             ],
             'icon-allow-overlap': true,
             'icon-ignore-placement': true,
-            'icon-size': 0.55,
+            'icon-size': 1.1,
           },
         },
         AIRCRAFT_LAYER_ID,
