@@ -119,12 +119,6 @@ describe('status mapping', () => {
   });
 
   it('registers one icon per status, skipping images already present', () => {
-    // jsdom has no canvas: stub the renderer, assert the registry logic
-    vi.mock('../src/mapIconCanvas', () => ({
-      renderBadgeIcon: (): { width: number; height: number; data: Uint8Array } => ({
-        width: 48, height: 48, data: new Uint8Array(48 * 48 * 4),
-      }),
-    }));
     const added: string[] = [];
     const map = {
       hasImage: (id: string): boolean => added.includes(id),

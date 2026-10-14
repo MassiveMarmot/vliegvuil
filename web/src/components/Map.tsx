@@ -15,7 +15,6 @@ import {
   iconIdForAircraft,
   SELECTED_ICON_ID,
 } from './aircraftIcons';
-import { renderBadgeIcon } from '../mapIconCanvas';
 import {
   AIRPORT_SOURCE_ID,
   AIRPORT_MARKER_LAYER_ID,
@@ -81,16 +80,6 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
     }
     // Register the altitude-band icons (session 17)
     registerAircraftIcons(map);
-
-    // Legacy 'airplane' image (canvas-rendered plane on a white badge);
-    // the layer itself selects per-band ids / the selected variant.
-    if (!map.hasImage('airplane')) {
-      map.addImage(
-        'airplane',
-        renderBadgeIcon('plane', { glyph: [0x3b, 0x35, 0x2f], fill: [0xff, 0xff, 0xff], shape: 'circle' }),
-        { pixelRatio: 2 },
-      );
-    }
 
     // Convert aircraft map to GeoJSON feature collection
     const features = Array.from(aircraft.values()).map(ac => ({

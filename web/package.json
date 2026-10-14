@@ -8,7 +8,8 @@
     "dev": "vite",
     "lint": "eslint . --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "gen:icons": "tsx scripts/gen-map-icons.ts"
   },
   "dependencies": {
     "@fontsource/space-grotesk": "^5.3.0",
@@ -21,6 +22,7 @@
     "zustand": "^4.5.5"
   },
   "devDependencies": {
+    "@napi-rs/canvas": "^1.0.11",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.0.1",
     "@types/jest": "^30.0.0",
@@ -37,6 +39,7 @@
     "eslint-plugin-unicorn": "^56.0.0",
     "jsdom": "^25.0.1",
     "prettier": "^3.3.3",
+    "tsx": "^4.23.15",
     "typescript": "^5.6.3",
     "vite": "^5.4.10",
     "vite-plugin-pwa": "^0.20.5",
