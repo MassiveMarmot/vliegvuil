@@ -4,6 +4,7 @@
 // Not-found view (session 25): unknown language segment or path.
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { Icon } from '../icons/Icon';
 import type { LanguageCode } from '../i18n';
 import { pagePath } from '../hooks/useRouter';
 
@@ -21,7 +22,7 @@ export function NotFoundPage({ language, onNavigate }: NotFoundPageProps): React
       <p>{t('notFound.body', 'Deze pagina bestaat niet. Misschien is de link verouderd of verkeerd getypt.')}</p>
       <p>
         <a className="back-to-map" href={mapHref} onClick={(e): void => { e.preventDefault(); onNavigate(mapHref); }}>
-          {t('notFound.backToMap', 'Naar de kaart')}
+          <Icon name="arrow-left" size={16} /> {t('notFound.backToMap', 'Naar de kaart')}
         </a>
       </p>
     </main>

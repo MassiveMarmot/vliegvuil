@@ -6,6 +6,7 @@
 // moved from this panel to the URL path (menu language switcher).
 import React, { useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Icon } from '../icons/Icon';
 import { type UnitSettings, saveUnits } from '../units';
 
 export interface SettingsPanelProps {
@@ -85,7 +86,7 @@ export function SettingsPanel({ open, onClose, units, onUnitsChange }: SettingsP
           onClick={onClose}
           aria-label={t('telemetry.close', 'Sluiten')}
         >
-          ×
+          <Icon name="x" size={18} />
         </button>
       </header>
 

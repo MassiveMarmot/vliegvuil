@@ -96,7 +96,9 @@
     "caveatNoise": "Contouren tonen het jaargemiddelde van de geluidsbelasting, geen live geluid.",
     "caveatAirports": "Luchthavenlocaties en -gegevens zijn referentiedata die af en toe worden bijgewerkt.",
     "caveatBasemap": "De achtergrondkaart toont Nederland in detail; in het buitenland zijn alleen landsgrenzen zichtbaar. Grenzen zijn indicatief, geen juridische grens.",
-    "caveatAircraftDatabase": "Registratie- en typegegevens komen uit een communitydatabase en kunnen onvolledig of verouderd zijn. De database dient als fallback: ontbrekende registratie, type of operator wordt aangevuld vanuit de snapshot (zie de datum hierboven); live data heeft altijd voorrang."
+    "caveatAircraftDatabase": "Registratie- en typegegevens komen uit een communitydatabase en kunnen onvolledig of verouderd zijn. De database dient als fallback: ontbrekende registratie, type of operator wordt aangevuld vanuit de snapshot (zie de datum hierboven); live data heeft altijd voorrang.",
+    "sectionUiIcons": "Kaarticonen",
+    "caveatUiIcons": "De UI- en kaarticonen zijn Lucide (ISC; van Feather afgeleide iconen zijn ook MIT). Licentiegegevens: LICENSES/lucide.txt."
   },
   "banner": {
     "loading": "Laden...",

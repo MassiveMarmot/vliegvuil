@@ -57,6 +57,17 @@ export const ATTRIBUTION_SECTIONS: readonly AttributionSectionConfig[] = [
     caveatDefault: 'Airport locations and details are reference data, updated occasionally.',
   },
   {
+    id: 'ui-icons',
+    headingKey: 'attribution.sectionUiIcons',
+    headingDefault: 'Map icons',
+    // Sources entry arrives via the data workflow (sources.json); this
+    // section renders as soon as the 'lucide-icons' id exists there.
+    sourceIds: ['lucide-icons'],
+    caveatKey: 'attribution.caveatUiIcons',
+    caveatDefault:
+      'The UI and map icons are Lucide (ISC; Feather-derived icons are also MIT). Licence details: LICENSES/lucide.txt.',
+  },
+  {
     id: 'basemap',
     headingKey: 'attribution.sectionBasemap',
     headingDefault: 'Basemap',

@@ -13,6 +13,7 @@
 
 import React, { useMemo, useEffect, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Icon } from '../icons/Icon';
 import { lookupNoiseBand } from '@vliegvuil/core';
 import type { NoiseContours } from '@vliegvuil/core';
 import { noiseBandColor, noiseBandPattern } from '../noiseStyle';
@@ -278,7 +279,7 @@ export function NoiseOverlay({
                   aria-label={t('telemetry.close', 'Close')}
                   data-testid="noise-legend-close"
                 >
-                  ×
+                  <Icon name="x" size={18} />
                 </button>
               </div>
               <LegendContent year={year} rows={rows} onOpenSources={onOpenSources} />

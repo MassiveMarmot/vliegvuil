@@ -12,45 +12,12 @@ export interface IconColors {
   fill: [number, number, number];
 }
 
-export function createAirplaneIcon(
-  colors: IconColors = { glyph: [0x3b, 0x35, 0x2f], fill: [0xff, 0xff, 0xff] },
-): { width: number; height: number; data: Uint8Array } {
-  const size = 24;
-  const data = new Uint8Array(size * size * 4);
-  const center = (size - 1) / 2;
-  const radius = size / 2 - 1;
-  const planeDist = 7; // distance from centre for the plane body pixels
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const idx = (y * size + x) * 4;
-      const dx = x - center;
-      const dy = y - center;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      // Thin dark border ring, then white circle fill
-      if (dist <= radius && dist > radius - 1.5) {
-        data[idx] = 0x3b; data[idx + 1] = 0x35; data[idx + 2] = 0x2f; data[idx + 3] = 0xff;
-      } else if (dist <= radius - 1.5) {
-        // Plane glyph: simple upward triangle along the vertical axis
-        const onBody = Math.abs(dx) <= 1.2 && dy >= -planeDist && dy <= planeDist;
-        const onWing = Math.abs(Math.abs(dx) - (planeDist - Math.abs(dy) * 0.6)) < 1.2 && Math.abs(dy) < planeDist * 0.7;
-        const isPlane = onBody || onWing;
-        const c = isPlane ? colors.glyph : colors.fill;
-        data[idx] = c[0];
-        data[idx + 1] = c[1];
-        data[idx + 2] = c[2];
-        data[idx + 3] = 0xff;
-      }
-    }
-  }
-  return { width: size, height: size, data };
-}
+// Canvas-rendered Lucide plane on a white badge with a dark ring (the
+// glyph colour is baked in per band; MapLibre cannot tint non-SDF images).
+// The plane glyph's nose points north-east, so the map layer rotates it
+// by heading - 45 (see planeRotationForHeading and its test).
+import { renderBadgeIcon } from '../mapIconCanvas';
 
-/**
- * Pre-rendered icons per altitude band (session 17): icon-color cannot
- * tint a non-SDF image, so each band gets its own registered image with
- * the band colour baked in. Map callsign labels are dropped for v0
- * (glyphs decision); callsigns render in the panel and list instead.
- */
 export interface AltitudeBand {
   id: string;
   minAlt: number;
@@ -84,17 +51,22 @@ export function iconIdForAircraft(
   return band.id;
 }
 
-/** Register every band icon plus the selected variant on the map */
+/** Register every band icon plus the selected variant on the map (2x). */
 export function registerAircraftIcons(map: maplibregl.Map): void {
   for (const band of ALTITUDE_BANDS) {
     if (!map.hasImage(band.id)) {
-      map.addImage(band.id, createAirplaneIcon({ glyph: band.color, fill: [0xff, 0xff, 0xff] }));
+      map.addImage(
+        band.id,
+        renderBadgeIcon('plane', { glyph: band.color, fill: [0xff, 0xff, 0xff], shape: 'circle' }),
+        { pixelRatio: 2 },
+      );
     }
   }
   if (!map.hasImage(SELECTED_ICON_ID)) {
     map.addImage(
       SELECTED_ICON_ID,
-      createAirplaneIcon({ glyph: [0xff, 0xff, 0xff], fill: [0xd3, 0x1a, 0x1a] }),
+      renderBadgeIcon('plane', { glyph: [0xff, 0xff, 0xff], fill: [0xd3, 0x1a, 0x1a], shape: 'circle' }),
+      { pixelRatio: 2 },
     );
   }
 }

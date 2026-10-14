@@ -8,6 +8,7 @@
 // is the keyboard/screen-reader path for airport info.
 import React, { useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Icon } from '../icons/Icon';
 import type { AirportStatus } from '../airports/airports';
 
 export interface AirportPopupProps {
@@ -99,7 +100,7 @@ export function AirportPopup({ icao, iata, name, status, onClose }: AirportPopup
         aria-label={t('telemetry.close', 'Sluiten')}
         style={{ fontSize: '0.875rem' }}
       >
-        ×
+        <Icon name="x" size={18} />
       </button>
     </div>
   );

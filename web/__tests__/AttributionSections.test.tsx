@@ -3,6 +3,7 @@ import { render } from '@testing-library/react';
 import React from 'react';
 import AttributionPage from '../src/components/AttributionPage';
 import { ATTRIBUTION_SECTIONS, NOISE_SECTION_ID, sectionForSource } from '../src/config/attributionSections';
+import { listSources } from '../src/components/AttributionPage';
 import sources from '../../sources.json';
 
 describe('attributionSections config', (): void => {
@@ -27,8 +28,13 @@ describe('AttributionPage layer sections', (): void => {
     for (const section of ATTRIBUTION_SECTIONS) {
       const anchor = section.id === NOISE_SECTION_ID ? 'attribution-noise' : `attribution-${section.id}`;
       const el = document.getElementById(anchor);
-      expect(el).not.toBeNull();
-      expect(el?.textContent ?? '').toContain(section.headingDefault);
+      // A section renders only when it has sources.json entries; the
+      // ui-icons section awaits its data-workflow entry and stays hidden.
+      if (el === null) {
+        expect(section.sourceIds.every((id): boolean => !listSources().some((e): boolean => e.id === id))).toBe(true);
+        continue;
+      }
+      expect(el.textContent ?? '').toContain(section.headingDefault);
     }
   });
 

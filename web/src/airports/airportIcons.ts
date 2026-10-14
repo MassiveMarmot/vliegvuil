@@ -29,81 +29,31 @@ export function airportIconId(statusCode: number): string {
   return spec !== undefined ? spec.id : 'airport-commercial';
 }
 
-interface RGBA {
-  width: number;
-  height: number;
-  data: Uint8Array;
-}
+// Canvas-rendered Lucide tower-control on a status badge (session 23
+// follow-up): shape carries status (circle commercial, diamond
+// military-shared, dashed ring planned), never colour alone. The glyph
+// strokes dark on white (or white on dark for planned's outline look).
+import { renderBadgeIcon } from '../mapIconCanvas';
 
 const DARK: [number, number, number] = [0x3b, 0x35, 0x2f];
 const WHITE: [number, number, number] = [0xff, 0xff, 0xff];
 
-/**
- * Render a 24x24 airport marker. Same visual language as the aircraft
- * icons (white fill, thin dark border) so the layer reads as one family;
- * the shape differs per status so colour is never the only signal.
- */
-export function createAirportIcon(spec: AirportIconSpec): RGBA {
-  const size = 24;
-  const data = new Uint8Array(size * size * 4);
-  const center = (size - 1) / 2;
-  const radius = size / 2 - 1;
-  const planeDist = 7;
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const idx = (y * size + x) * 4;
-      const dx = x - center;
-      const dy = y - center;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const diamondDist = Math.abs(dx) + Math.abs(dy);
-      let fill: [number, number, number] | null = null;
-      let border = false;
-      if (spec.shape === 'circle') {
-        if (dist <= radius && dist > radius - 1.5) border = true;
-        else if (dist <= radius - 1.5) fill = spec.fill;
-      } else if (spec.shape === 'diamond') {
-        if (diamondDist <= radius && diamondDist > radius - 1.5) border = true;
-        else if (diamondDist <= radius - 1.5) fill = spec.fill;
-      } else {
-        // ring: white fill with a dotted border (planned = outline look)
-        if (dist <= radius) fill = WHITE;
-        if (dist <= radius && dist > radius - 1.5 && ((x + y) % 2 === 0)) border = true;
-      }
-      // Plane glyph on top of the fill
-      const onBody = Math.abs(dx) <= 1.2 && dy >= -planeDist && dy <= planeDist;
-      const onWing =
-        Math.abs(Math.abs(dx) - (planeDist - Math.abs(dy) * 0.6)) < 1.2 &&
-        Math.abs(dy) < planeDist * 0.7;
-      const onPlane = onBody || onWing;
-      let r = 0, g = 0, b = 0, a = 0;
-      if (onPlane && dist <= radius - 1.5) {
-        // planned marker: outline plane (dark glyph on white reads fine)
-        [r, g, b] = DARK;
-        a = 0xff;
-      } else if (border) {
-        [r, g, b] = DARK;
-        a = 0xff;
-      } else if (fill !== null) {
-        [r, g, b] = fill;
-        a = 0xff;
-      }
-      data[idx] = r;
-      data[idx + 1] = g;
-      data[idx + 2] = b;
-      data[idx + 3] = a;
-    }
-  }
-  return { width: size, height: size, data };
-}
-
-/** Register all airport icons on a map instance (idempotent per icon) */
+/** Register every airport status icon on the map (2x resolution). */
 export function registerAirportIcons(map: {
   hasImage: (id: string) => boolean;
-  addImage: (id: string, image: RGBA) => void;
+  addImage: (id: string, image: { width: number; height: number; data: Uint8Array }, options?: { pixelRatio: number }) => void;
 }): void {
   for (const spec of AIRPORT_ICON_SPECS) {
     if (!map.hasImage(spec.id)) {
-      map.addImage(spec.id, createAirportIcon(spec));
+      map.addImage(
+        spec.id,
+        renderBadgeIcon('tower-control', {
+          shape: spec.shape,
+          fill: spec.shape === 'ring' ? WHITE : WHITE,
+          glyph: DARK,
+        }),
+        { pixelRatio: 2 },
+      );
     }
   }
 }

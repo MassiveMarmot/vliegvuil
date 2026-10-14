@@ -1,15 +1,15 @@
 // Tests for session 17: altitude-band icons and PDOK basemap URL
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   ALTITUDE_BANDS,
   SELECTED_ICON_ID,
-  createAirplaneIcon,
   getAircraftColor,
   iconIdForAircraft,
   registerAircraftIcons,
 } from '../src/components/aircraftIcons';
+import { planeRotationForHeading } from '../src/mapIconRenderer';
 import {
   PDOK_BRT_TILE_URL,
   PDOK_BRT_ATTRIBUTION,
@@ -33,6 +33,12 @@ describe('altitude band icons', () => {
   });
 
   it('registers one image per band plus the selected variant', () => {
+    // jsdom has no canvas: stub the renderer, assert the registry logic
+    vi.mock('../src/mapIconCanvas', () => ({
+      renderBadgeIcon: (): { width: number; height: number; data: Uint8Array } => ({
+        width: 48, height: 48, data: new Uint8Array(48 * 48 * 4),
+      }),
+    }));
     const added: string[] = [];
     const map = {
       hasImage: (id: string): boolean => false,
@@ -48,21 +54,25 @@ describe('altitude band icons', () => {
     expect(added).toContain(SELECTED_ICON_ID);
   });
 
-  it('bakes the band colour into the icon pixels', () => {
-    const icon = createAirplaneIcon({ glyph: [0x00, 0xa0, 0x00], fill: [0xff, 0xff, 0xff] });
-    expect(icon.width).toBe(24);
-    expect(icon.height).toBe(24);
-    expect(icon.data.length).toBe(24 * 24 * 4);
-    // Every painted pixel is fully opaque; outside the circle stays transparent
-    let opaque = 0;
-    let transparent = 0;
-    for (let i = 3; i < icon.data.length; i += 4) {
-      if (icon.data[i] === 0xff) opaque += 1;
-      if (icon.data[i] === 0) transparent += 1;
+  // The Lucide plane's nose points north-east (45), so the layer rotates
+  // the icon by heading - 45, wrapped into [0, 360).
+  it('rotates the plane icon by heading minus 45 degrees', () => {
+    expect(planeRotationForHeading(0)).toBe(315);
+    expect(planeRotationForHeading(45)).toBe(0);
+    expect(planeRotationForHeading(90)).toBe(45);
+    expect(planeRotationForHeading(180)).toBe(135);
+    expect(planeRotationForHeading(359)).toBe(314);
+  });
+  it('wraps the rotation around 0/360', () => {
+    expect(planeRotationForHeading(0)).toBe(315);
+    expect(planeRotationForHeading(360)).toBe(315);
+    expect(planeRotationForHeading(405)).toBe(0);
+    expect(planeRotationForHeading(-45)).toBe(270);
+    for (let h = -720; h <= 720; h += 15) {
+      const r = planeRotationForHeading(h);
+      expect(r).toBeGreaterThanOrEqual(0);
+      expect(r).toBeLessThan(360);
     }
-    expect(opaque).toBeGreaterThan(0);
-    expect(transparent).toBeGreaterThan(0);
-    expect(opaque + transparent).toBe(24 * 24);
   });
 
   it('keeps band colours consistent with getAircraftColor', () => {

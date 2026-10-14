@@ -8,6 +8,8 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Icon } from '../icons/Icon';
+import type { IconName } from '../icons/paths';
 import type { DisplayAircraft } from '../types';
 
 export type SortColumn = 'callsign' | 'registration' | 'altitude' | 'speed';
@@ -102,9 +104,10 @@ export function AircraftList({
     return sortDirection === 'asc' ? 'ascending' : 'descending';
   };
 
-  const sortIcon = (column: SortColumn): string => {
-    if (column !== sortColumn) return '↕';
-    return sortDirection === 'asc' ? '↑' : '↓';
+  // Lucide arrow per sort state (kept aria-hidden; aria-sort carries state)
+  const sortIconName = (column: SortColumn): IconName => {
+    if (column !== sortColumn) return 'arrow-up-down';
+    return sortDirection === 'asc' ? 'arrow-up' : 'arrow-down';
   };
 
   return (
@@ -123,7 +126,7 @@ export function AircraftList({
           onClick={onClose}
           aria-label={t('telemetry.close')}
         >
-          ×
+          <Icon name="x" size={18} />
         </button>
       </header>
 
@@ -139,22 +142,22 @@ export function AircraftList({
           <tr>
             <th scope="col" aria-sort={ariaSort('callsign')}>
               <button type="button" className="aircraft-list-sort" onClick={(): void => handleSort('callsign')}>
-                {t('telemetry.callsign')} <span aria-hidden="true">{sortIcon('callsign')}</span>
+                {t('telemetry.callsign')}{' '}<span aria-hidden="true"><Icon name={sortIconName('callsign')} size={14} /></span>
               </button>
             </th>
             <th scope="col" aria-sort={ariaSort('registration')}>
               <button type="button" className="aircraft-list-sort" onClick={(): void => handleSort('registration')}>
-                {t('telemetry.registration')} <span aria-hidden="true">{sortIcon('registration')}</span>
+                {t('telemetry.registration')}{' '}<span aria-hidden="true"><Icon name={sortIconName('registration')} size={14} /></span>
               </button>
             </th>
             <th scope="col" aria-sort={ariaSort('altitude')} className="numeric">
               <button type="button" className="aircraft-list-sort" onClick={(): void => handleSort('altitude')}>
-                {t('telemetry.altitude')} <span aria-hidden="true">{sortIcon('altitude')}</span>
+                {t('telemetry.altitude')} <span aria-hidden="true"><Icon name={sortIconName('altitude')} size={14} /></span>
               </button>
             </th>
             <th scope="col" aria-sort={ariaSort('speed')} className="numeric">
               <button type="button" className="aircraft-list-sort" onClick={(): void => handleSort('speed')}>
-                {t('telemetry.speed')} <span aria-hidden="true">{sortIcon('speed')}</span>
+                {t('telemetry.speed')} <span aria-hidden="true"><Icon name={sortIconName('speed')} size={14} /></span>
               </button>
             </th>
           </tr>

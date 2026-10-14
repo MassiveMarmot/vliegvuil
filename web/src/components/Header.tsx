@@ -10,6 +10,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LanguageCode } from '../i18n';
+import { Logo } from './Logo';
 import { pagePath, type RouteName } from '../hooks/useRouter';
 import {
   SITE_NAME,
@@ -30,17 +31,7 @@ export interface HeaderProps {
   skipTargetId: string;
 }
 
-/** Small inline plane glyph (aria-hidden; no image files, no icon lib) */
-function PlaneGlyph(): React.ReactElement {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path
-        d="M21 16v-2l-8-2.5V6.5a1.5 1.5 0 0 0-3 0v5L2 14v2l8-1.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-4.5z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
+
 
 export function Header({ language, route, onNavigate, onOpenSettings, onToggleList, search, skipTargetId }: HeaderProps): React.ReactElement {
   const { t } = useTranslation();
@@ -123,7 +114,7 @@ export function Header({ language, route, onNavigate, onOpenSettings, onToggleLi
             onNavigate(pagePath(language, 'map'));
           }}
         >
-          <PlaneGlyph />
+          <Logo />
           <span>{SITE_NAME}</span>
         </a>
         <div className="header-tools">
