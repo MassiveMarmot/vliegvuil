@@ -53,6 +53,43 @@ function today(): string {
  * VLIEGVUIL_NO_CACHE is not set, reuse it. Returns the file contents
  * (decompressed if gzip).
  */
+// Upstream WFS endpoints (haleconnect) intermittently answer 404/500 for
+// minutes at a time; a single flaky response must not fail the whole CI
+// build. Retry transient failures (404/5xx/network) with backoff.
+async function fetchWithRetry(url: string, attempts = 4): Promise<Response> {
+  let lastError: Error | null = null;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        return response;
+      }
+      if (response.status === 404 || response.status >= 500) {
+        lastError = new Error(`HTTP ${response.status} for ${url}`);
+        if (attempt === attempts) {
+          return response;
+        }
+      } else {
+        return response;
+      }
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (attempt === attempts) {
+        throw lastError;
+      }
+    }
+    const delay = attempt * 30_000;
+    process.stdout.write(
+      `attempt ${attempt} failed (${lastError?.message ?? 'unknown'}), retrying in ${delay / 1000}s
+`,
+    );
+    await new Promise((r): void => {
+      setTimeout(r, delay);
+    });
+  }
+  throw lastError ?? new Error(`download failed for ${url}`);
+}
+
 async function fetchCached(
   url: string,
   cacheFile: string,
@@ -66,7 +103,7 @@ async function fetchCached(
       process.stdout.write(`cache hit: ${cacheFile}\n`);
     } catch {
       process.stdout.write(`downloading: ${url}\n`);
-      const response = await fetch(url);
+      const response = await fetchWithRetry(url);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status} for ${url}`);
       }
@@ -76,7 +113,7 @@ async function fetchCached(
     }
   } else {
     process.stdout.write(`downloading: ${url}\n`);
-    const response = await fetch(url);
+    const response = await fetchWithRetry(url);
     if (!response.ok) {
       throw new Error(`HTTP ${response.status} for ${url}`);
     }
