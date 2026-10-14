@@ -68,10 +68,12 @@ describe('BRT-A tile downloader', () => {
 
   it('Caddy serves /tiles with a long cache and no directory listing', (): void => {
     const caddy = readFileSync(resolve(__dirname, '..', '..', 'Caddyfile'), 'utf8');
-    expect(caddy).toContain('handle /tiles/*');
+    // handle_path (not handle) strips /tiles/ before file_server maps the
+    // path onto the root; a plain handle would double the prefix and 404.
+    expect(caddy).toContain('handle_path /tiles/*');
     expect(caddy).toContain('Cache-Control "public, max-age=604800"');
     // file_server without browse = no directory listing (assert no browse directive)
-    const tilesBlock = caddy.slice(caddy.indexOf('handle /tiles/*'), caddy.indexOf('handle /fonts/*'));
+    const tilesBlock = caddy.slice(caddy.indexOf('handle_path /tiles/*'), caddy.indexOf('handle /fonts/*'));
     expect(tilesBlock).not.toContain('browse');
   });
 });
