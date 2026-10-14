@@ -9,6 +9,7 @@
 // Spec §2: "Search: callsign, registration or ICAO24."
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import { Icon } from '../icons/Icon';
 import { useTranslation } from 'react-i18next';
 import type { DisplayAircraft } from '../types';
 
@@ -164,16 +165,7 @@ export function SearchBox({ aircraft, onSelect }: SearchBoxProps): React.ReactEl
           aria-expanded={false}
           aria-controls={SEARCH_INPUT_ID}
         >
-          <svg
-            viewBox="0 0 24 24"
-            width="22"
-            height="22"
-            aria-hidden="true"
-            focusable="false"
-          >
-            <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" strokeWidth="2" />
-            <line x1="15.5" y1="15.5" x2="21" y2="21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
+          <Icon name="search" size={22} />
         </button>
       ) : (
         <>

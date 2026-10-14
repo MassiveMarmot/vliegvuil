@@ -96,7 +96,9 @@
     "caveatNoise": "Contours show the annual average noise load, not live noise.",
     "caveatAirports": "Airport locations and details are reference data, updated occasionally.",
     "caveatBasemap": "The basemap shows the Netherlands in detail; abroad only country borders are shown. Borders are indicative, not a legal boundary.",
-    "caveatAircraftDatabase": "Registration and type details come from a community database and may be incomplete or outdated. The database serves as a fallback: missing registration, type or operator is filled in from the snapshot (see the date above); live data always wins."
+    "caveatAircraftDatabase": "Registration and type details come from a community database and may be incomplete or outdated. The database serves as a fallback: missing registration, type or operator is filled in from the snapshot (see the date above); live data always wins.",
+    "sectionUiIcons": "Map icons",
+    "caveatUiIcons": "The UI and map icons are Lucide (ISC; Feather-derived icons are also MIT). Licence details: LICENSES/lucide.txt."
   },
   "banner": {
     "loading": "Loading...",

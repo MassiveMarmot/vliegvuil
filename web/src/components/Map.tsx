@@ -11,11 +11,11 @@ import { useMap } from '../hooks/useMap';
 import { DEFAULT_MAP_CONFIG, PDOK_BRT_STYLE } from '../types';
 import { NOISE_FILL_OPACITY, noiseFillExpression } from '../noiseStyle';
 import {
-  createAirplaneIcon,
   registerAircraftIcons,
   iconIdForAircraft,
   SELECTED_ICON_ID,
 } from './aircraftIcons';
+import { renderBadgeIcon } from '../mapIconCanvas';
 import {
   AIRPORT_SOURCE_ID,
   AIRPORT_MARKER_LAYER_ID,
@@ -79,10 +79,14 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
     // Register the altitude-band icons (session 17)
     registerAircraftIcons(map);
 
-    // Add airplane icon if not already added (24×24 RGBA glyph in a white
-    // circle with a thin border, per spec §3)
+    // Legacy 'airplane' image (canvas-rendered plane on a white badge);
+    // the layer itself selects per-band ids / the selected variant.
     if (!map.hasImage('airplane')) {
-      map.addImage('airplane', createAirplaneIcon());
+      map.addImage(
+        'airplane',
+        renderBadgeIcon('plane', { glyph: [0x3b, 0x35, 0x2f], fill: [0xff, 0xff, 0xff], shape: 'circle' }),
+        { pixelRatio: 2 },
+      );
     }
 
     // Convert aircraft map to GeoJSON feature collection

@@ -7,7 +7,6 @@
 export {
   ALTITUDE_BANDS,
   SELECTED_ICON_ID,
-  createAirplaneIcon,
   getAircraftColor,
   iconIdForAircraft,
   registerAircraftIcons,

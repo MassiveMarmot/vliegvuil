@@ -10,6 +10,7 @@
 // translated caveat per layer. Licences come only from sources.json.
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { Icon } from '../icons/Icon';
 import sources from '../../../sources.json';
 import { ATTRIBUTION_SECTIONS, NOISE_SECTION_ID } from '../config/attributionSections';
 import type { AttributionSectionConfig } from '../config/attributionSections';
@@ -110,7 +111,7 @@ function SourceItem({ entry, language }: { entry: SourceEntry; language: string 
             role="img"
             aria-label={t('attribution.dataAgeStaleIcon', 'Waarschuwing: dataset is mogelijk verouderd')}
           >
-            ⚠
+            <Icon name="triangle-alert" size={14} />
           </span>
           {t(
             'attribution.dataAgeStale',

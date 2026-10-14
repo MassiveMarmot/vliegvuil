@@ -5,6 +5,8 @@
 
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Icon } from '../icons/Icon';
+import type { IconName } from '../icons/paths';
 
 export interface BannerProps {
   type: 'info' | 'warning' | 'error';
@@ -60,7 +62,7 @@ export function Banner({ type, message, visible, onDismiss, autoHide = false, du
       role="alert"
       aria-live="polite"
     >
-      <span className="mr-2">{getIcon(type)}</span>
+      <span className="mr-2"><Icon name={bannerIcon(type)} size={18} /></span>
       <span>{message}</span>
       {onDismiss && (
         <button
@@ -75,17 +77,17 @@ export function Banner({ type, message, visible, onDismiss, autoHide = false, du
   );
 }
 
-// Get icon for banner type
-function getIcon(type: 'info' | 'warning' | 'error'): string {
+// Lucide icon for banner type (replaces the emoji set)
+function bannerIcon(type: 'info' | 'warning' | 'error'): IconName {
   switch (type) {
     case 'info':
-      return 'ℹ️';
+      return 'info';
     case 'warning':
-      return '⚠️';
+      return 'triangle-alert';
     case 'error':
-      return '❌';
+      return 'octagon-x';
     default:
-      return '';
+      return 'info';
   }
 }
 
@@ -119,7 +121,7 @@ export function SimpleBanner({ type, message, visible, onDismiss }: BannerProps)
       role="alert"
       aria-live="polite"
     >
-      <span style={{ marginRight: '0.5rem' }}>{getIcon(type)}</span>
+      <span style={{ marginRight: '0.5rem' }}><Icon name={bannerIcon(type)} size={18} /></span>
       <span>{message}</span>
       {onDismiss && (
         <button
@@ -135,7 +137,7 @@ export function SimpleBanner({ type, message, visible, onDismiss }: BannerProps)
           }}
           aria-label={t('banner.close', 'Sluiten')}
         >
-          ×
+          <Icon name="x" size={18} />
         </button>
       )}
     </div>

@@ -7,7 +7,8 @@
 // Spec §6: managed focus (moves in on select, returns on close, Esc to close) — not a focus trap.
 
 import React, { useEffect, useRef, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';import type { TFunction } from 'i18next';
+import { useTranslation } from 'react-i18next';
+import { Icon } from '../icons/Icon';import type { TFunction } from 'i18next';
 import type { DisplayAircraft } from '../types';
 import type { NoiseContours } from '@vliegvuil/core';
 import { NoiseBadge } from './NoiseOverlay';
@@ -107,7 +108,7 @@ export function TelemetryPanel({ aircraft, onClose, noiseContours, units = DEFAU
           onClick={onClose}
           aria-label={t('telemetry.close', 'Sluiten')}
         >
-          ×
+          <Icon name="x" size={18} />
         </button>
       </header>
 

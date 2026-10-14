@@ -97,6 +97,13 @@ function fakeMapApi(): Record<string, unknown> {
   };
 }
 
+// jsdom has no canvas: the badge renderer is stubbed so the layer logic
+// (what these tests assert) runs without pixels.
+vi.mock('../src/mapIconCanvas', () => ({
+  renderBadgeIcon: (): { width: number; height: number; data: Uint8Array } => ({
+    width: 48, height: 48, data: new Uint8Array(48 * 48 * 4),
+  }),
+}));
 vi.mock('maplibre-gl', () => {
   return {
     default: {

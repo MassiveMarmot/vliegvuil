@@ -8,6 +8,7 @@
 
 import React from 'react';
 import { useTranslation, Trans } from 'react-i18next';
+import { Icon } from '../icons/Icon';
 import type { LanguageCode } from '../i18n';
 import { pagePath } from '../hooks/useRouter';
 import {
@@ -98,7 +99,7 @@ export function AboutPage({ language, onNavigate }: AboutPageProps): React.React
       </section>
       <p>
         <a className="back-to-map" href={mapHref} onClick={(e): void => { e.preventDefault(); onNavigate(mapHref); }}>
-          {t('about.backToMap', '← Naar de kaart')}
+          <Icon name="arrow-left" size={16} /> {t('about.backToMap', '← Naar de kaart')}
         </a>
       </p>
     </main>
