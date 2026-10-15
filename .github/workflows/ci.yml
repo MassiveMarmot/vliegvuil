@@ -136,11 +136,11 @@ jobs:
         # Only the VAR=value lines; GITHUB_ENV has no comment syntax.
         run: |
           grep -E '^[A-Z_]+=' scripts/caddy-versions.env >> "$GITHUB_ENV"
-      - run: go install github.com/caddyserver/xcaddy/cmd/xcaddy@${XCADDY_VERSION}
-      - run: xcaddy build ${CADDY_VERSION}
-          --with github.com/mholt/caddy-ratelimit@${CADDY_RATELIMIT_VERSION}
-          --with github.com/caddyserver/cache-handler@${CADDY_CACHE_HANDLER_VERSION}
-          --with github.com/darkweak/storages/otter/caddy@${CADDY_OTTER_VERSION}
+      - run: go install "github.com/caddyserver/xcaddy/cmd/xcaddy@${XCADDY_VERSION}"
+      - run: xcaddy build "${CADDY_VERSION}"
+          --with "github.com/mholt/caddy-ratelimit@${CADDY_RATELIMIT_VERSION}"
+          --with "github.com/caddyserver/cache-handler@${CADDY_CACHE_HANDLER_VERSION}"
+          --with "github.com/darkweak/storages/otter/caddy@${CADDY_OTTER_VERSION}"
           --output ./caddy-custom
       - run: ./caddy-custom validate --config Caddyfile
       # Formatting gate: fail when caddy fmt would change the Caddyfile.
