@@ -192,9 +192,12 @@ sudo -u vliegvuil bash -c '
 '
 ```
 
-To build against a known Caddy version instead of the latest one, pin it
-(`xcaddy build <caddy-version> --with module@<version>`) and record the
-versions you deployed.
+The first-time build above is unpinned (latest). For every later rebuild use
+`sudo scripts/vps-caddy-update.sh` instead: it builds with the pinned
+versions from `scripts/caddy-versions.env` (the same set CI validates),
+validates before installing, and restarts with rollback. If you ever build
+by hand again, pin it (`xcaddy build <caddy-version> --with module@<version>`
+from `scripts/caddy-versions.env`) and record the versions you deployed.
 
 ```bash
 # 1c. Install it next to the packaged binary (official procedure).
@@ -722,81 +725,50 @@ appears until tiles actually fail to load for a non-404 reason.
 
 - **Caddy security updates.** `apt upgrade` updates only the packaged binary
   (`/usr/bin/caddy.default`); the custom one is **not** updated. Watch
-  Caddy's releases, and at least monthly rebuild with step 1b, then:
+  Caddy's releases, and at least monthly rebuild with the repo script:
 
   ```bash
-  sudo mv /home/vliegvuil/caddy /usr/bin/caddy.custom
-  sudo chown root:root /usr/bin/caddy.custom && sudo chmod 755 /usr/bin/caddy.custom
-  sudo caddy validate --config /etc/caddy/Caddyfile
-  sudo systemctl restart caddy
-  caddy version
+  cd /srv/vliegvuil && git pull --ff-only
+  sudo scripts/vps-caddy-update.sh
   ```
 
-  Record the Caddy and module versions you deployed.
+  The script (in the repo, so it is versioned and CI-checked alongside the
+  Caddyfile it installs) builds the custom binary with the SAME pinned
+  versions the `validate-caddyfile` CI job uses, and never leaves a broken
+  state:
 
-  **The whole rebuild as one command.** To make the monthly rebuild low-effort
-  and mistake-proof, wrap it in a script. Create it once:
+  1. Sources `scripts/caddy-versions.env` — the single source of truth for
+     the pins (Caddy v2.11.7, xcaddy v0.4.7, caddy-ratelimit v0.1.0,
+     cache-handler v0.17.0, storages/otter v0.0.20), read by both the script
+     and `.github/workflows/ci.yml`.
+  2. Builds to a **temp path** (nothing installed yet).
+  3. **Validates the new binary against the repo Caddyfile in the temp
+     location** — a failed validate aborts before anything is installed.
+  4. Backs up the current binary and Caddyfile.
+  5. Installs both, then runs `systemctl restart caddy` — a restart, NOT a
+     reload: SIGHUP re-reads the Caddyfile but does not swap the running
+     binary, so a reload would leave the new build inactive until the next
+     restart. The restart briefly drops open connections (a second or two);
+     this is NOT zero downtime.
+  6. Post-restart check: if caddy is not active, restores the backups,
+     restarts again and tells you to investigate if the rollback also fails.
 
-  ```bash
-  sudo tee /usr/local/sbin/rebuild-caddy >/dev/null <<'SCRIPT'
-  #!/usr/bin/env bash
-  set -euo pipefail
-  cd /tmp
+  Each run appends a timestamped `caddy version` line to
+  `/var/log/caddy-versions.log` — the record of deployed versions.
 
-  sudo -u vliegvuil bash -c '
-    go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
-    cd ~ && ~/go/bin/xcaddy build \
-      --with github.com/mholt/caddy-ratelimit \
-      --with github.com/caddyserver/cache-handler \
-      --with github.com/darkweak/storages/otter/caddy
-  '
+  Notes:
 
-  sudo mv /home/vliegvuil/caddy /usr/bin/caddy.custom
-  sudo chown root:root /usr/bin/caddy.custom
-  sudo chmod 755 /usr/bin/caddy.custom
-  sudo caddy validate --config /etc/caddy/Caddyfile
-  sudo systemctl restart caddy
-
-  echo "$(date -Is)  $(/usr/bin/caddy.custom version)" | tee -a /var/log/caddy-versions.log
-  echo "Deployed: $(/usr/bin/caddy.custom version)"
-  SCRIPT
-  sudo chmod 755 /usr/local/sbin/rebuild-caddy
-  ```
-
-  The monthly rebuild is then a single command:
-
-  ```bash
-  sudo rebuild-caddy
-  ```
-
-  Notes on the script:
-
-  - `set -euo pipefail` stops before the restart if the build or `caddy
-    validate` fails, so a broken build cannot take down the running Caddy.
-    Validation runs after the swap but before the restart; during a routine
-    rebuild the config does not change, so a failure there indicates a module
-    incompatibility — exactly what you want caught before restarting.
-  - Each run appends a timestamped `caddy version` line to
-    `/var/log/caddy-versions.log`, which is the record of deployed versions
-    this section asks for.
-  - The script builds `@latest` (no pinned versions). That is the
-    set-and-forget choice: security fixes arrive automatically and no
-    bookkeeping is needed. The trade-off is that each rebuild silently jumps
-    to the newest Caddy and module versions; if you ever need change
-    control, pin versions in the `xcaddy build` command instead.
-  - **CI pins what this script does not.** The `validate-caddyfile` job in
-    `.github/workflows/ci.yml` builds a pinned Caddy and module set
-    (currently Caddy v2.11.7, caddy-ratelimit v0.1.0, cache-handler v0.17.0,
-    storages/otter v0.0.20) and fails the build when `caddy fmt --diff`
-    would change the Caddyfile. The script and the CI job should build the
-    same Caddy version: CI is the reproducibility and formatting gate, so
-    when you bump the pins in `ci.yml`, rebuild the VPS binary with the
-    same pinned versions in the same PR (pass them to the `xcaddy build`
-    line here), or vice versa when a rebuild reveals the pins need moving —
-    either way, the pins and the deployed binary change together, never in
-    separate PRs. Today the script still builds `@latest`, so the deployed
-    version can be newer than the CI pins; check `/var/log/caddy-versions.log`
-    for what is actually deployed.
+  - `set -euo pipefail` stops at the first failure; because validation runs
+    BEFORE anything is installed, a broken build or a failed validate never
+    touches the running Caddy.
+  - **Pins are the single source of truth.** `scripts/caddy-versions.env` is
+    read by BOTH this script and the `validate-caddyfile` CI job (which also
+    fails the build when `caddy fmt --diff` would change the Caddyfile).
+    When you bump a pin, do it in that one file, in the same PR rebuild the
+    VPS binary (`sudo scripts/vps-caddy-update.sh`) — the pins, the
+    CI-validated set and the deployed binary always move together.
+  - xcaddy itself is pinned too (v0.4.7): the build tool reproduces what CI
+    used, not whatever `@latest` ships that day.
   - This is a small piece of infrastructure you own: keep it simple, and
     update it in the same sitting whenever the module set or paths change.
 - **Version-lag check.** `apt upgrade` updates `/usr/bin/caddy.default`
@@ -811,7 +783,8 @@ appears until tiles actually fail to load for a non-404 reason.
   build lists `rate_limit`, `cache` and `otter`; a stock binary does not).
   If `caddy.default` reports a newer version than the custom binary, run
   `sudo scripts/vps-caddy-update.sh` to rebuild the custom binary from the
-  repo (it also re-copies the Caddyfile, validates and reloads).
+  repo with the pinned versions (it also re-copies the Caddyfile, validates
+  before installing, restarts, and rolls back if the restart check fails).
 - **Do not `apt-mark hold caddy`.** The apt package must keep updating:
   it delivers `caddy.default` and Caddy's systemd service files, which the
   custom binary does not replace. The custom binary is updated by the
