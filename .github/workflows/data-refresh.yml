@@ -4,11 +4,15 @@
 #
 # Two jobs so the job that runs project code (untrusted upstream data!)
 # NEVER holds a write token:
-#   1. refresh  (contents: read)  — downloads, builds, validates, uploads
-#      a path-allowlisted artifact.
+#   1. refresh  (contents: read)  — downloads, builds, validates, builds
+#      the PR body (tested TypeScript, not bash string assembly) and the
+#      path-allowlisted artifact manifest, uploads everything as an artifact.
 #   2. open-pr  (contents: write, pull-requests: write) — downloads the
-#      artifact, re-validates the manifest against the allowlist, commits
-#      as github-actions[bot], pushes, opens the PR. Runs NO project code.
+#      artifact, re-validates the manifest in bash against the SAME path
+#      allowlist, commits as github-actions[bot], pushes, opens the PR.
+#      Runs NO project code: no pnpm, no node_modules, no tsx — only git,
+#      gh and bash, so nothing untrusted can execute while the write token
+#      is checked out (pnpm's preinstall or a transitive dependency could).
 name: data-refresh
 
 on:
@@ -49,6 +53,9 @@ jobs:
     steps:
       # SHAs from `git ls-remote https://github.com/<repo> refs/tags/<tag>`
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # This job never pushes; do not leave the token in git config.
+          persist-credentials: false
       - uses: pnpm/action-setup@a15d269cd4658e1107c09f1fabf4cbd7bd1f308a # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
@@ -76,6 +83,17 @@ jobs:
             printf '%s %s\n' "$f" "$(wc -c < "$f")" >> data-build/status/artifact-manifest.txt
           done
           cat data-build/status/artifact-manifest.txt
+      - name: Build the PR body (read-only job, so this is safe here)
+        # The body is assembled by tested TypeScript from the refresh
+        # report and manifest; no upstream data enters a run: script.
+        # Built here — in the job that CANNOT write — so the write-token
+        # job never executes project code.
+        run: |
+          set -eu
+          pnpm --filter @vliegvuil/data-build exec tsx src/pr-body.ts \
+            ../data-build/status/refresh-report.json \
+            ../data-build/status/pr-body.md \
+            ../data-build/status/artifact-manifest.txt
       - name: Upload the changed files as an artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -88,6 +106,7 @@ jobs:
             sources.json
             data-build/status/refresh-report.json
             data-build/status/artifact-manifest.txt
+            data-build/status/pr-body.md
           retention-days: 7
           if-no-files-found: error
 
@@ -95,7 +114,7 @@ jobs:
     needs: refresh
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # Only this job can write; it runs NO code from node_modules.
+    # Only this job can write; it runs NO project code: git, gh, bash only.
     permissions:
       contents: write
       pull-requests: write
@@ -103,26 +122,52 @@ jobs:
       DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
       SOURCE: ${{ inputs.source || 'all-auto' }}
     steps:
+      # This checkout DOES push, so it keeps its credentials on purpose.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           # Ensure the branch can be created from the current main tip
           ref: main
-      - name: Skip when dry run
+      - name: Dry-run summary
         if: ${{ env.DRY_RUN == '1' }}
         run: |
           echo "dry_run set: refresh report is in the artifacts; no PR opened." >> "$GITHUB_STEP_SUMMARY"
-          exit 0
-      - uses: pnpm/action-setup@a15d269cd4658e1107c09f1fabf4cbd7bd1f308a # v4.4.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: '22'
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
       - name: Download the artifact
+        if: ${{ env.DRY_RUN != '1' }}
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: refresh-output
+      - name: Re-validate the artifact manifest against the path allowlist
+        # The write-token job must not trust the artifact: every manifest
+        # entry must be a path this workflow is allowed to commit, and
+        # every downloaded file must match its recorded size. Only then
+        # is anything staged for git add.
+        if: ${{ env.DRY_RUN != '1' }}
+        run: |
+          set -eu
+          manifest=data-build/status/artifact-manifest.txt
+          test -f "$manifest"
+          allowlist="web/public/data/airports.json
+          web/public/data/aircraft.json
+          web/public/data/neighbours.geojson
+          web/public/noise-contours.geojson
+          sources.json
+          data-build/status/refresh-report.json
+          data-build/status/artifact-manifest.txt
+          data-build/status/pr-body.md"
+          while read -r path size; do
+            case "$allowlist" in
+              *"$path"*) ;;
+              *) echo "manifest path not in allowlist: $path"; exit 1 ;;
+            esac
+            actual="$(wc -c < "$path")"
+            if [ "$actual" != "$size" ]; then
+              echo "size mismatch for $path: manifest $size, actual $actual"
+              exit 1
+            fi
+          done < "$manifest"
+          echo "manifest validated against the allowlist"
       - name: Skip when an open data PR already exists
+        if: ${{ env.DRY_RUN != '1' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -133,17 +178,11 @@ jobs:
           else
             echo "PR_EXISTS=" >> "$GITHUB_ENV"
           fi
-      - name: Validate the artifact manifest and build the PR body
-        # Never on a dry run: the manifest/PR body are only needed when a PR
-        # will be opened (the dry-run summary already said so).
-        if: ${{ env.PR_EXISTS != '1' && env.DRY_RUN != '1' }}
+      - name: Detect whether anything changed
+        # No changed output paths means no PR: git status must show a diff.
+        if: ${{ env.DRY_RUN != '1' && env.PR_EXISTS != '1' }}
         run: |
           set -eu
-          pnpm --filter @vliegvuil/data-build exec tsx src/pr-body.ts \
-            ../data-build/status/refresh-report.json \
-            ../data-build/status/pr-body.md \
-            ../data-build/status/artifact-manifest.txt
-          # No changed output paths means no PR: git status must show a diff.
           if git diff --quiet; then
             echo "No changes; not opening a PR." >> "$GITHUB_STEP_SUMMARY"
             echo "NO_DIFF=1" >> "$GITHUB_ENV"
@@ -151,7 +190,7 @@ jobs:
       - name: Ensure the data labels exist
         # gh pr create --label fails when the label does not exist; create
         # each only if missing. Same job (write token), same env: rule.
-        if: ${{ env.PR_EXISTS != '1' && env.DRY_RUN != '1' && env.NO_DIFF != '1' }}
+        if: ${{ env.DRY_RUN != '1' && env.PR_EXISTS != '1' && env.NO_DIFF != '1' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -170,7 +209,7 @@ jobs:
             fi
           done
       - name: Commit, push and open the PR
-        if: ${{ env.PR_EXISTS != '1' && env.DRY_RUN != '1' && env.NO_DIFF != '1' }}
+        if: ${{ env.DRY_RUN != '1' && env.PR_EXISTS != '1' && env.NO_DIFF != '1' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

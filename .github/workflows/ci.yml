@@ -14,6 +14,7 @@ permissions:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: pnpm/action-setup@a15d269cd4658e1107c09f1fabf4cbd7bd1f308a # v4.4.0
@@ -26,6 +27,7 @@ jobs:
 
   typecheck:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: pnpm/action-setup@a15d269cd4658e1107c09f1fabf4cbd7bd1f308a # v4.4.0
@@ -38,6 +40,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: pnpm/action-setup@a15d269cd4658e1107c09f1fabf4cbd7bd1f308a # v4.4.0
@@ -52,6 +55,7 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: pnpm/action-setup@a15d269cd4658e1107c09f1fabf4cbd7bd1f308a # v4.4.0
@@ -61,27 +65,45 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      # pnpm build unconditionally rewrites sources.json (lastUpdated)
-      # and web/public/data/*.json (see AGENTS.md); those diffs are
-      # build output, never committed from here — data reaches the repo
-      # only through data-refresh PRs. Reset them, then demand a clean
-      # tree: any other modified tracked file, or any new untracked file
-      # the build emitted, means the build is not reproducible.
+      # pnpm build unconditionally rewrites sources.json (lastUpdated),
+      # web/public/data/*.json AND web/public/noise-contours.geojson (the
+      # data-build step regenerates all its outputs; see AGENTS.md); those
+      # diffs are build output, never committed from here — data reaches
+      # the repo only through data-refresh PRs. Reset them, then demand a
+      # clean tree: any other modified tracked file, or any new untracked
+      # file the build emitted, means the build is not reproducible.
       # git status --porcelain (not git diff) so untracked files count.
       - name: Fail if the build modifies tracked files
         run: |
-          git checkout -- sources.json web/public/data
+          git checkout -- sources.json web/public/data web/public/noise-contours.geojson
           test -z "$(git status --porcelain)" || { git status --short; exit 1; }
 
   validate-workflows:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       # Session 22c bugfix guard: catches $GITHUB_* typos in run: scripts
       # (actionlint does not check shell variable existence).
       - run: scripts/check-workflow-env.sh
+      # actionlint (workflow linter), downloaded as a pinned binary and
+      # verified by the checksum from the release's checksums file — no
+      # third-party action involved. v1.7.12 checksum verified against
+      # https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_checksums.txt
+      - name: Install actionlint v1.7.12 (checksum-pinned)
+        run: |
+          set -eu
+          curl -sSfL -o actionlint.tar.gz \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          echo '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  actionlint.tar.gz' | sha256sum -c -
+          tar xzf actionlint.tar.gz actionlint
+          ./actionlint --version
+      - run: ./actionlint
   validate-sources:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: pnpm/action-setup@a15d269cd4658e1107c09f1fabf4cbd7bd1f308a # v4.4.0
@@ -94,6 +116,8 @@ jobs:
 
   validate-caddyfile:
     runs-on: ubuntu-latest
+    # Compiles the whole Caddy + modules tree; slower than the JS jobs.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       # The Caddyfile uses the rate_limit (mholt/caddy-ratelimit) and cache

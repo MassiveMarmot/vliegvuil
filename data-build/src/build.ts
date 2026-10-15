@@ -53,6 +53,11 @@ function today(): string {
  * VLIEGVUIL_NO_CACHE is not set, reuse it. Returns the file contents
  * (decompressed if gzip).
  */
+// Per-attempt timeout: a hung upstream (connect stall, black-holed
+// route) must not hang the whole CI job until the job-level timeout-minutes
+// kills it; each attempt aborts itself after this many milliseconds.
+const FETCH_TIMEOUT_MS = 60_000;
+
 // Upstream WFS endpoints (haleconnect) intermittently answer 404/500 for
 // minutes at a time; a single flaky response must not fail the whole CI
 // build. Retry transient failures (404/5xx/network) with backoff.
@@ -60,7 +65,9 @@ async function fetchWithRetry(url: string, attempts = 4): Promise<Response> {
   let lastError: Error | null = null;
   for (let attempt = 1; attempt <= attempts; attempt++) {
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
       if (response.ok) {
         return response;
       }
