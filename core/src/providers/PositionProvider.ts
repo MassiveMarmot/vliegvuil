@@ -12,6 +12,14 @@ import type {
   PositionProviderConfig,
 } from './types';
 
+/**
+ * After a failed fetch, the cache is served only while it is younger than
+ * this multiple of cacheTTL; the caller can detect the failed poll via
+ * getLastError() (which stays set) and mark the data stale. An older cache
+ * is never served — the error is rethrown and the caller keeps its own data.
+ */
+export const STALE_CACHE_MAX_AGE_MULTIPLIER = 3;
+
 export abstract class PositionProvider implements PositionProviderInterface {
   protected lastUpdateTime: number = 0;
   protected lastError: Error | null = null;
@@ -49,9 +57,12 @@ export abstract class PositionProvider implements PositionProviderInterface {
     for (let attempt = 0; attempt < this.config.maxRetries; attempt++) {
       try {
         const positions = await this.fetchFromSourceWithTimeout(bbox);
+        // Timestamps reflect when the fetch completed, not when it started:
+        // a slow response must not make the cache look younger than it is.
+        const completedAt = Date.now() / 1000;
         this.cache = positions;
-        this.cacheTimestamp = now;
-        this.lastUpdateTime = now;
+        this.cacheTimestamp = completedAt;
+        this.lastUpdateTime = completedAt;
         this.lastError = null;
         return positions;
       } catch (error) {
@@ -73,13 +84,21 @@ export abstract class PositionProvider implements PositionProviderInterface {
       }
     }
 
-    // If all retries failed, return cached data if available
-    if (this.cache.length > 0) {
+    // All attempts failed. Never fail silently: serve the cache only while
+    // it is young enough to be worth showing, with lastError kept set so
+    // callers can tell this poll failed (getLastError()) and mark the data
+    // stale (isStale()); otherwise rethrow so the caller's error handling
+    // runs. Never return a silent empty array on failure.
+    const cacheAgeAfterFailure = Date.now() / 1000 - this.cacheTimestamp;
+    if (
+      this.cache.length > 0 &&
+      cacheAgeAfterFailure <
+        this.config.cacheTTL * STALE_CACHE_MAX_AGE_MULTIPLIER
+    ) {
       return this.cache;
     }
 
-    this.lastError = lastError;
-    return [];
+    throw lastError ?? new Error('Position fetch failed');
   }
 
   protected async fetchFromSourceWithTimeout(

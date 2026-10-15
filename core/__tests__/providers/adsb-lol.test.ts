@@ -202,6 +202,34 @@ describe('AdsblolProvider', () => {
       expect(positions).toEqual([]);
     });
 
+    it('treats a non-array ac value as empty instead of throwing', async () => {
+      (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ now: 1700000000, ac: 'garbage' }),
+      } as Response);
+      const positions = await provider.fetchFromSource(NETHERLANDS_BBOX);
+      expect(positions).toEqual([]);
+    });
+
+    it('skips a single malformed aircraft instead of failing the batch', async () => {
+      // Real fixture entries plus malformed ones: missing hex, non-string
+      // hex, empty hex. The fixture aircraft must still come through.
+      const good = fixture.ac.find((a) => a.hex === '4854cb')!;
+      const batch = [
+        good,
+        { ...good, hex: undefined },
+        { ...good, hex: 12345 },
+        { ...good, hex: '   ' },
+      ];
+      (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ now: fixture.now, ac: batch }),
+      } as Response);
+      const positions = await provider.fetchFromSource(NETHERLANDS_BBOX);
+      expect(positions).toHaveLength(1);
+      expect(positions[0]?.icao24).toBe('4854CB');
+    });
+
     it('accepts a configurable base URL', async () => {
       const custom = new AdsblolProvider({ baseUrl: 'https://proxy.example/v2' });
       (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({

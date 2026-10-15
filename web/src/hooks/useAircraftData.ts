@@ -133,11 +133,14 @@ export function useAircraftData(
   aircraftSizeRef.current = aircraft.size;
   configRef.current = pollingConfig;
 
+  // The provider serves its young cache after a failed poll instead of
+  // throwing; positions are then accompanied by the provider's lastError
+  // so this poll is treated as a failure, not a success.
   const fetchAircraftData = useCallback(
-    async (): Promise<AircraftPosition[]> => {
+    async (): Promise<{ positions: AircraftPosition[]; error: Error | null }> => {
       if (import.meta.env.VITE_MOCK === '1') {
         const { fetchMockAircraft } = await import('../mock/mockAircraftData');
-        return fetchMockAircraft();
+        return { positions: await fetchMockAircraft(), error: null };
       }
       if (providerRef.current === null) {
         const base = import.meta.env.VITE_API_BASE ?? '/api';
@@ -150,7 +153,7 @@ export function useAircraftData(
         minLongitude: 2.5,
         maxLongitude: 7.5,
       });
-      return positions;
+      return { positions, error: provider.getLastError() };
     },
     [],
   );
@@ -258,10 +261,18 @@ export function useAircraftData(
     setIsLoading(!hasLoadedOnceRef.current);
     setLastPollTime(Date.now());
     try {
-      const data = await fetchAircraftData();
-      if (mountedRef.current) {
-        updateAircraft(data);
+      const { positions, error } = await fetchAircraftData();
+      if (!mountedRef.current) {
+        return;
       }
+      // A poll the provider served from cache after a failed fetch is a
+      // failed poll: run the error path (banner + retry), not the success
+      // path, so a failing API never looks like fresh data.
+      if (error !== null) {
+        handleError(error, refreshRef.current);
+        return;
+      }
+      updateAircraft(positions);
     } catch (err) {
       if (mountedRef.current) {
         handleError(
