@@ -105,17 +105,18 @@ jobs:
           cache: false
       # Pinned so the fmt gate below cannot drift when a new Caddy release
       # changes canonical formatting, and so validate runs against the same
-      # version the VPS builds (keep in sync with scripts/vps-caddy-update.sh
-      # and docs/deploy.md 9). Latest releases at pin time:
-      # caddy https://github.com/caddyserver/caddy/releases/latest (v2.11.7)
-      # caddy-ratelimit https://github.com/mholt/caddy-ratelimit/tags (v0.1.0, only tag)
-      # cache-handler https://github.com/caddyserver/cache-handler/releases/latest (v0.17.0)
-      # storages https://github.com/darkweak/storages/releases (v0.0.20)
-      - run: go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
-      - run: xcaddy build v2.11.7
-          --with github.com/mholt/caddy-ratelimit@v0.1.0
-          --with github.com/caddyserver/cache-handler@v0.17.0
-          --with github.com/darkweak/storages/otter/caddy@v0.0.20
+      # version the VPS builds. Single source of truth for BOTH this job and
+      # scripts/vps-caddy-update.sh: scripts/caddy-versions.env (see also
+      # docs/deploy.md 9). Latest releases at pin time are recorded there.
+      - name: Load pinned Caddy versions
+        # Only the VAR=value lines; GITHUB_ENV has no comment syntax.
+        run: |
+          grep -E '^[A-Z_]+=' scripts/caddy-versions.env >> "$GITHUB_ENV"
+      - run: go install github.com/caddyserver/xcaddy/cmd/xcaddy@${XCADDY_VERSION}
+      - run: xcaddy build ${CADDY_VERSION}
+          --with github.com/mholt/caddy-ratelimit@${CADDY_RATELIMIT_VERSION}
+          --with github.com/caddyserver/cache-handler@${CADDY_CACHE_HANDLER_VERSION}
+          --with github.com/darkweak/storages/otter/caddy@${CADDY_OTTER_VERSION}
           --output ./caddy-custom
       - run: ./caddy-custom validate --config Caddyfile
       # Formatting gate: fail when caddy fmt would change the Caddyfile.
