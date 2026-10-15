@@ -68,6 +68,10 @@ One session = one PR = one merge. Start each new session from updated `main`. If
 
 Free plan is 2 sessions/day, so expect this to take ~a week; paid allows far more.
 
+Parked follow-ups (small PRs, not scheduled sessions):
+
+- **Derive the map layers' `icon-size` from `MAP_ICON_PX`** (session 17 / PRs #94–#95 follow-up): the `icon-size` 1.0 / 1.1 constants in `web/src/components/Map.tsx` are tuned to the 2x baked icons (48px images for a 24px badge, pixelRatio 2). Deriving them from `MAP_ICON_PX` would make the producer/consumer unit coupling structural instead of comment-only, so a future format change (e.g. different pixel ratio) cannot silently halve the markers again.
+
 ## 5. Session prompt template
 
 Paste into a new session, filling in the bracketed parts:
@@ -81,6 +85,11 @@ against main with the results and anything you could not verify.
 ```
 
 For data sessions add: "Fetch and read each official source page and licence text before writing code. Do not guess endpoints or licences."
+
+## Troubleshooting
+
+- `web/__tests__/serviceWorker.test.ts` reads `web/dist/sw.js`. A failure there (especially a denylist complaint) usually means a stale `dist/` built from another branch — re-run `pnpm --filter @vliegvuil/web build` before diagnosing a real bug.
+- `pnpm build` regenerates `sources.json` (lastUpdated) and `web/public/data/*.json`. Revert those build-generated diffs instead of committing them — except in a data-refresh PR (see AGENTS.md).
 
 ## 6. Human checkpoints
 

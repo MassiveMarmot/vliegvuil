@@ -11,7 +11,11 @@ Read docs/SPEC.md and docs/BUILD.md before every task, then the session file nam
 - Every data layer links to its entry on the Attribution page, which shows source, date, licence and caveats; the legend or badge shows a one-line essential (what, year, annual average). No medical claims; no causal claims about airports unless an official study is cited.
 - New dependency: state name, licence, reason in the PR. Prefer MIT/Apache/BSD/MPL.
 - Do not invent URLs, licences or API fields. If you cannot verify one by fetching the official page, leave a TODO with the link to check.
+- A claim of "verified" must name the evidence actually consulted (command + output, doc URL, registry metadata); a plausible-looking URL or licence is not verification.
 - One task per session, one branch/PR per task, PR description lists: what changed, what was verified, what was not.
+- A failed scripted or patch step fails the task; fix it before continuing. Before every commit, compare the changed-file list with the intended scope.
+- When a change wires X into Y, a test must assert the wiring, not just that X exists.
+- `pnpm build` regenerates `sources.json` (lastUpdated) and `web/public/data/*.json`; revert those build-generated stray diffs instead of committing them — except in a data-refresh PR, which is the only way data changes reach the repo.
 - Do not merge, deploy, or touch anything outside this repo. Commit only small generated files (< ~2 MB); larger outputs are built by the maintainer.
 - Accessibility: semantic landmarks, managed focus (not a trap) on the telemetry panel, prefers-reduced-motion, colour-independent legends.
 - No mock or random data in production code paths. Mocks live under `__tests__/` or behind an explicit dev-only flag that is off by default.

@@ -55,7 +55,9 @@ describe('service worker precache manifest (app shell only)', () => {
     // extension-suffixed (static asset) path.
     expect(sw).toContain('denylist:[');
     for (const seg of ['\\/api\\/', '\\/tiles\\/', '\\/fonts\\/', '\\/data\\/', 'noise-contours']) {
-      expect(sw).toContain(seg);
+      // A missing segment usually means a stale dist/ built from another
+      // branch: run `pnpm --filter @vliegvuil/web build` before diagnosing.
+      expect(sw, `${seg} missing from denylist — stale dist? run pnpm --filter @vliegvuil/web build`).toContain(seg);
     }
     const fallback = /createHandlerBoundToURL\("([^"]+)"\)/.exec(sw);
     expect(fallback, 'no navigation fallback handler found').not.toBeNull();
