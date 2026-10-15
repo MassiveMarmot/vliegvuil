@@ -25,9 +25,38 @@ LOG_FILE=/var/log/caddy-versions.log
 # shellcheck source=scripts/caddy-versions.env
 . "$VERSIONS_FILE"
 
+# Two temp directories with separate owners (privilege separation):
+# - WORKDIR: created by the invoking user (root via sudo), mode 700,
+#   root-owned. Holds the validated binary copy, the Caddyfile copies and
+#   the rollback backups. Nothing unprivileged ever writes here.
+# - BUILD_DIR: created BY vliegvuil, so the unprivileged xcaddy build can
+#   write its output there. Handing vliegvuil a root-owned mktemp dir was
+#   the bug: `xcaddy build --output` failed at the final copy with
+#   "open .../caddy.custom.new: permission denied" after a full build.
+# Pre-initialise so the EXIT trap never sees an unbound variable (set -u)
+# if either mktemp fails.
+WORKDIR=""
+BUILD_DIR=""
 WORKDIR="$(mktemp -d /tmp/caddy-update.XXXXXX)"
+BUILD_DIR="$(sudo -u vliegvuil mktemp -d /tmp/caddy-build.XXXXXX)"
+
+# Pre-flight: fail BEFORE the multi-minute build if vliegvuil cannot write
+# to BUILD_DIR, not after (the observed failure surfaced only at the very
+# end of the build).
+if ! sudo -u vliegvuil test -w "$BUILD_DIR"; then
+  echo "!! vliegvuil cannot write to $BUILD_DIR — aborting before the build." >&2
+  exit 1
+fi
+
+# Cleanup both dirs on exit, including failure. The trap must preserve the
+# script's exit status under `set -euo pipefail`: capture $? first, never
+# let a failed rm mask it, and re-exit with the original status. BUILD_DIR
+# is vliegvuil-owned, so remove it as vliegvuil.
 cleanup() {
-  rm -rf "$WORKDIR"
+  status=$?
+  [ -n "${WORKDIR:-}" ] && rm -rf "$WORKDIR" || true
+  [ -n "${BUILD_DIR:-}" ] && sudo -u vliegvuil rm -rf "$BUILD_DIR" || true
+  exit "$status"
 }
 trap cleanup EXIT
 
@@ -36,14 +65,15 @@ echo "== build custom Caddy ${CADDY_VERSION} (as vliegvuil, xcaddy ${XCADDY_VERS
 # a temp path so a failed build cannot leave a half-written artifact in ~.
 # sudo strips the environment by default (env_reset), so pass the pinned
 # versions and temp path explicitly on the sudo command line instead of
-# relying on exports.
+# relying on exports. The output goes to BUILD_DIR (vliegvuil-owned); root
+# then installs a root-owned copy into WORKDIR and removes the build copy.
 sudo -u vliegvuil \
   XCADDY_VERSION="$XCADDY_VERSION" \
   CADDY_VERSION="$CADDY_VERSION" \
   CADDY_RATELIMIT_VERSION="$CADDY_RATELIMIT_VERSION" \
   CADDY_CACHE_HANDLER_VERSION="$CADDY_CACHE_HANDLER_VERSION" \
   CADDY_OTTER_VERSION="$CADDY_OTTER_VERSION" \
-  WORKDIR="$WORKDIR" \
+  BUILD_DIR="$BUILD_DIR" \
   bash -c '
   set -e
   cd /tmp
@@ -52,10 +82,13 @@ sudo -u vliegvuil \
     --with github.com/mholt/caddy-ratelimit@$CADDY_RATELIMIT_VERSION \
     --with github.com/caddyserver/cache-handler@$CADDY_CACHE_HANDLER_VERSION \
     --with github.com/darkweak/storages/otter/caddy@$CADDY_OTTER_VERSION \
-    --output "$WORKDIR/caddy.custom.new"
+    --output "$BUILD_DIR/caddy.custom.new"
 '
-sudo chown root:root "$WORKDIR/caddy.custom.new"
-sudo chmod 755 "$WORKDIR/caddy.custom.new"
+# Root copies the built binary into the root-owned WORKDIR (install sets
+# owner/mode, replacing the old chown+chmod) and removes the build copy so
+# the unprivileged dir never holds a lingering root binary.
+sudo install -o root -g root -m 755 "$BUILD_DIR/caddy.custom.new" "$WORKDIR/caddy.custom.new"
+sudo -u vliegvuil rm -f "$BUILD_DIR/caddy.custom.new"
 
 echo "== validate the new binary against the repo Caddyfile (nothing installed yet) =="
 sudo cp "$REPO_DIR/Caddyfile" "$WORKDIR/Caddyfile.new"

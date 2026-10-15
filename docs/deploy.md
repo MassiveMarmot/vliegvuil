@@ -753,20 +753,41 @@ appears until tiles actually fail to load for a non-404 reason.
      the pins (Caddy v2.11.7, xcaddy v0.4.7, caddy-ratelimit v0.1.0,
      cache-handler v0.17.0, storages/otter v0.0.20), read by both the script
      and `.github/workflows/ci.yml`.
-  2. Builds to a **temp path** (nothing installed yet).
-  3. **Validates the new binary against the repo Caddyfile in the temp
-     location** — a failed validate aborts before anything is installed.
-  4. Backs up the current binary and Caddyfile.
-  5. Installs both, then runs `systemctl restart caddy` — a restart, NOT a
+  2. Creates **two temp directories**: a vliegvuil-owned build dir and a
+     root-owned work dir (mode 700) — the build runs unprivileged in its
+     own dir, and only root copies the finished binary into the work dir.
+     A pre-flight check verifies vliegvuil can write to the build dir
+     BEFORE the multi-minute build starts.
+  3. Builds to the **build dir** (nothing installed yet); root installs the
+     binary copy into the root-owned work dir and removes the build copy.
+  4. **Validates the new binary against the repo Caddyfile in the work
+     dir** — a failed validate aborts before anything is installed.
+  5. Backs up the current binary and Caddyfile.
+  6. Installs both, then runs `systemctl restart caddy` — a restart, NOT a
      reload: SIGHUP re-reads the Caddyfile but does not swap the running
      binary, so a reload would leave the new build inactive until the next
      restart. The restart briefly drops open connections (a second or two);
      this is NOT zero downtime.
-  6. Post-restart check: if caddy is not active, restores the backups,
+  7. Post-restart check: if caddy is not active, restores the backups,
      restarts again and tells you to investigate if the rollback also fails.
+
+  Both temp directories are removed by an EXIT trap that preserves the
+  script's exit status, on success and on failure.
 
   Each run appends a timestamped `caddy version` line to
   `/var/log/caddy-versions.log` — the record of deployed versions.
+
+  Troubleshooting:
+
+  - `caddy: go build caddy: copying /tmp/go-build.../a.out: open
+    /tmp/caddy-build.../caddy.custom.new: permission denied` — the build
+    output directory was not writable by `vliegvuil`. This was a real
+    failure (observed 2026-10): the script used to hand the unprivileged
+    build a root-owned `mktemp` dir (mode 700), so the whole compile
+    succeeded and only the final copy failed. The two-directory fix and
+    the pre-flight write check above make this impossible; if you still
+    see it, check that `sudo -u vliegvuil mktemp -d /tmp/caddy-build.XXXXXX`
+    succeeds and that no older script version is being run.
 
   Notes:
 
