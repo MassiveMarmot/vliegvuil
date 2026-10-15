@@ -22,6 +22,17 @@ interface ParsedPath {
   route: RouteName;
 }
 
+/**
+ * Pick the language for the root path from navigator.languages, matching
+ * the Caddy root-redirect logic: en only when the FIRST tag is English
+ * (en, en-US, en-GB...), anything else - including no preference - falls
+ * back to the default language nl.
+ */
+export function rootLanguage(languages: readonly string[]): LanguageCode {
+  const first = (languages[0] ?? '').toLowerCase();
+  return /^en(-|$)/.test(first) ? 'en' : DEFAULT_LANGUAGE;
+}
+
 /** Map a pathname to {language, route}. Unknown paths: not-found. */
 export function parsePath(pathname: string): ParsedPath {
   const segments = pathname.replace(/\/+$/, '').split('/').filter(Boolean);
@@ -70,6 +81,15 @@ export function useRouter(): {
       syncFrom(window.location.pathname);
     };
     window.addEventListener('popstate', onPopState);
+    // The service worker's navigation fallback serves index.html for '/'
+    // without Caddy's root redirect, so the router itself must send '/' to
+    // the right language instead of rendering not-found (replaceState, not
+    // pushState: the language root is where the user belongs, not a page
+    // they navigated away from).
+    if (window.location.pathname === '/') {
+      const language = rootLanguage(window.navigator.languages);
+      window.history.replaceState({}, '', `/${language}/`);
+    }
     // Sync once on mount so the language of a deep link wins over the
     // i18n module's initial guess.
     syncFrom(window.location.pathname);

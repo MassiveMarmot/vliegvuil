@@ -17,7 +17,11 @@ export default defineConfig({
         theme_color: '#f7f3ec',
         background_color: '#f7f3ec',
         display: 'standalone',
-        start_url: '/',
+        // The language path is required: the router shows not-found at '/'
+        // (Caddy's root redirect does not run for the installed PWA). scope
+        // stays '/' so the app can still navigate to /en/ pages.
+        start_url: '/nl/',
+        scope: '/',
         icons: [
           {
             src: 'icons/icon-192.png',
