@@ -4,7 +4,7 @@
 // Hook for MapLibre GL map management
 
 import { useEffect, useRef, useState } from 'react';
-import maplibregl, { Map as MapLibreMap, LngLatBounds } from 'maplibre-gl';
+import { Map as MapLibreMap, LngLatBounds } from 'maplibre-gl';
 import type { MapConfig, MapStyle } from '../types';
 import { NETHERLANDS_BBOX, getBasemapUrl, PDOK_BRT_ATTRIBUTION } from '../types';
 import { AIRPORT_GLYPHS_URL } from '../airports/airportLayer';
@@ -52,8 +52,8 @@ export function useMap(config: MapConfig, _style?: MapStyle): UseMapReturn {
     }
 
     try {
-      // Create map instance
-      const mapInstance = new maplibregl.Map({
+      // Create map instance (maplibre-gl 6 is ESM-only: named import)
+      const mapInstance = new MapLibreMap({
         container: mapContainer.current,
         style: {
           version: 8,
@@ -151,20 +151,21 @@ export function useMap(config: MapConfig, _style?: MapStyle): UseMapReturn {
 
       // Basemap tile errors (self-hosted tiles): one non-blocking notice,
       // never spamming on repeated tile failures (state flips once).
-      // Verified against the MapLibre 4.7 source: 404 tiles fire NO error
+      // Verified against the MapLibre source (4.7, re-verified 6.14): 404 tiles fire NO error
       // event at all (source_cache.ts deliberately suppresses them and
       // falls back to parent tiles) — so this notice appears only for
       // real failures (network errors, 5xx, malformed responses), where
       // event.sourceId is attached by the style's evented parent.
-      mapInstance.on('error', (event: { sourceId?: string }) => {
-        if (event.sourceId === 'pdok-brt') {
+      // MapLibre 6 fires real event classes: the 'error' listener receives
+      // an ErrorEvent whose `error` property is the underlying Error.
+      mapInstance.on('error', (event) => {
+        if ((event as { sourceId?: string }).sourceId === 'pdok-brt') {
           setTileError(true);
         }
-      });
-      // Handle map errors
-      mapInstance.on('error', (error: Error) => {
-        setMapError(error.message);
-        console.error('Map error:', error);
+        const detail = (event as unknown as { error?: unknown }).error;
+        const message = detail instanceof Error ? detail.message : String(event);
+        setMapError(message);
+        console.error('Map error:', detail ?? event);
       });
 
       // Cleanup function

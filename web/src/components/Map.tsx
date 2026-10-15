@@ -5,7 +5,7 @@
 
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import maplibregl, { SymbolLayerSpecification, MapLayerMouseEvent } from 'maplibre-gl';
+import type { GeoJSONSource, GeoJSONSourceSpecification, MapLayerMouseEvent, SymbolLayerSpecification } from 'maplibre-gl';
 import type { DisplayAircraft } from '../types';
 import { useMap } from '../hooks/useMap';
 import { DEFAULT_MAP_CONFIG, PDOK_BRT_STYLE } from '../types';
@@ -110,7 +110,7 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
 
     // Get or create source
     if (map.getSource(AIRCRAFT_SOURCE_ID)) {
-      (map.getSource(AIRCRAFT_SOURCE_ID) as maplibregl.GeoJSONSource).setData(geoJson);
+      (map.getSource(AIRCRAFT_SOURCE_ID) as GeoJSONSource).setData(geoJson);
     } else {
       map.addSource(AIRCRAFT_SOURCE_ID, {
         type: 'geojson',
@@ -164,14 +164,14 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
     if (!map || !styleReady || !noiseContours) {
       return;
     }
-    const noiseData = noiseContours as unknown as maplibregl.GeoJSONSourceSpecification['data'];
+    const noiseData = noiseContours as unknown as GeoJSONSourceSpecification['data'];
     if (!map.getSource(NOISE_SOURCE_ID)) {
       map.addSource(NOISE_SOURCE_ID, {
         type: 'geojson',
         data: noiseData,
       });
     } else {
-      (map.getSource(NOISE_SOURCE_ID) as maplibregl.GeoJSONSource).setData(noiseData);
+      (map.getSource(NOISE_SOURCE_ID) as GeoJSONSource).setData(noiseData);
     }
     if (!map.getLayer(NOISE_LAYER_ID)) {
       map.addLayer(
@@ -203,7 +203,7 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
     registerAirportIcons(map);
     if (!airports || airports.length === 0) {
       if (map.getSource(AIRPORT_SOURCE_ID)) {
-        (map.getSource(AIRPORT_SOURCE_ID) as maplibregl.GeoJSONSource).setData({
+        (map.getSource(AIRPORT_SOURCE_ID) as GeoJSONSource).setData({
           type: 'FeatureCollection',
           features: [],
         });
@@ -215,11 +215,11 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
     if (!map.getSource(AIRPORT_SOURCE_ID)) {
       map.addSource(AIRPORT_SOURCE_ID, {
         type: 'geojson',
-        data: data as unknown as maplibregl.GeoJSONSourceSpecification['data'],
+        data: data as unknown as GeoJSONSourceSpecification['data'],
       });
     } else {
-      (map.getSource(AIRPORT_SOURCE_ID) as maplibregl.GeoJSONSource).setData(
-        data as unknown as maplibregl.GeoJSONSourceSpecification['data'],
+      (map.getSource(AIRPORT_SOURCE_ID) as GeoJSONSource).setData(
+        data as unknown as GeoJSONSourceSpecification['data'],
       );
     }
     if (!map.getLayer(AIRPORT_MARKER_LAYER_ID)) {
