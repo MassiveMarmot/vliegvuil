@@ -130,11 +130,36 @@ Session 22c shipped the workflows (`.github/workflows/data-check.yml` and
 `data-refresh.yml`); the commands above still work locally for a manual run.
 The refresh workflow runs in two jobs: the job that runs project code
 (downloading untrusted upstream data) holds a read-only token; only the
-separate `open-pr` job — which runs no project code — can write, after
-re-validating the artifact against a path allowlist. GitHub disables
-scheduled workflows in a public repository after 60 days without repository
-activity (GitHub docs); merging the monthly data PRs counts as activity,
-but if you stop, re-enable the workflows in the Actions tab.
+separate `open-pr` job — which runs no project code (git, gh and bash
+only; no pnpm, no node_modules) — can write, after re-validating the
+artifact against a path allowlist. The PR body is built by tested
+TypeScript in the read-only `refresh` job and travels in the artifact.
+GitHub disables scheduled workflows in a public repository after 60 days
+without repository activity (GitHub docs); merging the monthly data PRs
+counts as activity, but if you stop, re-enable the workflows in the
+Actions tab.
+
+**Data PRs do not automatically run CI.** A pull request opened with the
+workflow's own `GITHUB_TOKEN` does not trigger the `ci.yml` `pull_request`
+event — that is deliberate GitHub behaviour (events created by
+`GITHUB_TOKEN` do not trigger new workflow runs, to prevent recursive
+runs), not a bug in the workflow. The PR therefore shows no CI checks
+until a human acts. Options, in the order we use them:
+
+- **Close and reopen the PR.** The reopened PR's event is created by the
+  user, so `ci.yml` runs normally. This is the routine path: nothing to
+  configure, no secrets.
+- A maintainer can also run the workflow manually on the PR branch via
+  the `workflow_dispatch` trigger of `ci.yml` (or re-run a failed check
+  from the PR's Checks tab).
+
+We deliberately do NOT work around this with a PAT or any other secret:
+that would make an automation token with write access a permanent part
+of the repo's secret store for a convenience gain only. The data PR's
+own gates (schema, magic bytes, size caps, row-count tolerance, the
+artifact allowlist) already ran in the `refresh` job before the PR was
+opened; CI on the data PR is a second opinion, not the only line of
+defence.
 
 ## When a manual source shows `update-available`
 
