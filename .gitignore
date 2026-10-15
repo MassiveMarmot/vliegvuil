@@ -8,6 +8,13 @@ build/
 coverage/
 *.tsbuildinfo
 .vite/
+# Compiled output must never sit next to TypeScript sources (the fixtures
+# shadowing bug: bundlers resolve .js before .ts, so a stale .js fixture
+# silently wins over the edited .ts). Fixtures are committed as .ts only.
+core/__tests__/fixtures/**/*.js
+core/__tests__/fixtures/**/*.js.map
+core/__tests__/fixtures/**/*.d.ts
+core/__tests__/fixtures/**/*.d.ts.map
 
 # Env and secrets (none should exist; see AGENTS.md)
 .env

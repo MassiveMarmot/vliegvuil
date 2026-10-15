@@ -48,15 +48,15 @@ describe('AdsbfiProvider', () => {
     // Both fixture aircraft fall inside the NL bbox
     expect(positions).toHaveLength(2);
     expect(positions[0]).toMatchObject({
-      icao24: '484507',
-      callsign: 'KLM1035',
-      registration: 'PH-BHA',
-      type: 'B789',
-      altitude: 36000,
+      icao24: '406A92',
+      callsign: 'EZY87EW',
+      registration: 'G-EZWR',
+      type: 'A320',
+      altitude: 24000,
       onGround: false,
     });
     expect(positions[1]).toMatchObject({
-      icao24: '404462',
+      icao24: '4841A9',
       onGround: true,
       altitude: null,
     });
@@ -73,6 +73,21 @@ describe('AdsbfiProvider', () => {
     } as Response);
     const positions = await provider.fetchPositions(NETHERLANDS_BBOX);
     expect(positions).toHaveLength(2);
+  });
+
+  it("refuses a 'now' in milliseconds (real API sends unix seconds)", async () => {
+    const provider = new AdsbfiProvider({ maxRetries: 1 });
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: new Headers(),
+      json: () =>
+        Promise.resolve({ now: 1792079276001, aircraft: fixture.aircraft }),
+    } as Response);
+    await expect(
+      provider.fetchPositions(NETHERLANDS_BBOX),
+    ).rejects.toThrow(/not unix seconds/);
   });
 
   it('treats a missing aircraft array as empty', async () => {
@@ -123,9 +138,9 @@ describe('AdsbfiProvider', () => {
     const positions = await provider.fetchPositions(NETHERLANDS_BBOX);
     expect(positions).toHaveLength(3);
     expect(positions.map((p) => p.icao24)).toEqual([
-      '484507',
-      '404462',
-      '484507',
+      '406A92',
+      '4841A9',
+      '406A92',
     ]);
   });
 
