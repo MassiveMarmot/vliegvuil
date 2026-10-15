@@ -121,6 +121,15 @@ export class AdsbfiProvider extends PositionProvider {
       );
     }
     const data = (await response.json()) as AdsbfiResponse;
+    // `now` is unix SECONDS in the real API (verified against the live
+    // endpoint, e.g. 1792079276.001). If a response ever carries
+    // milliseconds instead, every aircraft timestamp would be ~555000
+    // years in the future; fail loudly rather than produce garbage.
+    if (typeof data.now === 'number' && data.now > 1e12) {
+      throw new Error(
+        `adsb.fi API error: 'now' is not unix seconds (${data.now}); refusing to parse`,
+      );
+    }
     // A malformed upstream payload must not break the whole batch: the
     // aircraft array is optional and a single bad entry is skipped.
     const aircraft = Array.isArray(data.aircraft) ? data.aircraft : [];
