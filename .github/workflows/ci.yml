@@ -61,6 +61,17 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
+      # pnpm build unconditionally rewrites sources.json (lastUpdated)
+      # and web/public/data/*.json (see AGENTS.md); those diffs are
+      # build output, never committed from here — data reaches the repo
+      # only through data-refresh PRs. Reset them, then demand a clean
+      # tree: any other modified tracked file, or any new untracked file
+      # the build emitted, means the build is not reproducible.
+      # git status --porcelain (not git diff) so untracked files count.
+      - name: Fail if the build modifies tracked files
+        run: |
+          git checkout -- sources.json web/public/data
+          test -z "$(git status --porcelain)" || { git status --short; exit 1; }
 
   validate-workflows:
     runs-on: ubuntu-latest
