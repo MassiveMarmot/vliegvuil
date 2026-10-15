@@ -83,6 +83,11 @@ ECHO_PID=$!
 # the test requests the percent-encoded form (as a browser would).
 mkdir -p "$WORK/fonts/Space Grotesk Regular"
 printf 'pbf-fixture' > "$WORK/fonts/Space Grotesk Regular/0-255.pbf"
+# Fixture for the /assets/* MIME check: a real ESM module served as
+# text/javascript, like the MapLibre worker.
+mkdir -p "$WORK/assets"
+printf 'export const ok = 1;\n' > "$WORK/assets/worker-fixture.mjs"
+
 # Fixture for the /tiles/* HSTS check (one tile file; the real tile tree is
 # still being downloaded on the VPS, so this fixture only proves the
 # site-level header reaches tile responses).
@@ -112,6 +117,14 @@ sed -e "s/__ECHO_PORT__/$ECHO_PORT/" > "$WORK/Caddyfile.test" <<'EOF'
 		file_server
 	}
 	handle /tiles/* {
+		root * __WORK__
+		file_server
+	}
+	# Same /assets/* handle as the real Caddyfile: files only, no SPA
+	# fallback, so a missing asset is a real 404 (the missing MapLibre
+	# worker once came back as index.html/text-html and Firefox rejected
+	# it with "disallowed MIME type"). One .mjs fixture proves the MIME.
+	handle /assets/* {
 		root * __WORK__
 		file_server
 	}
@@ -403,4 +416,31 @@ with urllib.request.urlopen(existing, timeout=10) as r:
         print('FAIL: existing glyph range served as HTML:', ctype)
         sys.exit(1)
 print('OK: existing glyph range returns 200 with non-HTML content type:', ctype)
+
+# --- /assets/* : files only, no SPA fallback; .mjs = JavaScript MIME ---
+# A missing asset must be a real 404: when the MapLibre worker was absent
+# from the build, the SPA fallback answered it with index.html and Firefox
+# rejected the text/html worker ("disallowed MIME type").
+try:
+    urllib.request.urlopen(f'http://127.0.0.1:{proxy_port}/assets/does-not-exist.mjs', timeout=10)
+    print('FAIL: missing /assets/*.mjs did not return 404')
+    sys.exit(1)
+except urllib.error.HTTPError as e:
+    if e.status != 404:
+        print('FAIL: missing /assets/*.mjs returned', e.status, 'instead of 404')
+        sys.exit(1)
+print('OK: a missing /assets/*.mjs returns 404 (no SPA fallback)')
+
+# The worker-class file (.mjs) must be served with a JavaScript type —
+# Firefox refuses workers with any other MIME.
+with urllib.request.urlopen(
+    f'http://127.0.0.1:{proxy_port}/assets/worker-fixture.mjs', timeout=10) as r:
+    act = r.headers.get('Content-Type', '')
+    if r.status != 200:
+        print('FAIL: /assets/*.mjs fixture returned', r.status)
+        sys.exit(1)
+    if 'javascript' not in act.lower():
+        print('FAIL: .mjs served with wrong content type:', act)
+        sys.exit(1)
+print('OK: .mjs under /assets/ is served as', act)
 EOF

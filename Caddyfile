@@ -188,6 +188,16 @@ vliegvuil.nl {
 	handle /fonts/* {
 		file_server
 	}
+	# Hashed build output plus the unhashed MapLibre worker. Files only,
+	# never the SPA fallback: a missing asset must be a real 404, not a
+	# 200 with index.html. When the MapLibre worker was missing from the
+	# build, the SPA fallback answered it with text/html and Firefox
+	# rejected it ("disallowed MIME type"), which turned a packaging bug
+	# into a MIME puzzle — a 404 here would have named the problem.
+	# .mjs is served as text/javascript by Caddy's mime table (Go).
+	handle /assets/* {
+		file_server
+	}
 	# SPA routing: serve the file if it exists, otherwise index.html.
 	# Must live inside a catch-all handle: a top-level try_files runs before
 	# handle blocks and would rewrite /api/* to /index.html, bypassing the
