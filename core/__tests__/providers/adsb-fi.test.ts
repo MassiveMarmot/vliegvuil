@@ -88,6 +88,47 @@ describe('AdsbfiProvider', () => {
     expect(positions).toEqual([]);
   });
 
+  it('treats a non-array aircraft value as empty instead of throwing', async () => {
+    const provider = new AdsbfiProvider();
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: new Headers(),
+      json: () => Promise.resolve({ now: 100, aircraft: { not: 'an array' } }),
+    } as Response);
+    const positions = await provider.fetchPositions(NETHERLANDS_BBOX);
+    expect(positions).toEqual([]);
+  });
+
+  it('skips a single malformed aircraft instead of failing the batch', async () => {
+    const provider = new AdsbfiProvider();
+    // Real fixture entries plus malformed ones: missing hex, non-string
+    // hex, empty hex. The two fixture aircraft must still come through.
+    const batch = [
+      fixture.aircraft[0],
+      { ...fixture.aircraft[1] as object, hex: undefined },
+      fixture.aircraft[1],
+      { ...fixture.aircraft[0] as object, hex: 12345 },
+      { ...fixture.aircraft[1] as object, hex: '   ' },
+      fixture.aircraft[0],
+    ];
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: new Headers(),
+      json: () => Promise.resolve({ now: fixture.now, aircraft: batch }),
+    } as Response);
+    const positions = await provider.fetchPositions(NETHERLANDS_BBOX);
+    expect(positions).toHaveLength(3);
+    expect(positions.map((p) => p.icao24)).toEqual([
+      '484507',
+      '404462',
+      '484507',
+    ]);
+  });
+
   it('excludes aircraft outside the bbox', async () => {
     const provider = new AdsbfiProvider();
     const farAway = [

@@ -6,6 +6,7 @@ import type { AircraftPosition, PositionProvider } from '@vliegvuil/core';
 // Mock the core provider factory; the real AdsbfiProvider is covered by
 // core/__tests__/providers/adsb-fi.test.ts against the real fixture.
 const fetchPositions = vi.fn();
+const providerLastError = { current: null as Error | null };
 vi.mock('@vliegvuil/core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@vliegvuil/core')>();
   return {
@@ -14,7 +15,7 @@ vi.mock('@vliegvuil/core', async (importOriginal) => {
       fetchPositions: (...args: unknown[]) =>
         fetchPositions(...(args as Parameters<PositionProvider['fetchPositions']>)),
       getDataAge: () => 0,
-      getLastError: () => null,
+      getLastError: () => providerLastError.current,
       isStale: () => false,
     }),
   };
@@ -49,6 +50,7 @@ function position(overrides: Partial<AircraftPosition> = {}): AircraftPosition {
 describe('useAircraftData', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    providerLastError.current = null;
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-01-01T12:00:00Z'));
   });
@@ -136,6 +138,89 @@ describe('useAircraftData', () => {
     });
     expect(fetchPositions.mock.calls.length).toBe(callsAfterStop);
     expect(result.current.isPolling).toBe(false);
+  });
+
+  it('treats a 500 as a failed poll: error set, stale banner, retry, then recovery', async () => {
+    // First a success so aircraft are on screen
+    fetchPositions.mockResolvedValue([position()]);
+    const { result } = renderHook(() =>
+      useAircraftData({ interval: 1000, retryDelay: 100 }),
+    );
+    act(() => {
+      result.current.startPolling();
+    });
+    await vi.waitFor(() => {
+      expect(result.current.aircraft.size).toBe(1);
+    });
+    expect(result.current.error).toBeNull();
+    expect(result.current.showStaleBanner).toBe(false);
+
+    // Then a 500: the hook must surface it, not treat it as success
+    fetchPositions.mockRejectedValue(new Error('adsb.fi API error: 500 Internal Server Error'));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+    await vi.waitFor(() => {
+      expect(result.current.error).toBe('adsb.fi API error: 500 Internal Server Error');
+    });
+    expect(result.current.showStaleBanner).toBe(true);
+    // Aircraft stay on screen (the hook never clears them on an error)
+    expect(result.current.aircraft.size).toBe(1);
+
+    // The retry fires without waiting for the poll interval
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+    await vi.waitFor(() => {
+      expect(fetchPositions.mock.calls.length).toBeGreaterThanOrEqual(3);
+    });
+
+    // Recovery: the next success clears error and banner
+    fetchPositions.mockResolvedValue([position()]);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+    await vi.waitFor(() => {
+      expect(result.current.error).toBeNull();
+      expect(result.current.showStaleBanner).toBe(false);
+      expect(result.current.aircraft.size).toBe(1);
+    });
+  });
+
+  it('treats a cache-served failed poll (provider lastError set) as a failure, not success', async () => {
+    // Simulate the provider serving its young cache after a failed fetch:
+    // positions resolve AND getLastError() returns the error (the wiring
+    // the core PositionProvider now provides).
+    fetchPositions.mockResolvedValue([position()]);
+    const { result } = renderHook(() =>
+      useAircraftData({ interval: 1000, retryDelay: 100 }),
+    );
+    act(() => {
+      result.current.startPolling();
+    });
+    await vi.waitFor(() => {
+      expect(result.current.aircraft.size).toBe(1);
+    });
+
+    providerLastError.current = new Error('adsb.fi API error: 503 Service Unavailable');
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+    await vi.waitFor(() => {
+      expect(result.current.error).toBe('adsb.fi API error: 503 Service Unavailable');
+    });
+    expect(result.current.showStaleBanner).toBe(true);
+    // A successful poll must not be mistaken for a cached failure twice
+
+    // Recovery: lastError cleared with the next successful fetch
+    providerLastError.current = null;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+    await vi.waitFor(() => {
+      expect(result.current.error).toBeNull();
+      expect(result.current.showStaleBanner).toBe(false);
+    });
   });
 
   it('shows the stale banner when data is older than 3 intervals', async () => {

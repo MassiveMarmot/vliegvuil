@@ -114,9 +114,20 @@ export class AdsblolProvider extends PositionProvider {
       );
     }
     const data = (await response.json()) as AdsblolResponse;
-    return (data.ac ?? [])
-      .filter((ac) => this.isInBoundingBox(ac, bbox))
+    // A malformed upstream payload must not break the whole batch: the
+    // aircraft array is optional and a single bad entry is skipped.
+    const acList = Array.isArray(data.ac) ? data.ac : [];
+    return acList
+      .filter(
+        (ac) =>
+          this.isWellFormed(ac) && this.isInBoundingBox(ac, bbox),
+      )
       .map((ac) => this.convertAircraft(ac, data.now));
+  }
+
+  /** A single aircraft needs a usable hex string; anything else is skipped. */
+  private isWellFormed(ac: AdsblolAircraft): boolean {
+    return typeof ac.hex === 'string' && ac.hex.trim().length > 0;
   }
 
   // Returns a URL string, not a URL object: relative base URLs (the

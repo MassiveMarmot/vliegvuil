@@ -100,25 +100,78 @@ describe('PositionProvider', () => {
       expect(positions[0].icao24).toBe('484002');
     });
 
-    it('should return cached data on failure if cache exists', async () => {
+    it('serves the young cache after a failed fetch and reports it via getLastError', async () => {
       // Populate cache
       await provider.fetchPositions(NETHERLANDS_BBOX);
-
-      // Make provider fail
       provider.setShouldFail(true);
 
-      // Should return cached data
-      const positions = await provider.fetchPositions(NETHERLANDS_BBOX);
+      // Age the cache past cacheTTL so a fetch is attempted, but keep it
+      // younger than 3x cacheTTL: it is served, with the failure visible
+      // through getLastError so callers treat it as a failed poll.
+      vi.advanceTimersByTime(6000);
+      const positionsPromise = provider.fetchPositions(NETHERLANDS_BBOX);
+      // Attach handlers before flushing the retry backoffs (pollInterval
+      // 100: waits of 100 and 200 ms) so no rejection is unhandled.
+      const settled = positionsPromise.then(
+        (positions) => ({ ok: true as const, positions }),
+        (error: Error) => ({ ok: false as const, error }),
+      );
+      await vi.advanceTimersByTimeAsync(400);
+      const outcome = await settled;
+      expect(outcome.ok).toBe(true);
+      const positions = outcome.ok ? outcome.positions : [];
+
       expect(positions).toHaveLength(1);
       expect(positions[0].icao24).toBe('484001');
+      expect(provider.getLastError()?.message).toBe('Mock fetch failure');
     });
 
-    it('should return empty array on failure with no cache', async () => {
+    it('rethrows after the last retry when the cache is too old', async () => {
+      // Populate cache
+      await provider.fetchPositions(NETHERLANDS_BBOX);
+      provider.setShouldFail(true);
+
+      // Age the cache beyond 3x cacheTTL (15 s with cacheTTL 5)
+      vi.advanceTimersByTime(16000);
+      const positionsPromise = provider.fetchPositions(NETHERLANDS_BBOX);
+      // Attach the rejection handler before flushing the backoff timers,
+      // otherwise the rejection is unhandled while the timers run.
+      const rejection = expect(positionsPromise).rejects.toThrow(
+        'Mock fetch failure',
+      );
+      await vi.advanceTimersByTimeAsync(400);
+      await rejection;
+
+      expect(provider.getLastError()?.message).toBe('Mock fetch failure');
+    });
+
+    it('rethrows after the last retry with no cache (never a silent empty array)', async () => {
       const failingProvider = new TestPositionProvider([], { maxRetries: 1, timeout: 100 });
       failingProvider.setShouldFail(true);
 
-      const positions = await failingProvider.fetchPositions(NETHERLANDS_BBOX);
-      expect(positions).toHaveLength(0);
+      await expect(
+        failingProvider.fetchPositions(NETHERLANDS_BBOX),
+      ).rejects.toThrow('Mock fetch failure');
+    });
+
+    it('sets lastUpdateTime/cacheTimestamp when the fetch completes, not when it starts', async () => {
+      const slowData: AircraftPosition[] = [mockAircraft];
+      const slow = new (class extends TestPositionProvider {
+        async fetchFromSource(_bbox: unknown): Promise<AircraftPosition[]> {
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          return slowData;
+        }
+      })(slowData, { maxRetries: 1, timeout: 5000 });
+
+      const fetchPromise = slow.fetchPositions(NETHERLANDS_BBOX);
+      // While the fetch is in flight, the timestamps must stay unset.
+      expect(slow.getDataAge()).toBeGreaterThan(1000);
+      await vi.advanceTimersByTimeAsync(2000);
+      await fetchPromise;
+      // Completed at t=2000, not at t=0 when the fetch started (the old
+      // bug: timestamps set at fetch start would make the age 3 here).
+      vi.advanceTimersByTime(1000);
+      expect(slow.getDataAge()).toBe(1);
     });
   });
 
@@ -158,7 +211,9 @@ describe('PositionProvider', () => {
     it('should return error after failure', async () => {
       const failingProvider = new TestPositionProvider([], { maxRetries: 1, timeout: 100 });
       failingProvider.setShouldFail(true);
-      await failingProvider.fetchPositions(NETHERLANDS_BBOX);
+      await expect(
+        failingProvider.fetchPositions(NETHERLANDS_BBOX),
+      ).rejects.toThrow('Mock fetch failure');
       expect(failingProvider.getLastError()).toBeDefined();
       expect(failingProvider.getLastError()?.message).toContain('Mock fetch failure');
     });
