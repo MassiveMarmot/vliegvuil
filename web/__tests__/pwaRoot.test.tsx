@@ -110,6 +110,27 @@ describe('manifest start_url (built output)', () => {
     expect(manifest.scope).toBe('/');
   });
 
+  it('the MapLibre worker file is emitted unhashed (build-output wiring)', (): void => {
+    // maplibre-gl 6 derives the worker URL at runtime from
+    // import.meta.url of the chunk in /assets/, so the worker MUST be at
+    // dist/assets/maplibre-gl-worker.mjs — unhashed, or the runtime URL
+    // never matches and every GeoJSON layer silently dies in the browser
+    // (observed live: Firefox "disallowed MIME type text/html").
+    const worker = resolve(__dirname, '..', 'dist', 'assets', 'maplibre-gl-worker.mjs');
+    if (!existsSync(worker)) {
+      // covered by the guard above if the build never ran
+      throw new Error(
+        'dist/assets/maplibre-gl-worker.mjs is MISSING: the maplibreWorkerAsset ' +
+          'plugin in web/vite.config.ts did not emit the worker. Planes, airports ' +
+          'and the noise overlay will not render.',
+      );
+    }
+    const bytes = readFileSync(worker);
+    expect(bytes.length).toBeGreaterThan(100_000);
+    // It is a self-contained ESM module: no relative imports that would 404.
+    expect(bytes.subarray(0, 50).includes('import')).toBe(false);
+  });
+
   it('the favicon referenced by index.html and the SW precache exists', (): void => {
     const favicon = resolve(__dirname, '..', 'public', 'favicon.ico');
     expect(existsSync(favicon), 'web/public/favicon.ico not found').toBe(true);
