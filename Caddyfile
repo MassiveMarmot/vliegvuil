@@ -25,7 +25,11 @@ vliegvuil.nl {
 	# Security headers (same origin only; the API is proxied below, so no
 	# third-party origins appear in connect-src and no CORS headers exist).
 	header {
-		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; worker-src 'self' blob:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"
+		# style-src has no 'unsafe-inline': maplibre-gl 4.7.1 and the built
+		# bundle contain no createElement('style'), no setAttribute('style')
+		# and no style.cssText (verified by grepping the shipped dist; React
+		# style props go through the CSSOM, which CSP does not restrict).
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; worker-src 'self' blob:; frame-ancestors 'none'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"
 		Referrer-Policy "strict-origin-when-cross-origin"
@@ -63,7 +67,21 @@ vliegvuil.nl {
 
 	# Same-origin API proxy: /api/* -> https://opendata.adsb.fi/api/v2/*
 	# This removes CORS entirely: the browser only ever talks to vliegvuil.nl.
-	handle /api/* {
+	#
+	# The app (core/src/providers/adsb-fi.ts buildUrl) only ever requests
+	# GET /api/lat/{lat 4 decimals}/lon/{lon 4 decimals}/dist/{int} with a
+	# numeric lat/lon and an integer radius. Only that shape is proxied:
+	# any other /api path answers 404 (an unmatched handle_path falls
+	# through to the static site), and any other method answers 405 via
+	# the explicit method matcher. POST/PUT/DELETE never reach adsb.fi.
+	@api_shaped {
+		path_regexp ^/api/lat/-?[0-9]+(\.[0-9]+)?/lon/-?[0-9]+(\.[0-9]+)?/dist/[0-9]+/?$
+		method GET HEAD
+	}
+	# handle blocks are mutually exclusive and evaluated in order, so the
+	# specific @api_shaped block must come first; the /api/* catch-all
+	# then answers everything the app would never request.
+	handle @api_shaped {
 		# Stricter per-IP rate limit for the proxied API
 		rate_limit {
 			zone api_per_ip {
@@ -129,6 +147,16 @@ vliegvuil.nl {
 				header_down -X-Powered-By
 			}
 		}
+	}
+	# Anything else under /api/*: 405 when the lat/lon/dist shape matches
+	# but the method is not GET/HEAD, 404 for every other path or method.
+	# POST/PUT/DELETE and probing paths never reach adsb.fi. Caddy has no
+	# 405 responder; respond with the status and set Allow on the 405s.
+	@api_shape_any_method path_regexp ^/api/lat/-?[0-9]+(\.[0-9]+)?/lon/-?[0-9]+(\.[0-9]+)?/dist/[0-9]+/?$
+	handle /api/* {
+		header @api_shape_any_method Allow "GET, HEAD"
+		respond @api_shape_any_method 405
+		respond 404
 	}
 
 	# Self-hosted BRT-A basemap tiles (session: self-host PDOK tiles).

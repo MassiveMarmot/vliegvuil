@@ -690,7 +690,7 @@ sudo systemd-run --unit=vliegvuil-tiles --working-directory=/srv/vliegvuil \
 Monitor and stop:
 
 ```bash
-journalctl -u vliegvuil-tiles -f          # progress (also: tiles.new/.download.log)
+journalctl -u vliegvuil-tiles -f          # progress (also: tiles.new.download.log in /srv/vliegvuil)
 systemctl stop vliegvuil-tiles             # clean stop; rerun the same command to resume
 ```
 
@@ -700,8 +700,20 @@ retries with backoff, and aborts after 5 consecutive failures instead of
 hammering the server (PDOK Fair Use publishes no numeric rate limit). It is
 resumable: existing valid tiles are skipped, safe to Ctrl-C and rerun.
 
-When it finishes it atomically swaps `tiles.new` into `/srv/vliegvuil/tiles`
-(keeping `tiles.old` for rollback), then reload Caddy:
+When it finishes it swaps `tiles.new` into `/srv/vliegvuil/tiles`
+(keeping `tiles.old` for rollback), then reload Caddy. The swap is
+guarded: a partial run — a custom `--min-zoom`/`--max-zoom` range, a
+custom `--out`, or any non-404 failure — is NOT swapped in (the live set
+stays untouched; the partial set remains in `tiles.new` for a rerun;
+the script exits 1). 404s are genuine upstream holes and do not block
+the swap: the map falls back to parent tiles for those. State and the
+download log are written next to the tile tree (`tiles.new.state.json`,
+`tiles.new.download.log` in `/srv/vliegvuil/`), never inside it, so
+they are never published under `/tiles/`. The rename pair (live → old,
+new → live) is two separate `rename()` calls — POSIX cannot atomically
+exchange directories — so there is a sub-millisecond gap where no live
+directory exists; Caddy answers 404 for those instants and MapLibre
+falls back to parent tiles, so visitors never see a broken map.
 
 ```bash
 sudo systemctl reload caddy
