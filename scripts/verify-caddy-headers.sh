@@ -101,6 +101,9 @@ sed -e "s/__ECHO_PORT__/$ECHO_PORT/" > "$WORK/Caddyfile.test" <<'EOF'
 	# vliegvuil.nl site (HSTS part), so the HSTS response assertions below
 	# run against the same directive the production site uses.
 	header Strict-Transport-Security "max-age=86400"
+	# Same CSP as the production site: no 'unsafe-inline' in style-src,
+	# frame-ancestors 'none'. The fixture asserts both reach the client.
+	header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; worker-src 'self' blob:; frame-ancestors 'none'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"
 	# Same /fonts/* handle as the real Caddyfile: no SPA fallback, so a
 	# missing glyph range is a 404, not index.html. __WORK__ is replaced
 	# with the temp dir so the root points at the fixture files below.
@@ -112,7 +115,15 @@ sed -e "s/__ECHO_PORT__/$ECHO_PORT/" > "$WORK/Caddyfile.test" <<'EOF'
 		root * __WORK__
 		file_server
 	}
-	handle /api/* {
+	# Same /api method+shape restriction as the real Caddyfile: only
+	# GET/HEAD /api/lat/{n}/lon/{n}/dist/{n} is proxied to the echo
+	# upstream; anything else under /api is 405 (right shape, wrong
+	# method) or 404 (wrong shape), and NEVER reaches the upstream.
+	@api_shaped {
+		path_regexp ^/api/lat/-?[0-9]+(\.[0-9]+)?/lon/-?[0-9]+(\.[0-9]+)?/dist/[0-9]+/?$
+		method GET HEAD
+	}
+	handle @api_shaped {
 		uri strip_prefix /api
 		reverse_proxy http://127.0.0.1:__ECHO_PORT__ {
 			header_up -X-Forwarded-For
@@ -132,6 +143,12 @@ sed -e "s/__ECHO_PORT__/$ECHO_PORT/" > "$WORK/Caddyfile.test" <<'EOF'
 			header_down -Via
 			header_down -X-Powered-By
 		}
+	}
+	@api_shape_any_method path_regexp ^/api/lat/-?[0-9]+(\.[0-9]+)?/lon/-?[0-9]+(\.[0-9]+)?/dist/[0-9]+/?$
+	handle /api/* {
+		header @api_shape_any_method Allow "GET, HEAD"
+		respond @api_shape_any_method 405
+		respond 404
 	}
 }
 EOF
@@ -172,7 +189,7 @@ import json, sys, urllib.request, urllib.error
 proxy_port = sys.argv[2]
 base = f'http://127.0.0.1:{proxy_port}'
 req = urllib.request.Request(
-    f'http://127.0.0.1:{proxy_port}/api/point/52.1/5.3/50',
+    f'http://127.0.0.1:{proxy_port}/api/lat/52.2500/lon/5.0000/dist/194',
     headers={
         'User-Agent': 'Mozilla/5.0 (test client)',
         'X-Forwarded-For': '203.0.113.7',
@@ -208,7 +225,7 @@ print('OK: User-Agent was replaced with', headers['User-Agent'])
 # Response-side check: fetch through the proxy again and assert the
 # upstream headers listed above were stripped from the client response.
 with urllib.request.urlopen(
-    f'http://127.0.0.1:{proxy_port}/api/point/52.1/5.3/50', timeout=10
+    f'http://127.0.0.1:{proxy_port}/api/lat/52.2500/lon/5.0000/dist/194', timeout=10
 ) as r:
     response_headers = {k.lower(): v for k, v in r.headers.items()}
     # Keep every Via line (a dict would collapse duplicates; Caddy appends
@@ -241,7 +258,7 @@ print('OK: Cloudflare/reporting/set-cookie headers are stripped from the respons
 # /api included. The strip above removes only the upstream's copy; assert
 # exactly one header line with the ramp-up value remains.
 with urllib.request.urlopen(
-    f'http://127.0.0.1:{proxy_port}/api/point/52.1/5.3/50', timeout=10
+    f'http://127.0.0.1:{proxy_port}/api/lat/52.2500/lon/5.0000/dist/194', timeout=10
 ) as r:
     hsts = r.headers.get_all('Strict-Transport-Security') or []
     if hsts != ['max-age=86400']:
@@ -290,6 +307,75 @@ except urllib.error.HTTPError as e:
     # completed - the header check only runs on a 200 in this fixture.
     print(f'NOTE: /tiles/ returned {e.status}; HSTS tile check skipped (tile run in progress on the VPS)')
 print('OK: HSTS assertions complete')
+
+# --- /api method + shape restriction (new behaviour) ---
+# Wrong-shape and wrong-method requests must fail with the expected
+# status codes (404/405) and the Allow header must be set on 405; the
+# echo upstream's header log proves only proxied (shaped GET/HEAD)
+# requests ever reach it.
+import urllib.request as _ur
+
+def _status(path, method='GET'):
+    req = _ur.Request(f'http://127.0.0.1:{proxy_port}{path}', method=method)
+    try:
+        with _ur.urlopen(req, timeout=10) as r:
+            return r.status, dict(r.headers)
+    except urllib.error.HTTPError as e:
+        return e.status, dict(e.headers)
+
+# GET with the right shape proxies (200, answered by the echo upstream)
+code, _ = _status('/api/lat/52.2500/lon/5.0000/dist/194')
+assert code == 200, f'shaped GET expected 200, got {code}'
+print('OK: GET /api/lat/../lon/../dist/.. is proxied')
+
+# POST with the right shape: 405 + Allow, and never proxied
+code, hdrs = _status('/api/lat/52.2500/lon/5.0000/dist/194', method='POST')
+assert code == 405, f'POST to shaped path expected 405, got {code}'
+assert hdrs.get('Allow') == 'GET, HEAD', f'405 must carry Allow: GET, HEAD, got {hdrs.get("Allow")}'
+print('OK: POST to the shaped path returns 405 with Allow: GET, HEAD')
+
+# DELETE with the right shape: also 405
+code, _ = _status('/api/lat/52.2500/lon/5.0000/dist/194', method='DELETE')
+assert code == 405, f'DELETE to shaped path expected 405, got {code}'
+print('OK: DELETE to the shaped path returns 405')
+
+# GET with the wrong shape: 404, never proxied. Note on traversal probes:
+# Go's HTTP stack (hence Caddy) decodes %2e%2e and cleans ../-segments BEFORE
+# the handler matchers run, so /api/%2e%2e/... never appears under /api to
+# any handler — it falls through to the static site (serving the SPA),
+# never to the proxy. Assert that instead: the escaped-traversal request
+# must NOT be proxied (any status is fine as long as it is not the echo
+# upstream's JSON with an api path recorded).
+for bad in ['/api/', '/api/point/52.1/5.3/50', '/api/lat/52.1/lon/5.3',
+            '/api/lat/abc/lon/5.3/dist/10']:
+    code, _ = _status(bad)
+    assert code == 404, f'wrong-shape {bad} expected 404, got {code}'
+print('OK: wrong-shape /api paths return 404 (4 probed)')
+
+# Traversal: /api/%2e%2e/... is decoded and path-cleaned to /etc/passwd by
+# Caddy before matching, so it never enters the /api handles and never
+# reaches the upstream. It must not answer as the proxy would (JSON);
+# the fixture serves it from the static root (404 there: no such file).
+code, hdrs = _status('/api/%2e%2e/%2e%2e/etc/passwd')
+assert code != 200 or 'application/json' not in hdrs.get('Content-Type', ''), \
+    f'traversal probe must not be proxied (got {code} {hdrs.get("Content-Type")})'
+print('OK: traversal under /api is path-cleaned before matching and never proxied')
+
+# HEAD with the right shape proxies (the app does not send HEAD, but it
+# is in the allowed method set). The echo upstream answers 501 to HEAD
+# (python's BaseHTTPRequestHandler without do_HEAD) - a 501 PROVES the
+# request was proxied; a 404/405 would prove it was not.
+code, _ = _status('/api/lat/52.2500/lon/5.0000/dist/194', method='HEAD')
+assert code in (200, 501), f'HEAD expected 200 or 501 (proxied), got {code}'
+print('OK: HEAD on the shaped path is proxied (echo answers 501 to HEAD)')
+
+# --- CSP: no unsafe-inline in style-src, frame-ancestors 'none' ---
+with _ur.urlopen(f'http://127.0.0.1:{proxy_port}/', timeout=10) as r:
+    csp = r.headers.get('Content-Security-Policy', '')
+assert "style-src 'self'" in csp, 'style-src must be self only: ' + csp
+assert 'unsafe-inline' not in csp, 'CSP must not contain unsafe-inline anywhere: ' + csp
+assert "frame-ancestors 'none'" in csp, 'CSP must contain frame-ancestors none: ' + csp
+print("OK: CSP has style-src 'self' (no unsafe-inline) and frame-ancestors 'none'")
 print('Upstream received these headers:')
 for k, v in sorted(headers.items()):
     print(f'  {k}: {v}')

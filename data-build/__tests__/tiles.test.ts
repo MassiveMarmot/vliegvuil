@@ -15,9 +15,18 @@ async function loadScript(): Promise<{
   tilesForZoom: (z: number) => Array<{ z: number; x: number; y: number }>;
   allTiles: (min: number, max: number) => Array<{ z: number; x: number; y: number }>;
   validTile: (b: Buffer) => boolean;
+  swapAllowed: (o: {
+    minZoom: number;
+    maxZoom: number;
+    outDir: string;
+    failedCount: number;
+  }) => { allowed: boolean; reason: string };
 }> {
   return (await import(`file://${SCRIPT}`)) as never;
 }
+
+const STAGING = '/srv/vliegvuil/tiles.new';
+const COMPLETE = { minZoom: 6, maxZoom: 14, outDir: STAGING, failedCount: 0 };
 
 describe('BRT-A tile downloader', () => {
   it('covers the app bbox with the expected tile counts per zoom', async (): Promise<void> => {
@@ -64,6 +73,57 @@ describe('BRT-A tile downloader', () => {
     expect(script).toContain("'User-Agent': USER_AGENT");
     // the app bbox is the source of the tile bounds
     expect(script).toContain('minLon: 2.5, minLat: 50.5, maxLon: 7.5, maxLat: 54.0');
+  });
+
+  it('swapAllowed: a complete default-range run with no failures may swap', async (): Promise<void> => {
+    const m = await loadScript();
+    expect(m.swapAllowed(COMPLETE)).toEqual({ allowed: true, reason: 'complete set' });
+  });
+
+  it('swapAllowed: a custom zoom range must not swap', async (): Promise<void> => {
+    const m = await loadScript();
+    const minOnly = m.swapAllowed({ ...COMPLETE, minZoom: 8 });
+    expect(minOnly.allowed).toBe(false);
+    expect(minOnly.reason).toContain('--min-zoom 8');
+    const maxOnly = m.swapAllowed({ ...COMPLETE, maxZoom: 12 });
+    expect(maxOnly.allowed).toBe(false);
+    expect(maxOnly.reason).toContain('--max-zoom 12');
+  });
+
+  it('swapAllowed: a custom --out dir must not swap into the live root', async (): Promise<void> => {
+    const m = await loadScript();
+    const r = m.swapAllowed({ ...COMPLETE, outDir: '/tmp/partial-tiles' });
+    expect(r.allowed).toBe(false);
+    expect(r.reason).toContain('--out /tmp/partial-tiles');
+  });
+
+  it('swapAllowed: any non-404 failure must not swap', async (): Promise<void> => {
+    const m = await loadScript();
+    const r = m.swapAllowed({ ...COMPLETE, failedCount: 3 });
+    expect(r.allowed).toBe(false);
+    expect(r.reason).toContain('3 failed tiles');
+  });
+
+  it('state and log paths are written OUTSIDE the tile directory', async (): Promise<void> => {
+    // .state.json / .download.log inside OUT_DIR would be published under
+    // /tiles/ after the swap; they must live in the parent directory.
+    const script = readFileSync(SCRIPT, 'utf8');
+    expect(script).toContain("const STATE_PATH = join(dirname(OUT_DIR), `${basename(OUT_DIR)}.state.json`)");
+    expect(script).toContain("const LOG_PATH = join(dirname(OUT_DIR), `${basename(OUT_DIR)}.download.log`)");
+  });
+
+  it('Caddy restricts /api to GET/HEAD and the lat/lon/dist shape', (): void => {
+    const caddy = readFileSync(resolve(__dirname, '..', '..', 'Caddyfile'), 'utf8');
+    // The proxy handle is keyed on BOTH the method and the path shape;
+    // everything else under /api answers 405 (right shape, wrong method)
+    // or 404 (wrong shape).
+    expect(caddy).toMatch(/@api_shaped \{[\s\S]*?method GET HEAD[\s\S]*?\}/);
+    expect(caddy).toMatch(/path_regexp \^\/api\/lat\/-\?\[0-9\]/);
+    // the 405 carries Allow: GET, HEAD
+    expect(caddy).toContain('respond @api_shape_any_method 405');
+    expect(caddy).toContain('Allow "GET, HEAD"');
+    // the catch-all 404 for everything else under /api
+    expect(caddy).toMatch(/handle \/api\/\* \{[\s\S]*?respond 404/);
   });
 
   it('Caddy serves /tiles with a long cache and no directory listing', (): void => {

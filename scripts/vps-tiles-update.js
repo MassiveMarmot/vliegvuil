@@ -35,7 +35,7 @@
 
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 // --- constants: same URL the app uses today (web/src/types) ---
@@ -99,6 +99,26 @@ export function validTile(buffer) {
   );
 }
 
+/**
+ * Whether this run produced a COMPLETE tile set that may replace the live
+ * one. A partial set must never be swapped in:
+ * - a custom zoom range (--min-zoom/--max-zoom) covers only part of the
+ *   z6..z14 range the map uses;
+ * - a custom --out dir is not the staging dir the swap expects;
+ * - any non-404 failure (network error, 5xx after retries, invalid bytes)
+ *   means at least one tile the app may request is missing.
+ * 404s are NOT failures: a 404 is a genuine hole in upstream coverage
+ * that a complete rerun would hit too; swapping with known holes is the
+ * documented normal case (the map falls back to parent tiles).
+ */
+export function swapAllowed({ minZoom, maxZoom, outDir, failedCount }) {
+  if (minZoom !== DEFAULT_MIN_ZOOM) return { allowed: false, reason: `custom --min-zoom ${minZoom}` };
+  if (maxZoom !== DEFAULT_MAX_ZOOM) return { allowed: false, reason: `custom --max-zoom ${maxZoom}` };
+  if (outDir !== DEFAULT_STAGING_DIR) return { allowed: false, reason: `custom --out ${outDir}` };
+  if (failedCount > 0) return { allowed: false, reason: `${failedCount} failed tiles` };
+  return { allowed: true, reason: 'complete set' };
+}
+
 // --- CLI ---
 
 const args = process.argv.slice(2);
@@ -114,10 +134,13 @@ const DELAY_MS_OVERRIDE = argValue('--delay-ms', undefined);
 const MIN_ZOOM = Number(argValue('--min-zoom', String(DEFAULT_MIN_ZOOM)));
 const MAX_ZOOM = Number(argValue('--max-zoom', String(DEFAULT_MAX_ZOOM)));
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const OUT_DIR = argValue('--out', DRY_RUN ? join(REPO_ROOT, 'tiles.dry-run-sample') : '/srv/vliegvuil/tiles.new');
+const DEFAULT_STAGING_DIR = '/srv/vliegvuil/tiles.new';
+const OUT_DIR = argValue('--out', DRY_RUN ? join(REPO_ROOT, 'tiles.dry-run-sample') : DEFAULT_STAGING_DIR);
 const LIVE_DIR = '/srv/vliegvuil/tiles';
-const STATE_PATH = join(OUT_DIR, '.state.json');
-const LOG_PATH = join(OUT_DIR, '.download.log');
+// State and log live OUTSIDE the tile tree: OUT_DIR becomes LIVE_DIR in
+// the swap, so a .state.json inside it would be published under /tiles/.
+const STATE_PATH = join(dirname(OUT_DIR), `${basename(OUT_DIR)}.state.json`);
+const LOG_PATH = join(dirname(OUT_DIR), `${basename(OUT_DIR)}.download.log`);
 const SAMPLE_SIZE = 200;
 
 function log(line) {
@@ -294,7 +317,25 @@ async function main() {
   }
   log(`missing tiles total: ${missing} (a 404 is a genuine upstream hole; everything else was retried)`);
 
-  // atomic swap: tiles.new -> tiles, keep the previous set as tiles.old
+  // Swap only a complete set: a custom zoom range, a custom --out or
+  // any non-404 failure means OUT_DIR is NOT a full replacement for the
+  // live tiles, and swapping would leave the map with holes for zooms the
+  // app actually uses. Keep the live set; the staging dir stays for
+  // inspection and a rerun resumes from it.
+  const guard = swapAllowed({ minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM, outDir: OUT_DIR, failedCount: state.failed.length });
+  if (!guard.allowed) {
+    log(`NOT swapping into ${LIVE_DIR}: ${guard.reason}. The live tile set is untouched; the partial set stays at ${OUT_DIR}.`);
+    return 1;
+  }
+  // Swap with no moment without a live directory. POSIX rename() cannot
+  // atomically exchange two directories, so a rename pair always has a
+  // gap between "live -> old" and "staging -> live" (two separate
+  // rename() calls). Limitation, accepted and documented: the gap is two
+  // metadata operations (typically < 1 ms on local disk), Caddy's
+  // file_server returns 404 for those instants, and MapLibre silently
+  // falls back to parent tiles for 404s (verified in its source), so no
+  // visitor sees a broken map. The alternative (renameat2 RENAME_EXCHANGE)
+  // has no Node.js binding and needs a syscall addon.
   if (existsSync(LIVE_DIR)) {
     const old = `${LIVE_DIR}.old`;
     if (existsSync(old)) await rm(old, { recursive: true, force: true });
@@ -304,7 +345,7 @@ async function main() {
   await rename(OUT_DIR, LIVE_DIR);
   log(`swapped: ${OUT_DIR} -> ${LIVE_DIR}`);
   log(`next: reload Caddy (sudo systemctl reload caddy) and check https://vliegvuil.nl/tiles/8/132/84.png`);
-  return missing > 0 && state.failed.length > 0 ? 1 : 0;
+  return 0;
 }
 
 // Only run main when executed directly (not when imported by tests)
