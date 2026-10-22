@@ -59,6 +59,9 @@ export interface MapProps {
   airports?: readonly import('../airports/airports').AirportData[];
   /** Called when a visitor clicks an airport marker */
   onAirportClick?: (airport: AirportPopupData) => void;
+  /** Opens the aircraft list; offered from the fatal-init-failure notice
+   *  so visitors without WebGL2 still reach the data (session 25c). */
+  onOpenList?: () => void;
 }
 
 /**
@@ -67,11 +70,11 @@ export interface MapProps {
 const NOISE_SOURCE_ID = 'noise-contours';
 const NOISE_LAYER_ID = 'noise-contours-fill';
 
-export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContours, noiseEnabled = false, airports, onAirportClick }: MapProps): React.ReactElement {
+export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContours, noiseEnabled = false, airports, onAirportClick, onOpenList }: MapProps): React.ReactElement {
   // styleReady ('style.load') gates the data layers, not mapLoaded ('load'):
   // with every basemap tile 404ing, 'load' never fires (it requires the first
   // fully rendered frame) and aircraft stayed invisible until a click.
-  const { mapContainer, map, styleReady, tileError } = useMap(DEFAULT_MAP_CONFIG, PDOK_BRT_STYLE);
+  const { mapContainer, map, styleReady, tileError, mapInitError } = useMap(DEFAULT_MAP_CONFIG, PDOK_BRT_STYLE);
 
   // Update aircraft layer when data changes
   useEffect(() => {
@@ -305,6 +308,52 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
       className="map-container"
       style={{ width: '100%', height: '100%', minHeight: '400px' }}
     >
+      {/* Fatal init failure (WebGL2 unavailable): the map never started.
+          Distinct from mapError, which runtime 'error' events also set
+          (tile failures) and which must stay non-blocking. */}
+      {mapInitError && (
+        <div
+          role="status"
+          data-testid="map-init-error-notice"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.75rem',
+            padding: '1.5rem',
+            textAlign: 'center',
+            backgroundColor: '#f5f2ec',
+            color: '#3b352f',
+            fontSize: '0.9375rem',
+            zIndex: 30,
+          }}
+        >
+          <p style={{ margin: 0, maxWidth: '34rem' }}>
+            {t(
+              'map.webgl2Unavailable',
+              'Je browser biedt geen WebGL2 (dit kan door privacy-instellingen uitgeschakeld zijn). De lijst werkt nog wel.',
+            )}
+          </p>
+          {onOpenList && (
+            <button
+              type="button"
+              onClick={onOpenList}
+              style={{
+                padding: '0.4rem 1rem',
+                borderRadius: '0.375rem',
+                border: '1px solid #8c7f6b',
+                backgroundColor: '#fff',
+                color: '#3b352f',
+              }}
+            >
+              {t('map.openList', 'Vliegtuigenlijst openen')}
+            </button>
+          )}
+        </div>
+      )}
       {/* Non-blocking notice when the self-hosted basemap tiles fail to
           load; the aircraft layer keeps working (spec: planes unaffected) */}
       {tileError && (

@@ -31,6 +31,10 @@ export interface UseMapReturn {
   /** True once the style is loaded ('style.load') — independent of tiles. */
   styleReady: boolean;
   mapError: string | null;
+  /** Fatal init failure (e.g. WebGL2 unavailable): set only when the MapLibre
+   *  constructor throws, unlike mapError which is also set by runtime 'error'
+   *  events (tile failures and the like) and must stay non-blocking. */
+  mapInitError: string | null;
   /** Non-blocking notice when basemap tiles fail to load (self-hosted tiles) */
   tileError: boolean;
 }
@@ -44,6 +48,7 @@ export function useMap(config: MapConfig, _style?: MapStyle): UseMapReturn {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [styleReady, setStyleReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [mapInitError, setMapInitError] = useState<string | null>(null);
   const [tileError, setTileError] = useState(false);
 
   useEffect(() => {
@@ -175,6 +180,7 @@ export function useMap(config: MapConfig, _style?: MapStyle): UseMapReturn {
       };
     } catch (error) {
       setMapError(error instanceof Error ? error.message : 'Unknown map error');
+      setMapInitError(error instanceof Error ? error.message : 'Unknown map error');
       console.error('Failed to initialize map:', error);
     }
   }, [config.center, config.zoom, config.minZoom, config.maxZoom, config.pitch, config.bearing]);
@@ -186,6 +192,7 @@ export function useMap(config: MapConfig, _style?: MapStyle): UseMapReturn {
     styleReady,
     tileError,
     mapError,
+    mapInitError,
   };
 }
 

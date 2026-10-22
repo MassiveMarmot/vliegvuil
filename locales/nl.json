@@ -14,7 +14,9 @@
     "hideNoise": "Verberg geluidscontouren",
     "loadError": "De kaart kan niet worden geladen. Herlaad de pagina om de nieuwste versie te gebruiken.",
     "reload": "Herlaad",
-    "tileError": "Kaartachtergrond kon niet geladen worden"
+    "tileError": "Kaartachtergrond kon niet geladen worden",
+    "webgl2Unavailable": "Je browser biedt geen WebGL2 (dit kan door privacy-instellingen uitgeschakeld zijn). De lijst werkt nog wel.",
+    "openList": "Vliegtuigenlijst openen"
   },
   "noise": {
     "legendTitle": "Legenda geluidscontouren",
