@@ -290,6 +290,15 @@ function App(): React.ReactElement {
     });
   }, [route, navigate, language, announce, t]);
 
+  // Fatal map-init failure (WebGL2 unavailable): open the list view from
+  // the notice — a pure open, never a toggle-close (spec: the list is the
+  // data alternative to the map).
+  const handleOpenListFromMapError = useCallback((): void => {
+    if (!showList) {
+      handleToggleList();
+    }
+  }, [showList, handleToggleList]);
+
   // Noise overlay toggle with announcement (spec §6)
   const handleToggleNoise = useCallback(
     (enabled: boolean): void => {
@@ -449,6 +458,7 @@ function App(): React.ReactElement {
                 noiseEnabled={noiseEnabled}
                 airports={airports}
                 onAirportClick={handleAirportClick}
+                onOpenList={handleOpenListFromMapError}
               />
             </Suspense>
           </MapErrorBoundary>
