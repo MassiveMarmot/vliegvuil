@@ -101,7 +101,9 @@
     "caveatBasemap": "De achtergrondkaart toont Nederland in detail; in het buitenland zijn alleen landsgrenzen zichtbaar. Grenzen zijn indicatief, geen juridische grens.",
     "caveatAircraftDatabase": "Registratie- en typegegevens komen uit een communitydatabase en kunnen onvolledig of verouderd zijn. De database dient als fallback: ontbrekende registratie, type of operator wordt aangevuld vanuit de snapshot (zie de datum hierboven); live data heeft altijd voorrang.",
     "sectionUiIcons": "Kaarticonen",
-    "caveatUiIcons": "De UI- en kaarticonen zijn Lucide (ISC; van Feather afgeleide iconen zijn ook MIT). Licentiegegevens: LICENSES/lucide.txt."
+    "caveatUiIcons": "De UI- en kaarticonen zijn Lucide (ISC; van Feather afgeleide iconen zijn ook MIT). Licentiegegevens: LICENSES/lucide.txt.",
+    "sectionAnalytics": "Analytics",
+    "caveatAnalytics": "De landcode bij paginaweergaven komt uit de GeoLite2-database van MaxMind (ingesloten in de zelf-gehoste GoatCounter). Het IP-adres zelf wordt niet opgeslagen of gelogd."
   },
   "banner": {
     "loading": "Laden...",
@@ -161,7 +163,7 @@
     },
     "privacy": {
       "title": "Privacy",
-      "body": "Deze site gebruikt geen analytics, geen cookies en geen tracking. Er worden geen toegangslogs bijgehouden en je IP-adres wordt niet doorgestuurd naar de databron voor vliegtuigposities. De site vraagt je browser alleen om de app zelf, de kaartachtergrond en de vliegtuigdata — geen enkele derde partij wordt benaderd. Het enige dat lokaal wordt opgeslagen, is je voorkeur voor eenheden (in je eigen browser, nooit verstuurd)."
+      "body": "Deze site telt paginaweergaven met een minimale, zelf-gehoste teller op onze eigen server: hoeveel bezoeken, wanneer en uit welk land — meer niet. Je IP-adres wordt uitsluitend in het geheugen van onze eigen server verwerkt (op de interne route naar de teller) om dat land en unieke bezoeken af te leiden; het wordt nooit opgeslagen of gelogd, er zijn geen cookies en geen gebeurtenis-tracking. Verwijssites worden uitsluitend als uurtotaal geteld — onze app stuurt zelf nooit een verwijzer mee, dus pagina's die je binnen de site bezoekt worden nooit als 'afkomstig van vliegvuil.nl' geregistreerd — en schermgrootte, regio en taal worden niet verzameld. Er worden geen toegangslogs bijgehouden en je IP-adres wordt niet doorgestuurd naar de databron voor vliegtuigposities. De site vraagt je browser alleen om de app zelf, de kaartachtergrond, de vliegtuigdata en de telling — allemaal vanaf vliegvuil.nl zelf, geen enkele derde partij wordt benaderd. Het enige dat lokaal wordt opgeslagen, is je voorkeur voor eenheden (in je eigen browser, nooit verstuurd)."
     },
     "license": {
       "title": "Licentie",

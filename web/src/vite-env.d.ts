@@ -9,6 +9,8 @@ interface ImportMetaEnv {
   readonly VITE_MOCK: string;
   /** Optional override for the basemap tile URL (PDOK default) */
   readonly VITE_TILE_URL: string;
+  /** Session 25c: '1' enables the same-origin analytics count in the build */
+  readonly VITE_ANALYTICS: string;
 }
 
 interface ImportMeta {

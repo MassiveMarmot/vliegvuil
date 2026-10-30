@@ -101,7 +101,9 @@
     "caveatBasemap": "The basemap shows the Netherlands in detail; abroad only country borders are shown. Borders are indicative, not a legal boundary.",
     "caveatAircraftDatabase": "Registration and type details come from a community database and may be incomplete or outdated. The database serves as a fallback: missing registration, type or operator is filled in from the snapshot (see the date above); live data always wins.",
     "sectionUiIcons": "Map icons",
-    "caveatUiIcons": "The UI and map icons are Lucide (ISC; Feather-derived icons are also MIT). Licence details: LICENSES/lucide.txt."
+    "caveatUiIcons": "The UI and map icons are Lucide (ISC; Feather-derived icons are also MIT). Licence details: LICENSES/lucide.txt.",
+    "sectionAnalytics": "Analytics",
+    "caveatAnalytics": "The country code attached to page views comes from MaxMind’s GeoLite2 database (embedded in the self-hosted GoatCounter). The IP address itself is never stored or logged."
   },
   "banner": {
     "loading": "Loading...",
@@ -161,7 +163,7 @@
     },
     "privacy": {
       "title": "Privacy",
-      "body": "This site uses no analytics, no cookies and no tracking. No access logs are kept and your IP address is not forwarded to the aircraft position data provider. The site asks your browser only for the app itself, the basemap and the aircraft data — no third party is contacted. The only thing stored locally is your unit preference (in your own browser, never sent)."
+      "body": "This site counts page views with a minimal, self-hosted counter on our own server: how many visits, when, and from which country — nothing else. Your IP address is processed in memory on our own server only (on the internal route to the counter) to derive that country and unique visits; it is never stored or logged, there are no cookies and no event tracking. Referring sites are counted only as hourly totals — our app never sends a referrer itself, so pages you navigate to within the site are never recorded as “referred by vliegvuil.nl” — and screen size, region and language are not collected. No access logs are kept, and your IP address is not forwarded to the aircraft data provider. The site asks your browser only for the app itself, the basemap, the aircraft data and the page-view count — all from vliegvuil.nl itself, no third party is contacted. The only thing stored locally is your unit preference (in your own browser, never sent)."
     },
     "license": {
       "title": "Licence",

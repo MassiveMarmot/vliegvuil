@@ -34,6 +34,7 @@ VliegVuil.nl is a monorepo with three workspaces and a strict layering rule: `/c
 4. Noise lookup runs entirely client-side: the app fetches a small GeoJSON contour snapshot (built by `/data-build`) and uses core's point-in-polygon `lookupNoiseBand`.
 5. Airport markers and name labels (session 23) come from a lazily-fetched `airports.json` (large/medium airports only, status shown in plain language in the popup). Labels use self-hosted map glyphs: Space Grotesk (OFL 1.1) PBFs for Unicode ranges 0–511, generated with fontnik from the official upstream TTFs, served from our own origin (`/fonts/`), licence file next to the glyphs. No third-party font host; the CSP is unchanged.
 6. When the live feed lacks registration, type or operator, the telemetry display falls back to the aircraft database snapshot (`aircraft.json`, tar1090-db, ODC-By-1.0) by ICAO24 hex — lazily loaded, live values always win; see the Attribution page.
+7. Analytics (session 25c): on every route change the SPA sends a same-origin `GET /count?p=<path>` request (production builds only). Caddy proxies `/count` and `/count.js` to a self-hosted GoatCounter bound to 127.0.0.1 (dashboard not proxied; access via SSH tunnel). GoatCounter derives the country and the session key from the visitor IP **in memory** on that localhost route — never stored (KillSignal=SIGKILL), never logged. The ADS-B proxy (step 2) still strips client IP/headers; the browser still makes no third-party request.
 
 ## Build-time data
 

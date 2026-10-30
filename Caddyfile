@@ -159,6 +159,41 @@ vliegvuil.nl {
 		respond 404
 	}
 
+	# Session 25c: privacy-first analytics (self-hosted GoatCounter, on the
+	# VPS only, listening on 127.0.0.1). ONLY the count script and the count
+	# endpoint are proxied from the main origin, so the page makes no
+	# third-party request and the CSP stays 'self'. The dashboard is NOT
+	# proxied: reach it via an SSH tunnel (docs/deploy.md 6b) or a separate
+	# protected host decided by the maintainer.
+	#
+	# Privacy: this is the ONLY route that passes the visitor IP — over
+	# localhost, to derive the country and the session key in GoatCounter's
+	# memory (GoatCounter has no trusted-proxy setting; its mware.RealIP
+	# trusts X-Forwarded-For/X-Real-Ip blindly, which is why the listener
+	# must never be reachable except via this route). The ADS-B proxy above
+	# still strips IP and headers; Caddy access logs stay off; GoatCounter
+	# never logs the IP (its own /count request log is disabled and the
+	# session-key debug log is never enabled: no -debug in production).
+	#
+	# The Host header selects the site (Site.ByHost; unknown hosts get a
+	# 400), so it must be set to the vhost the site was created with.
+	# reverse_proxy sets X-Forwarded-For with the client IP; inbound
+	# client-supplied X-Forwarded-For values are ignored per Caddy's
+	# trusted-proxies default (none trusted), so a visitor cannot spoof it.
+	# Exactly /count (with any query string) and /count.js — nothing deeper
+	# (the dashboard and everything else stay unreachable from this origin).
+	@goatcounter_count path /count
+	handle @goatcounter_count {
+		reverse_proxy 127.0.0.1:8091 {
+			header_up Host {host}
+		}
+	}
+	handle /count.js {
+		reverse_proxy 127.0.0.1:8091 {
+			header_up Host {host}
+		}
+	}
+
 	# Self-hosted BRT-A basemap tiles (session: self-host PDOK tiles).
 	# Served from /srv/vliegvuil/tiles (swapped atomically by
 	# scripts/vps-tiles-update.js); long cache, no directory listing

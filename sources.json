@@ -170,6 +170,17 @@
       },
       "retrievedAt": "2026-10-10",
       "checkedAt": "2026-10-10T00:00:00.000Z"
+    },
+    {
+      "id": "geolite2-country",
+      "name": "MaxMind GeoLite2 Country (embedded in GoatCounter)",
+      "url": "https://www.maxmind.com",
+      "license": "GeoLite2 EULA (data CC BY-SA 4.0 elements; attribution required)",
+      "licenseUrl": "https://www.maxmind.com/en/geolite2/eula",
+      "dataType": "Visitor country for page-view analytics",
+      "updateFrequency": "static (embedded in the GoatCounter binary; updated with the binary)",
+      "lastUpdated": "2026-10-30",
+      "notes": "Used by the self-hosted GoatCounter (v2.7.0) to derive the visitor's country from the IP address, in memory, on the internal analytics route (session 25c). The IP itself is never stored or logged. Attribution per the GeoLite2 EULA: 'This product includes GeoLite Data created by MaxMind, available from https://www.maxmind.com.' Shown on the attribution page for completeness; the site makes no MaxMind request."
     }
   ]
 }

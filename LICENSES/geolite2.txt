@@ -1,0 +1,19 @@
+GeoLite2 Country database (embedded in GoatCounter)
+Source: https://www.maxmind.com (GeoLite2, embedded in the GoatCounter
+binary, goatcounter-v2.7.0-linux-amd64; pkg/geo/geo.go: go:embed
+GeoLite2-Country.mmdb.gz)
+
+Licence: GeoLite End User License Agreement
+https://www.maxmind.com/en/geolite2/eula (consulted 2026-10-30; updated
+2026-02-12). Copyrightable elements of the GeoLite Databases are licensed
+under the Creative Commons Attribution-ShareAlike 4.0 International
+License (incorporated into the EULA by reference).
+
+Required attribution (EULA section 3): "This product includes GeoLite
+Data created by MaxMind, available from https://www.maxmind.com."
+
+Use in VliegVuil.nl: the self-hosted GoatCounter derives each visitor's
+country from their IP address in memory (session 25c analytics). No
+MaxMind web service or API key is used; the site makes no request to
+MaxMind. The entry also appears in sources.json and on the attribution
+page.
