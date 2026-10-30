@@ -13,7 +13,7 @@ import { Map as MapLibreMap, LngLatBounds, NavigationControl } from 'maplibre-gl
 // the data: SVG backgrounds fall under img-src, which already allows data:.
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { MapConfig, MapStyle } from '../types';
-import { NETHERLANDS_BBOX, getBasemapUrl, PDOK_BRT_ATTRIBUTION } from '../types';
+import { NETHERLANDS_BBOX, getBasemapUrl, PDOK_BRT_ATTRIBUTION, DEFAULT_MAP_CONFIG } from '../types';
 import { AIRPORT_GLYPHS_URL } from '../airports/airportLayer';
 
 // Country context for bordering states: the PDOK BRT basemap renders only the
@@ -98,6 +98,14 @@ export function useMap(config: MapConfig, _style?: MapStyle, locale?: MapLocaleP
               tiles: [getBasemapUrl()],
               tileSize: 256,
               attribution: PDOK_BRT_ATTRIBUTION,
+              // The self-hosted tile tree only exists for zoom 6-14
+              // (DEFAULT_MAP_CONFIG minZoom/maxZoom). Declaring the real
+              // range here stops MapLibre from requesting zoom 0-5 tiles
+              // that always 404 at the NL-wide initial view (upstream
+              // parent tiles are outside the downloaded bbox anyway) —
+              // each 404 also trips the non-blocking tile-error notice.
+              minzoom: DEFAULT_MAP_CONFIG.minZoom,
+              maxzoom: DEFAULT_MAP_CONFIG.maxZoom,
             },
           },
           layers: [

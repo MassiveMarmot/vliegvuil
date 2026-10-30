@@ -114,3 +114,31 @@ describe('maplibre stylesheet import (invisible-compass fix): control geometry',
     expect(rule('.maplibregl-ctrl-attrib')).not.toMatch(/display:\s*none/);
   });
 });
+
+describe('WebGL canvas stacking (Firefox nightly regression, 2026-10-30)', (): void => {
+  it('the map container is an explicit z-index:0 stacking context', (): void => {
+    // Firefox Nightly 159 + radeonsi hoisted the accelerated canvas
+    // layer above the positioned page chrome (counter, noise toggle)
+    // once the map started presenting — elementFromPoint returned the
+    // canvas at the chrome's positions. An explicit z-index:0 +
+    // isolation on the container pins the canvas (and MapLibre's
+    // controls) inside one stacking context, so it can never order
+    // against the page chrome across the container boundary.
+    const container = rule('.map-container');
+    expect(container).toMatch(/position:\s*relative/);
+    expect(container).toMatch(/z-index:\s*0/);
+    expect(container).toMatch(/isolation:\s*isolate/);
+    // The page chrome keeps its higher z-indexes in the parent context
+    expect(rule('.map-status')).toMatch(/z-index:\s*10/);
+    expect(rule('.noise-overlay')).toMatch(/z-index:\s*20/);
+  });
+
+  it('the basemap source declares the real tile zoom range (no phantom tiles)', (): void => {
+    // The self-hosted tile tree is z6-14 only; the raster source used
+    // to declare 0-22, so MapLibre requested z0-5 tiles that always
+    // 404 (and each 404 trips the non-blocking tile-error notice).
+    expect(useMapSource).toContain(
+      'minzoom: DEFAULT_MAP_CONFIG.minZoom,\n              maxzoom: DEFAULT_MAP_CONFIG.maxZoom'
+    );
+  });
+});
