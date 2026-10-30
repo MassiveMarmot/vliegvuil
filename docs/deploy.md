@@ -846,8 +846,16 @@ disk. Expect slightly lower counts around service restarts.
   we use Referrer|UserAgent|Location|Session.
 - **Data retention** (Settings, in days; native since 2.x via
   settings.data_retention, range 31-1825, applied by a daily cron
-  vacuum): **pending maintainer decision** - propose 730 (2 years); set
-  it once and record the chosen value here.
+  vacuum): maintainer decision 2026-10-30 - **indefinite for now**.
+  Leave the field empty/0 in the dashboard: 0 is the default and means
+  "never delete" (verified in the v2.7.0 source: the daily cron skips
+  any site with `DataRetention <= 0` - `cron/tasks.go:64` `if
+  s.Settings.DataRetention <= 0 { continue }`; the 31-1825 range check
+  only applies when a positive value is set - `settings.go:377`; the
+  dashboard field's own help text says "Set to `0` to never delete" -
+  `tpl/settings_main.gohtml:103`). Revisitable: if a retention period
+  is ever wanted, set a value in the 31-1825 range here and update
+  privacy.md and the locale About texts in the same PR.
 - **Admin 2FA (TOTP)**: maintainer decision 2026-10-30 - **deferred**
   while dashboard access is SSH-tunnel-only (the tunnel already needs
   a VPS login; TOTP adds little). It becomes **REQUIRED the day any
