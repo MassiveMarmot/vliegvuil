@@ -85,6 +85,11 @@ export default defineConfig({
         // Session 25: real paths. The navigation fallback serves the app
         // shell for /{lang}/... deep links but never for the API, the
         // self-hosted tiles, the map glyphs or other static asset paths.
+        // Session 25b: the prerendered per-language pages
+        // (/{lang}/index.html, /{lang}/about/index.html, ...) are precached
+        // by the html glob; the navigation fallback stays the language-
+        // neutral shell (index.html), which routes by URL path — so one
+        // language's shell is never served for another language's URL.
         navigateFallbackDenylist: [
           /^\/api\//,
           /^\/tiles\//,

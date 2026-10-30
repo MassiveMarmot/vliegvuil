@@ -178,5 +178,25 @@
     "title": "Pagina niet gevonden",
     "body": "Deze pagina bestaat niet. Misschien is de link verouderd of verkeerd getypt.",
     "backToMap": "Naar de kaart"
+  },
+  "seo": {
+    "map": {
+      "title": "VliegVuil.nl — live vliegtuigverkeer en geluidscontouren in Nederland",
+      "description": "Zie live welke vliegtuigen er boven Nederland vliegen en waar de officiële geluidscontouren rondom Nederlandse luchthavens liggen. Onafhankelijk, zonder tracking.",
+      "ogTitle": "Live vliegtuigverkeer en vliegtuiggeluid in Nederland",
+      "ogDescription": "Live vliegtuigen op de kaart, met officiële geluidscontouren (jaargemiddelde) rondom Nederlandse luchthavens."
+    },
+    "about": {
+      "title": "Over VliegVuil.nl — onafhankelijk, privacy-eerst",
+      "description": "Wat VliegVuil.nl doet en niet doet: live metingen van vliegtuigbewegingen en geluidscontouren, geen tracking, geen cookies, open data met open licenties.",
+      "ogTitle": "Over VliegVuil.nl",
+      "ogDescription": "Onafhankelijk en niet-commercieel: live metingen boven Nederland, metingen in plaats van vermoedens, privacy-eerst."
+    },
+    "attribution": {
+      "title": "Bronvermelding — VliegVuil.nl",
+      "description": "Alle gegevensbronnen van VliegVuil.nl met hun licentie, ophaaldatum en referentiejaar: vliegtuigposities, geluidscontouren, luchthavens en kaartachtergrond.",
+      "ogTitle": "Bronnen en licenties van VliegVuil.nl",
+      "ogDescription": "Elke gegevenslaag met bron, licentie en datum: adsb.fi, RIVM, OurAirports en meer."
+    }
   }
 }

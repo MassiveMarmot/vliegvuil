@@ -214,7 +214,10 @@ vliegvuil.nl {
 				window 1m
 			}
 		}
-		try_files {path} /index.html
+		# Session 25b: {path}/index.html serves the prerendered per-language
+		# pages (/{lang}/, /{lang}/about/, /{lang}/attribution/); the final
+		# /index.html is the SPA fallback for unknown deep links.
+		try_files {path} {path}/index.html /index.html
 		file_server
 	}
 }

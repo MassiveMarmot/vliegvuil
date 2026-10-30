@@ -178,5 +178,25 @@
     "title": "Page not found",
     "body": "This page does not exist. The link may be outdated or mistyped.",
     "backToMap": "Go to the map"
+  },
+  "seo": {
+    "map": {
+      "title": "VliegVuil.nl — live air traffic and noise contours over the Netherlands",
+      "description": "See which planes are flying over the Netherlands right now and where the official noise contours around Dutch airports lie. Independent, no tracking.",
+      "ogTitle": "Live air traffic and aviation noise in the Netherlands",
+      "ogDescription": "Live aircraft on the map, with official (annual-average) noise contours around Dutch airports."
+    },
+    "about": {
+      "title": "About VliegVuil.nl — independent, privacy-first",
+      "description": "What VliegVuil.nl does and does not do: live measurements of aircraft movements and noise contours, no tracking, no cookies, open data under open licences.",
+      "ogTitle": "About VliegVuil.nl",
+      "ogDescription": "Independent and non-commercial: live measurements over the Netherlands, measurements rather than guesses, privacy-first."
+    },
+    "attribution": {
+      "title": "Attribution — VliegVuil.nl",
+      "description": "Every data source used by VliegVuil.nl with its licence, retrieval date and reference year: aircraft positions, noise contours, airports and the basemap.",
+      "ogTitle": "Sources and licences of VliegVuil.nl",
+      "ogDescription": "Every data layer with source, licence and date: adsb.fi, RIVM, OurAirports and more."
+    }
   }
 }
