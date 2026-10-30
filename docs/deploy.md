@@ -737,7 +737,11 @@ Description=GoatCounter analytics (vliegvuil.nl)
 After=network.target
 
 [Service]
-Type=notify
+# Type=simple: GoatCounter v2.7.0 has NO sd_notify support (verified in
+# the source: no go-systemd dependency, no NOTIFY_SOCKET handling), so
+# Type=notify makes systemd wait 90s for READY=1, time out and SIGKILL
+# the process. simple = the process is the service.
+Type=simple
 User=goatcounter
 Group=goatcounter
 WorkingDirectory=/var/lib/goatcounter
