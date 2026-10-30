@@ -12,7 +12,7 @@ VliegVuil.nl is privacy-first by design. This page documents what the site does 
   - Bot filtering is best-effort: self-identified bots are marked as such in the aggregate numbers; disguised bots may be counted, crawlers without JavaScript are never seen.
 - **No third-party scripts, fonts, or pixels** — everything, including the analytics count, is served from our own origin
 - **No cookies** — settings (language, units) are stored in your browser's localStorage and never sent to us; the analytics uses no cookies or localStorage
-- **No access logs** — the Caddy web server has access logging disabled
+- **No access logs, and no visitor IP in any server log** — the Caddy web server has access logging disabled, and its error log is scrubbed: failed-request entries record only the status and timing, never your address, headers or the page you were on
 - **No client IP forwarded upstream** — requests proxied to the ADS-B data provider (adsb.fi) are stripped of your IP address and identifying headers; the only place your address is used at all is the internal analytics route described above
 - **No accounts or profiling** — there is nothing to log into and no behavioural tracking of any kind
 

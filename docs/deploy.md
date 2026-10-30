@@ -493,8 +493,21 @@ this fixes.
 - **No access logs.** Caddy does not write access logs unless one is
   explicitly configured; the Caddyfile does not configure one. There is no
   `access_log off` directive because that is not valid Caddy syntax — see
-  <https://caddyserver.com/docs/caddyfile/directives/log>. Error logs go to
-  stderr (visible via `journalctl -u caddy`).
+  <https://caddyserver.com/docs/caddyfile/directives/log>.
+- **No visitor IP in any log (scrubbed error log).** Caddy's HTTP error
+  logger (`http.log.error`) embeds the full request object (remote_ip,
+  client_ip, headers, URI — which also contains the map viewport) in every
+  failed or cancelled request; with the SPA polling /api every 5 s,
+  cancelled polls made IPs accumulate in the journal (found during the
+  25c deploy verification). The Caddyfile routes that logger through a
+  filter encoder that DELETES the request object and redacts IPs from
+  the error field, and excludes it from the default log; Go stdlib
+  server messages (`http.stdlib`, including TLS handshake failures) log
+  at Debug level and are not emitted at the default INFO level.
+  Verified against the Caddy 2.11.7 source and by live tests (see the
+  scrub PR): a forced 500 logs status/duration/trace but no request
+  object; a garbage-HTTP + failed-TLS-handshake test produced zero IPs
+  in the log.
 - **No client IP upstream.** All requests to `/api/*` are forwarded with
   `X-Forwarded-For` (and friends) deleted and a fixed
   `User-Agent: VliegVuil.nl/1.0 (+https://vliegvuil.nl)`. adsb.fi never
@@ -803,7 +816,9 @@ not catchable, so `Memstore.StoreSessions` never runs.
       ("briefly written to the local database on restart, deleted at
       next start").
 - [ ] journalctl -u caddy --since "1 hour ago" piped through an
-      IPv4-pattern grep - still no IPs in Caddy logs.
+      IPv4-pattern grep - still no IPs in Caddy logs (error entries are
+      scrubbed; if any appear, check they are not from before the scrub
+      deploy, then rotate/vacuum the journal).
 - [ ] scripts/verify-caddy-headers.sh still passes (ADS-B route still
       strips client IP and headers).
 - [ ] caddy validate --config /etc/caddy/Caddyfile with the custom
@@ -1070,7 +1085,9 @@ appears until tiles actually fail to load for a non-404 reason.
 # Validation must pass before every reload
 caddy validate --config /etc/caddy/Caddyfile
 
-# Error logs (no access logs exist)
+# Error logs (no access logs exist). HTTP error entries are SCRUBBED:
+# no request object (no IP/headers/URI), only status/duration/trace -
+# see the global log config at the top of the Caddyfile.
 journalctl -u caddy -f
 # GoatCounter errors (stderr only; never enable -debug: the session debug
 # log prints the session key)

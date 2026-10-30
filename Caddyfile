@@ -15,7 +15,37 @@
 
 # Privacy: Caddy does not write access logs unless an access log is explicitly
 # configured, so no `access_log off` directive is needed or valid here.
-# Error logs go to stderr/journal only.
+# Error logs go to stderr/journal only — but by default Caddy's HTTP error
+# logger (http.log.error) embeds the FULL request object (remote_ip,
+# client_ip, headers, URI) in every failed/cancelled request. With the SPA
+# polling /api every 5 s, browser navigation cancels polls routinely, so
+# visitor IPs would accumulate in the systemd journal (session 25c finding,
+# 2026-10-30). Fix (verified against the Caddy 2.11.7 source,
+# modules/logging/filterencoder.go + modules/caddyhttp/server.go):
+#  - route http.log.error entries to a dedicated 'scrubbed' log whose
+#    filter encoder DELETES the request object entirely (the IPs, headers
+#    and the URI — which also leaks the map viewport position — all live
+#    in it) and redacts any IP that a Go network error message may embed
+#    in the top-level error field;
+#  - exclude the same logger from the default log so the entries are not
+#    ALSO written unscrubbed there (entries go to every matching log).
+# Note (filterencoder.go): ts, level, logger and msg cannot be filtered;
+# msg never contains IPs for these entries ("context canceled" etc.), so
+# that is safe.
+{
+	log scrubbed {
+		include http.log.error
+		output stderr
+		format filter {
+			wrap json
+			request delete
+			error regexp "\b\d{1,3}(\.\d{1,3}){3}(:\d+)?\b" "[ip]"
+		}
+	}
+	log {
+		exclude http.log.error
+	}
+}
 
 vliegvuil.nl {
 	# Static app (git pull + pnpm build on the server, see docs/deploy.md)
