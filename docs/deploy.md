@@ -741,14 +741,35 @@ not catchable, so `Memstore.StoreSessions` never runs.
 
 ### Site settings (apply once, in the dashboard)
 
-- **Data collection** (Settings, Data collection): switch OFF
-  **Referrer** and **Screen size**; switch OFF **Region** (needs the City
-  DB we do not use). Keep **User agent**, **Location** (country) and
-  **Session** - the session key needs the user agent, and unique visits
-  need the session. These map to the v2.7.0 settings.collect bitflags
-  (CollectReferrer 2, CollectUserAgent 4, CollectScreenSize 8,
-  CollectLocation 16, CollectLocationRegion 32, CollectSession 128;
-  default = Referrer|UserAgent|ScreenSize|Location|LocationRegion|Session).
+- **Data collection** (Settings, Data collection; maintainer decision
+  2026-10-30): switch OFF **Screen size** and **Region**. Keep ON
+  **Referrer**, **User agent**, **Location** (country) and **Session**.
+  What each setting does in v2.7.0 (settings.collect bitflags):
+  - **Referrer (2)** - when ON, the count request's referrer is stored
+    and aggregated per referrer per path **per hour** (the `ref_counts`
+    table; dashboard shows hourly/total referral numbers). The
+    individual page-view log does not show referrers unless you open a
+    page's "show refs" view. Our SPA module never sends a referrer, so
+    this only matters for direct external traffic counted by the browser
+    navigation (document.referrer on the initial load is NOT sent by our
+    module either) - in practice the referrer list stays empty unless a
+    count.js-style client is ever introduced; the setting stays ON so
+    that day needs no config change.
+  - **User agent (4)** - the browser's user-agent string is parsed and
+    stored (browser/system for the dashboard's breakdowns); the session
+    key is built from it, so it stays ON.
+  - **Screen size (8)** - the count.js client sends the screen
+    resolution; we never send it, and the setting is OFF so nothing can
+    arrive by accident.
+  - **Location (16)** - the country from the embedded GeoLite2 DB; the
+    privacy-promise core of the analytics, stays ON.
+  - **Region (32)** - a region below country; requires the City DB
+    (MaxMind key) which we do not use: OFF.
+  - **Session (128)** - enables unique-visitor counting via the session
+    key; stays ON.
+  - (Language (64) is off by default and stays off.)
+  Default = Referrer|UserAgent|ScreenSize|Location|LocationRegion|Session;
+  we use Referrer|UserAgent|Location|Session.
 - **Data retention** (Settings, in days; native since 2.x via
   settings.data_retention, range 31-1825, applied by a daily cron
   vacuum): **pending maintainer decision** - propose 730 (2 years); set

@@ -8,7 +8,7 @@ VliegVuil.nl is privacy-first by design. This page documents what the site does 
 
 - **Minimal, self-hosted analytics** — we count page views, unique visits, date/time and country of origin with a self-hosted GoatCounter on our own server. There is no analytics account with any third party and no data leaves our server.
   - Your IP address is processed **in memory** on our own server, only on the internal route to the analytics service, to derive your country and a session key (browser + address + site) so visits can be counted as unique. It is **never stored in the database and never logged**. Because the analytics service is stopped non-gracefully (`KillSignal=SIGKILL`), the in-memory session key is never written to disk; if that ever changes, this page will say so honestly.
-  - We do **not** collect referrers, screen sizes, regions or languages, and there is no event tracking.
+  - Referrers (which site a visit came from) are counted **per hour in aggregate** when present; our own app never sends a referrer, so pages you navigate to inside the site are never recorded as "referred by vliegvuil.nl". We do **not** collect screen sizes, regions or languages, and there is no event tracking.
   - Bot filtering is best-effort: self-identified bots are marked as such in the aggregate numbers; disguised bots may be counted, crawlers without JavaScript are never seen.
 - **No third-party scripts, fonts, or pixels** — everything, including the analytics count, is served from our own origin
 - **No cookies** — settings (language, units) are stored in your browser's localStorage and never sent to us; the analytics uses no cookies or localStorage

@@ -56,6 +56,45 @@ describe('analytics module (session 25c)', () => {
     vi.unstubAllGlobals();
   });
 
+  it('in-app route changes never record the site itself as referrer (decision 2026-10-30)', async (): Promise<void> => {
+    // The referrer SETTING in GoatCounter stays ON (aggregate per hour),
+    // but our module never sends an r= parameter: without it, GoatCounter
+    // cannot record any referrer — in particular not vliegvuil.nl itself
+    // on an in-app route change (document.referrer would be our own URL).
+    vi.resetModules();
+    process.env['VITE_ANALYTICS'] = '1';
+    const { countRouteChange: enabledRoute } = await import('../src/analytics');
+    const requests: Array<string> = [];
+    vi.stubGlobal('Image', class {
+      _src = '';
+      get src(): string {
+        return this._src as string;
+      }
+      set src(value: string) {
+        this._src = value;
+        requests.push(value);
+      }
+    });
+    // Simulate in-app navigation: even with document.referrer set to our
+    // own origin (as a real SPA route change leaves it), no referrer may
+    // reach the count request.
+    Object.defineProperty(document, 'referrer', {
+      configurable: true,
+      get: (): string => 'https://vliegvuil.nl/nl/',
+    });
+    enabledRoute('/nl/about');
+    enabledRoute('/nl/attribution');
+    expect(requests.length).toBe(2);
+    for (const url of requests) {
+      expect(url, 'no referrer (r=) parameter may be sent').not.toMatch(/[?&]r=/);
+      // Only the path (p=) and the cache-buster (cb=) are sent.
+      const params = new URLSearchParams(url.split('?')[1] ?? '');
+      expect([...params.keys()].sort()).toEqual(['cb', 'p']);
+    }
+    vi.unstubAllGlobals();
+    delete process.env['VITE_ANALYTICS'];
+  });
+
   it('the count request is same-origin only (no third-party host, session 11 invariant)', async (): Promise<void> => {
     vi.resetModules();
     process.env['VITE_ANALYTICS'] = '1';

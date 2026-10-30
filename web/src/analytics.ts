@@ -18,6 +18,13 @@
 //   onload/visibility logic would double-count SPA route changes. This
 //   module sends the minimal /count?p= request itself — the same
 //   endpoint, same first-party origin, fewer fields.
+// - Referrer policy (maintainer decision, session 25c): GoatCounter's
+//   referrer setting stays ON in the dashboard (it aggregates per
+//   referrer, per path, per HOUR — ref_counts in the v2.7.0 schema), but
+//   this module never sends an r= parameter: external referrers arrive
+//   only via count.js-style requests, which we do not make. In-app SPA
+//   route changes therefore NEVER record the site itself as referrer —
+//   pinned by a test (see __tests__/analytics.test.tsx).
 
 /** Minimal window.goatcounter shape we interact with (none: we build the
  *  request ourselves; typed for clarity and future maintenance). */
