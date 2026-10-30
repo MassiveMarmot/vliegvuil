@@ -708,7 +708,9 @@ sudo -u goatcounter test -w /var/lib/goatcounter/db && echo writable
 #   https://github.com/zgoat/goatcounter/releases/tag/v2.7.0
 #   (asset: goatcounter-v2.7.0-linux-amd64.gz)
 wget -O /tmp/goatcounter.gz https://github.com/zgoat/goatcounter/releases/download/v2.7.0/goatcounter-v2.7.0-linux-amd64.gz
-sudo gunzip -c /tmp/goatcounter.gz > /usr/local/bin/goatcounter
+# NOTE: 'sudo gunzip ... > file' does NOT work — bash opens the redirect
+# as YOUR user, not root. Use tee so sudo does the writing:
+gunzip -c /tmp/goatcounter.gz | sudo tee /usr/local/bin/goatcounter > /dev/null
 sudo chmod +x /usr/local/bin/goatcounter
 /usr/local/bin/goatcounter version   # must print v2.7.0
 
