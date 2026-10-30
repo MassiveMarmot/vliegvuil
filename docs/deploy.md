@@ -778,6 +778,12 @@ flush of session keys to the `store` table. Verified against the v2.7.0
 source: `signal.Notify(sig, SIGHUP, SIGTERM, os.Interrupt)` - SIGKILL is
 not catchable, so `Memstore.StoreSessions` never runs.
 
+Accepted side effect of the same choice: pageviews buffered in memory
+(v2.7.0 persists them at most every 10 s) are lost when the service is
+stopped or crashes. By design and tolerable: analytics is best-effort,
+and the alternative (a graceful flush) would write session keys to
+disk. Expect slightly lower counts around service restarts.
+
 ### Site settings (apply once, in the dashboard)
 
 - **Data collection** (Settings, Data collection; maintainer decision
@@ -813,7 +819,12 @@ not catchable, so `Memstore.StoreSessions` never runs.
   settings.data_retention, range 31-1825, applied by a daily cron
   vacuum): **pending maintainer decision** - propose 730 (2 years); set
   it once and record the chosen value here.
-- **Admin 2FA**: enable TOTP (User, Multi-factor authentication).
+- **Admin 2FA (TOTP)**: maintainer decision 2026-10-30 - **deferred**
+  while dashboard access is SSH-tunnel-only (the tunnel already needs
+  a VPS login; TOTP adds little). It becomes **REQUIRED the day any
+  non-tunnel access is added** (a basic_auth host, a public dashboard
+  hostname, anything else that reaches the dashboard without SSH):
+  enable it (User, Multi-factor authentication) in the same change.
   v2.7.0 has **no recovery codes** (verified: only enable/disable TOTP
   endpoints exist). If 2FA locks you out, recovery is via the database:
   query the users table and clear totp_secret/totp_enabled for your
@@ -831,8 +842,13 @@ not catchable, so `Memstore.StoreSessions` never runs.
       e.g. fetch the script body and expect its first lines.
 - [ ] A test visit shows up in the dashboard with a country.
 - [ ] Inspect the hits table schema (sqlite3 .schema hits) - no IP
-      column; then grep the database file and the journal for the test
-      IP: no hit.
+      column. With "Individual pageviews" OFF (maintainer decision), the
+      raw `hits` table stays **empty by design** - the dashboard reads the
+      `hit_stats` aggregates. Verify there instead:
+      `select count(*) from hit_stats;` (grows after a test visit), and
+      grep the raw database file for the test IP - no hit. Do NOT use
+      `select count(*) from hits` as a check; an empty `hits` is expected
+      and not an error.
 - [ ] **Store-table check:** stop and start the goatcounter service,
       then select key from store - with KillSignal=SIGKILL the shutdown
       flush did not write the session keys; if it did, tell the
