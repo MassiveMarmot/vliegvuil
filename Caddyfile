@@ -55,10 +55,17 @@ vliegvuil.nl {
 	# Security headers (same origin only; the API is proxied below, so no
 	# third-party origins appear in connect-src and no CORS headers exist).
 	header {
-		# style-src has no 'unsafe-inline': maplibre-gl 4.7.1 and the built
-		# bundle contain no createElement('style'), no setAttribute('style')
-		# and no style.cssText (verified by grepping the shipped dist; React
-		# style props go through the CSSOM, which CSP does not restrict).
+		# style-src has no 'unsafe-inline': maplibre-gl 6.14.0 (resolved
+		# version in pnpm-lock.yaml; the vendor chunk ships inside
+		# assets/Map-*.js) and the built bundle contain no
+		# createElement('style'), no setAttribute('style') and no
+		# style.cssText (re-verified 2026-10-30 by grepping the built
+		# web/dist for createElement/setAttribute with a style argument
+		# and for cssText: zero matches in every chunk, our code and
+		# maplibre both; React style props and maplibre's marker sizing go
+		# through the CSSOM (el.style.<prop> assignments), which CSP does
+		# not restrict). Re-run that grep whenever maplibre-gl is upgraded
+		# (docs/deploy.md, Privacy properties).
 		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; worker-src 'self' blob:; frame-ancestors 'none'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"
