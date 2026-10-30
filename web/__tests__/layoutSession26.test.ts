@@ -117,3 +117,71 @@ describe('counter affordance (session 26 follow-up): geometry at 320/360/375 px'
     expect(rule('.map-status-chevron')).not.toMatch(/transition/);
   });
 });
+
+describe('maplibre stylesheet import (invisible-compass fix): control geometry', (): void => {
+  it('the compass chrome override keeps the app palette (anchor stays MapLibre\'s own top-right)', (): void => {
+    // The header is in normal flow above the map region (asserted above:
+    // position: relative, no bottom edge), so MapLibre's top:0 anchor
+    // inside .map-container is already below the header bar — no extra
+    // offset needed. The library's own corner rule is pinned in
+    // maplibreStylesheet.test.ts (built CSS). Here: our override.
+    const group = rule('.maplibregl-ctrl-top-right .maplibregl-ctrl-group');
+    expect(group).toMatch(/border-radius:\s*10px/);
+  });
+
+  it('the attribution control moves to bottom-center, clear of the noise legend, telemetry panel and counter', (): void => {
+    // MapLibre anchors the attribution bottom-right by default — the same
+    // corner as .noise-overlay and .telemetry-panel. Our override moves
+    // it to the bottom-center; the airport popup sits higher
+    // (bottom: 4.5rem), so no overlap at 320/360/375 px either. The
+    // corner rule uses a two-selector list, so match it directly.
+    expect(css).toMatch(
+      /\.maplibregl-ctrl-bottom-right,\s*\.maplibregl-ctrl-bottom-left\s*\{[^}]*left:\s*50%[^}]*bottom:\s*0\.25rem[^}]*transform:\s*translateX\(-50%\)/
+    );
+    expect(css).toMatch(
+      /\.maplibregl-ctrl-bottom-right,\s*\.maplibregl-ctrl-bottom-left\s*\{[^}]*right:\s*auto/
+    );
+    // Still visible (required PDOK/Kadaster attribution): not display:none
+    expect(rule('.maplibregl-ctrl-attrib')).not.toMatch(/display:\s*none/);
+  });
+});
+
+describe('WebGL canvas stacking (Firefox nightly regression, 2026-10-30)', (): void => {
+  it('the map container is an explicit z-index:0 stacking context', (): void => {
+    // Firefox Nightly 159 + radeonsi hoisted the accelerated canvas
+    // layer above the positioned page chrome (counter, noise toggle)
+    // once the map started presenting — elementFromPoint returned the
+    // canvas at the chrome's positions. An explicit z-index:0 +
+    // isolation on the container pins the canvas (and MapLibre's
+    // controls) inside one stacking context, so it can never order
+    // against the page chrome across the container boundary.
+    const container = rule('.map-container');
+    expect(container).toMatch(/position:\s*relative/);
+    expect(container).toMatch(/z-index:\s*0/);
+    expect(container).toMatch(/isolation:\s*isolate/);
+    // The page chrome keeps its higher z-indexes in the parent context
+    expect(rule('.map-status')).toMatch(/z-index:\s*10/);
+    expect(rule('.noise-overlay')).toMatch(/z-index:\s*20/);
+  });
+
+  it('the basemap source declares the real tile zoom range (no phantom tiles)', (): void => {
+    // The self-hosted tile tree is z6-14 only; the raster source used
+    // to declare 0-22, so MapLibre requested z0-5 tiles that always
+    // 404 (and each 404 trips the non-blocking tile-error notice).
+    expect(useMapSource).toContain(
+      'minzoom: DEFAULT_MAP_CONFIG.minZoom,\n              maxzoom: DEFAULT_MAP_CONFIG.maxZoom'
+    );
+  });
+});
+
+describe('compass compositing hint (Firefox canvas-hoist follow-up, PR #124)', (): void => {
+  it('the compass corner carries will-change:transform (own composited layer)', (): void => {
+    // PR #124 isolated the map container, fixing the page chrome, but the
+    // compass is INSIDE the container next to the WebGL canvas and stayed
+    // buried under the hoisted canvas layer on the affected Firefox
+    // nightly + radeonsi. will-change:transform promotes the corner onto
+    // its own composited layer; the library already provides the corner's
+    // position:absolute + z-index:2 (pinned in maplibreStylesheet.test.ts).
+    expect(rule('.maplibregl-ctrl-top-right')).toMatch(/will-change:\s*transform/);
+  });
+});

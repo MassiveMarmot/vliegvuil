@@ -25,10 +25,18 @@ function maplibreWorkerAsset(): Plugin {
       const require = createRequire(import.meta.url);
       const pkgJson = require.resolve('maplibre-gl/package.json');
       const workerPath = path.join(path.dirname(pkgJson), 'dist', 'maplibre-gl-worker.mjs');
+      // Strip the sourceMappingURL comment: no map is emitted for this
+      // copied asset, so the comment points at a file that 404s in
+      // production devtools (harmless, but noisy). Kept in dev builds —
+      // only the built asset is stripped.
+      const source = readFileSync(workerPath, 'utf8').replace(
+        /^\/\/# sourceMappingURL=.*$/m,
+        '',
+      );
       this.emitFile({
         type: 'asset',
         fileName: 'assets/maplibre-gl-worker.mjs',
-        source: readFileSync(workerPath),
+        source,
       });
     },
   };

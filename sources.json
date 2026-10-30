@@ -47,16 +47,16 @@
       "notes": "Verified 2026-09-29: 'All data is released to the Public Domain.' Download from https://raw.githubusercontent.com/davidmegginson/ourairports-data/main/airports.csv",
       "cadence": "monthly",
       "refresh": "auto",
-      "retrievedAt": "2026-10-22",
-      "upstreamVersion": "b529623d2a0b09a9be78d37fc7a7a5e1e16e3451",
-      "checkedAt": "2026-10-22T13:36:04.209Z",
+      "retrievedAt": "2026-10-30",
+      "upstreamVersion": "ec3175579bd8f0160a8a0136b78aa3810ce79ab2",
+      "checkedAt": "2026-10-30T20:34:19.627Z",
       "upstream": {
         "method": "github",
         "url": "https://api.github.com/repos/davidmegginson/ourairports-data/commits/main"
       },
       "downloadUrl": "https://raw.githubusercontent.com/davidmegginson/ourairports-data/main/airports.csv",
-      "contentSha256": "0499dbd88de2fc735ac5c09f59796ccc3af544e17ffda807f793c0c6fe6c3d75",
-      "downloadEtag": "W/\"c6aa7747b5e88a83e95a9f5667de6a165e813b7fd851763385102f75df84e30d\""
+      "contentSha256": "423a70f3a3a6b849db1063a5558e47bbd4e715decb6071f1f80f413ab92a88ac",
+      "downloadEtag": "W/\"4824a87ea26de06146e243b87b54142fcbb2526dbebdbbaa6c96a72c48c46d06\""
     },
     {
       "id": "tar1090-db",
@@ -70,16 +70,16 @@
       "notes": "Download: https://github.com/wiedehopf/tar1090-db/raw/refs/heads/csv/aircraft.csv.gz — derived from Mictronics/aircraft-database, whose exports are made available under the Open Data Commons Attribution License (ODC-By-1.0).",
       "cadence": "monthly",
       "refresh": "auto",
-      "retrievedAt": "2026-10-22",
-      "upstreamVersion": "522f3da995fcd52ea7a84583fbcd6e8f43197407",
-      "checkedAt": "2026-10-22T13:36:07.181Z",
+      "retrievedAt": "2026-10-30",
+      "upstreamVersion": "df22c2ef05e8bb42247d0043aebb02a10c5ab3e9",
+      "checkedAt": "2026-10-30T20:34:22.232Z",
       "upstream": {
         "method": "github",
         "url": "https://api.github.com/repos/wiedehopf/tar1090-db/commits/csv"
       },
       "downloadUrl": "https://github.com/wiedehopf/tar1090-db/raw/refs/heads/csv/aircraft.csv.gz",
-      "contentSha256": "42b690d0070cef536adfcb90c885d8f09ab2459778a45c7c11fdae8c3dbea9d6",
-      "downloadEtag": "W/\"e4dc128b27a2bc10683d722171e11cdcbfefcb77d6d37d4e12b48ecd2d1e02b4\""
+      "contentSha256": "99377ce34d8601854807b657a3b4e74e1053e6d799f57ba868fc632dc04be4f6",
+      "downloadEtag": "W/\"68841cb8bad683e801e3e1370388230734a02222adaf64ff32e137ca2d3bb727\""
     },
     {
       "id": "pdok-brt",
