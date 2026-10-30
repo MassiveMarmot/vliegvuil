@@ -338,11 +338,13 @@ Convention: a staging subdomain (`staging.vliegvuil.nl`) on the same VPS.
   further traffic in your webserver logs."
   (<https://letsencrypt.org/docs/faq/>). A staging hostname is therefore
   discoverable by anyone, not secret.
-- **HSTS**: the production site currently sends no HSTS header at all (see
-  the HSTS TODO above), and even when enabled it will start without
-  `includeSubDomains` — so the apex header would not cover staging. Do not
-  add a HSTS header to the staging block; staging is not a place to make
-  that decision (see the HSTS and Subdomains plan in this file).
+- **HSTS**: the production site sends HSTS with `max-age=86400` (one day),
+  without `includeSubDomains` and without `preload` (see "HSTS: enabled at
+  the first ramp-up step" in the header verification section below) — so
+  the apex header does not cover a staging subdomain, and staging must
+  serve valid HTTPS on its own. Do not add a HSTS header to the staging
+  block; staging is not a place to make that decision (see the HSTS and
+  Subdomains plan in this file).
 - **Shared resources — decide, do not assume**:
   - *Tiles*: share `/srv/vliegvuil/tiles` (symlink or read-only bind) or
     run a second 24 h tile download for a fully isolated copy. Both cost
