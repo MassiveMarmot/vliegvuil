@@ -558,9 +558,12 @@ sudo journalctl -u caddy --since "1 hour ago" \
   | grep -E '([0-9]{1,3}\.){3}[0-9]{1,3}' || echo "no IPv4 addresses found"
 ```
 
-Caddy's error logs can mention client addresses in some situations (for
-example failed TLS handshakes; not verified here). If addresses appear, cap
-journal retention, for example:
+Expected result: no IPv4 addresses found. The error log is scrubbed
+(the global log block in the Caddyfile deletes the request object from
+http.log.error entries and redacts IPv4 in the error field), so any hit
+means the scrub was lost - fix the Caddyfile, not the journal. As defence
+in depth, cap journal retention (a system-level setting, unrelated to the
+GoatCounter data-retention setting in 6b):
 
 ```bash
 sudo mkdir -p /etc/systemd/journald.conf.d
@@ -571,7 +574,33 @@ CONF
 sudo systemctl restart systemd-journald
 ```
 
-and update `docs/privacy.md` to describe what is actually logged.
+If the check ever fails because addresses appeared, see the GoatCounter
+verification checklist in 6b for the post-deploy journal rotate/vacuum
+step, and update `docs/privacy.md` to describe what is actually logged.
+
+### style-src re-verification (maplibre-gl upgrades)
+
+The CSP's `style-src 'self'` (no `unsafe-inline`) depends on the shipped
+bundle never creating inline styles or style attributes. After ANY
+maplibre-gl upgrade, rebuild and re-run the grep before deploying the
+new Caddyfile-less bundle:
+
+```bash
+pnpm build
+cd web/dist/assets
+grep -riE "createElement\([^)]{0,20}style|setAttribute\([^)]{0,15}style" . ; grep -ri "cssText" .
+```
+
+Zero matches = the CSP can stay as it is. Any match in a maplibre chunk
+means `style-src 'self'` would break the map at runtime: do NOT relax the
+CSP on your own - open an issue with the exact grep output and decide
+together (options: `style-src-elem` with a hash, or maplibre's CSP
+documentation if it names the required directive). The last check ran on
+2026-10-30 against maplibre-gl 6.14.0: zero matches in every chunk. This
+grep proves only that no inline style is *created*; it was not tested in
+a real browser - after deploying, load the site with devtools open, open
+the compass, an airport popup and the legend, and confirm zero CSP
+violations in the console.
 
 ## 6. Rate limiting and micro-cache
 
