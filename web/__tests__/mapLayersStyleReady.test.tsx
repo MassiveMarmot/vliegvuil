@@ -58,6 +58,8 @@ function fakeMapApi(): Record<string, unknown> {
       listeners.set(key, arr);
       return {};
     },
+    // Session 26: the compass label-update effect queries the container.
+    getContainer: (): HTMLDivElement => document.createElement('div'),
     off: (type: string, layerOrFn: string | ((ev?: unknown) => void), maybeFn?: (ev?: unknown) => void): object => {
       const fn = typeof layerOrFn === 'string' ? maybeFn : layerOrFn;
       const key = typeof layerOrFn === 'string' ? `${type}:${layerOrFn}` : type;

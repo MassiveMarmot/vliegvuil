@@ -57,6 +57,15 @@ export function useMap(config: MapConfig, _style?: MapStyle, locale?: MapLocaleP
   const [mapInitError, setMapInitError] = useState<string | null>(null);
   const [tileError, setTileError] = useState(false);
 
+  // Session 26 (review fix): the locale patch is a CONSTRUCTION-only option
+  // (MapLibre reads it in _setButtonTitle at onAdd). Keep it in a ref so it
+  // never enters the init effect's dependency array — an unstable object
+  // there re-created the whole Map on every render (infinite loop, CI OOM).
+  const localeRef = useRef(locale);
+  localeRef.current = locale;
+  // The label string itself is the dependency for the update effect below.
+  const compassLabel = locale?.['NavigationControl.ResetBearing'];
+
   useEffect(() => {
     if (!mapContainer.current) {
       return;
@@ -128,7 +137,7 @@ export function useMap(config: MapConfig, _style?: MapStyle, locale?: MapLocaleP
         // no interaction can tilt it) so the compass never needs to reset
         // tilt — it only ever resets the bearing to 0.
         maxPitch: 0,
-        locale,
+        locale: localeRef.current,
       });
 
       // Set Netherlands bounds
@@ -204,18 +213,36 @@ export function useMap(config: MapConfig, _style?: MapStyle, locale?: MapLocaleP
         console.error('Map error:', detail ?? event);
       });
 
-      // Cleanup function
+      // Cleanup function. The ready signals must reset here: if the effect
+      // ever re-runs (it should not, but a config change would), the
+      // data-layer effects would otherwise run against the new map before
+      // its style loaded.
       return (): void => {
         mapInstance.off('style.load', onStyleLoad);
         mapInstance.removeControl(compassControl);
         mapInstance.remove();
+        setStyleReady(false);
+        setMapLoaded(false);
       };
     } catch (error) {
       setMapError(error instanceof Error ? error.message : 'Unknown map error');
       setMapInitError(error instanceof Error ? error.message : 'Unknown map error');
       console.error('Failed to initialize map:', error);
     }
-  }, [config.center, config.zoom, config.minZoom, config.maxZoom, config.pitch, config.bearing, locale]);
+  }, [config.center, config.zoom, config.minZoom, config.maxZoom, config.pitch, config.bearing]);
+
+  // Session 26 (review fix): update the compass button's label in place on a
+  // language change — MapLibre 6.14 sets both `title` and `aria-label`
+  // (NavigationControl#_setButtonTitle at onAdd), so a later update must
+  // set both. No map re-creation, viewport preserved.
+  useEffect((): void => {
+    if (!map || !compassLabel) {
+      return;
+    }
+    const btn = map.getContainer().querySelector('.maplibregl-ctrl-compass');
+    btn?.setAttribute('aria-label', compassLabel);
+    btn?.setAttribute('title', compassLabel);
+  }, [map, compassLabel]);
 
   return {
     mapContainer,

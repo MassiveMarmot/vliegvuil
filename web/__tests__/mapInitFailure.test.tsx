@@ -30,6 +30,8 @@ function fakeMapApi(): Record<string, unknown> {
       return {};
     },
     off: (): object => ({}),
+    // Session 26: the compass label-update effect queries the container.
+    getContainer: (): HTMLDivElement => document.createElement('div'),
     // Session 26: useMap registers the compass NavigationControl.
     addControl: (_control: unknown, _position: string): object => ({}),
     removeControl: (): void => undefined,

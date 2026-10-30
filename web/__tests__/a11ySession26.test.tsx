@@ -36,6 +36,8 @@ interface FakeMapInstance {
   controls: Array<{ options: Record<string, boolean>; position: string }>;
   removed: boolean;
   ctorOptions?: Record<string, unknown>;
+  container: HTMLDivElement;
+  ctorCount: number;
 }
 const holder = vi.hoisted(() => ({
   current: null as FakeMapInstance | null,
@@ -48,11 +50,25 @@ function makeCompassButton(): HTMLButtonElement {
   return btn;
 }
 
+/** Per-map fake container: getContainer().querySelector finds the compass. */
+function makeContainer(btn: HTMLButtonElement): HTMLDivElement {
+  const div = document.createElement('div');
+  div.appendChild(btn);
+  return div;
+}
+
 vi.mock('maplibre-gl', () => {
   const listeners = new Map<string, Array<(ev?: unknown) => void>>();
-  const fake: FakeMapInstance = { listeners, controls: [], removed: false };
+  const fake: FakeMapInstance = {
+    listeners,
+    controls: [],
+    removed: false,
+    container: makeContainer(makeCompassButton()),
+    ctorCount: 0,
+  };
   holder.current = fake;
   const mapApi = (): Record<string, unknown> => ({
+    getContainer: (): HTMLDivElement => fake.container,
     on: (type: string, fn: (ev?: unknown) => void): object => {
       const arr = listeners.get(type) ?? [];
       arr.push(fn);
@@ -83,6 +99,7 @@ vi.mock('maplibre-gl', () => {
       // Session 26: pitch must be disabled (maxPitch 0) and the locale
       // patch must carry the compass label.
       fake.ctorOptions = opts;
+      fake.ctorCount += 1;
       Object.assign(this, mapApi());
     }
   };
@@ -107,6 +124,13 @@ vi.mock('maplibre-gl', () => {
 });
 
 import App from '../src/App';
+import { useMap as useMapOriginal } from '../src/hooks/useMap';
+import { DEFAULT_MAP_CONFIG, PDOK_BRT_STYLE } from '../src/types';
+
+/** Probe wrapper: fixed config/style, variable locale label. */
+function useMapProbe(locale: Record<string, string>): ReturnType<typeof useMapOriginal> {
+  return useMapOriginal(DEFAULT_MAP_CONFIG, PDOK_BRT_STYLE, locale);
+}
 
 function setPathSafe(path: string): void {
   window.history.replaceState({}, '', path);
@@ -203,6 +227,11 @@ describe('compass (session 26)', () => {
     if (holder.current) {
       holder.current.controls.length = 0;
       holder.current.listeners.clear();
+      holder.current.ctorCount = 0;
+      holder.current.removed = false;
+      // Fresh container + compass button per test (the label-update effect
+      // queries inside it).
+      holder.current.container = makeContainer(makeCompassButton());
       if ('ctorOptions' in holder.current) delete holder.current['ctorOptions'];
     }
   });
@@ -230,6 +259,54 @@ describe('compass (session 26)', () => {
     // The translated label reached MapLibre's locale patch
     const locale = fake.ctorOptions?.['locale'] as Record<string, string> | undefined;
     expect(locale?.['NavigationControl.ResetBearing']).toBe('Kaart naar het noorden draaien');
+  });
+
+  it('re-rendering the App ten times creates exactly one Map (no init loop)', async (): Promise<void> => {
+    setPathSafe('/nl/');
+    const { rerender } = render(<App />);
+    await vi.waitFor((): void => {
+      expect(holder.current).not.toBeNull();
+    });
+    const fake = holder.current as FakeMapInstance;
+    const first = fake.ctorCount;
+    expect(first).toBe(1);
+    for (let i = 0; i < 10; i += 1) {
+      rerender(<App />);
+    }
+    // Regression (session 26 CI OOM): an unstable locale object in the init
+    // effect deps re-created the map on every render — an infinite loop.
+    expect(fake.ctorCount).toBe(1);
+    expect(fake.removed).toBe(false);
+  });
+
+  it('a changed compass label updates aria-label and title in place (no second Map)', async (): Promise<void> => {
+    // Probe at the useMap level: App's mocked t() is constant, but a real
+    // language switch changes the label STRING, which is the effect's
+    // dependency. The locale OBJECT is new every render (inline literal in
+    // Map.tsx) and must never re-create the map.
+    const Probe = ({ label }: { label: string }): React.ReactElement => {
+      const { mapContainer } = useMapProbe({ 'NavigationControl.ResetBearing': label });
+      return <div ref={mapContainer} />;
+    };
+    const { rerender } = render(<Probe label="Kaart naar het noorden draaien" />);
+    await vi.waitFor((): void => {
+      expect(holder.current).not.toBeNull();
+    });
+    const fake = holder.current as FakeMapInstance;
+    expect(fake.ctorCount).toBe(1);
+    const btn = fake.container.querySelector('.maplibregl-ctrl-compass');
+    expect(btn).not.toBeNull();
+    expect(btn?.getAttribute('aria-label')).toBe('Kaart naar het noorden draaien');
+    // A new inline locale object with a NEW label string, as a language
+    // switch produces in the real app:
+    rerender(<Probe label="Reset map to north" />);
+    await vi.waitFor((): void => {
+      expect(btn?.getAttribute('aria-label')).toBe('Reset map to north');
+    });
+    expect(btn?.getAttribute('title')).toBe('Reset map to north');
+    // Still exactly one map — the viewport survives a language switch.
+    expect(fake.ctorCount).toBe(1);
+    expect(fake.removed).toBe(false);
   });
 
   it('keyboard activation: the compass button is reachable and resets bearing to 0', async (): Promise<void> => {

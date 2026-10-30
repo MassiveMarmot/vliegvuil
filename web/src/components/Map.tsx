@@ -78,7 +78,9 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
   // Session 26: the NavigationControl compass button's accessible name comes
   // from MapLibre's UI strings; the locale patch replaces the English
   // "Drag to rotate map, click to reset north" with our translated label
-  // (map.compass, identical keys in every locale).
+  // (map.compass, identical keys in every locale). An inline literal is
+  // safe: useMap reads it from a ref at construction (never a dependency)
+  // and tracks the label STRING for in-place updates on language change.
   const { mapContainer, map, styleReady, tileError, mapInitError } = useMap(
     DEFAULT_MAP_CONFIG,
     PDOK_BRT_STYLE,
