@@ -65,7 +65,11 @@ vi.mock('maplibre-gl', () => {
     },
     NavigationControl: class {
       onAdd(): HTMLButtonElement {
-        return document.createElement('button');
+        // The portaled compass lands in the axe DOM now; give the fake
+        // button an accessible name so button-name does not fire.
+        const btn = document.createElement('button');
+        btn.setAttribute('aria-label', 'Kaart naar het noorden draaien');
+        return btn;
       }
       onRemove(): void {}
     },
