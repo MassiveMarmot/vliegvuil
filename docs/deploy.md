@@ -787,8 +787,11 @@ not catchable, so `Memstore.StoreSessions` never runs.
 - [ ] systemctl status goatcounter - active, and
       ss -tlnp | grep 8091 shows ONLY 127.0.0.1:8091 (no public
       listener).
-- [ ] curl -sSI https://vliegvuil.nl/count.js | head -5 - served from
-      the main origin (Caddy proxy).
+- [ ] A GET of https://vliegvuil.nl/count.js - served from the main
+      origin (Caddy proxy). NOTE: use a GET, not a HEAD (-I): Caddy's
+      reverse_proxy only forwards GET/POST by default, so a HEAD request
+      gets a 405 from the route - that 405 is expected and not an error.
+      e.g. fetch the script body and expect its first lines.
 - [ ] A test visit shows up in the dashboard with a country.
 - [ ] Inspect the hits table schema (sqlite3 .schema hits) - no IP
       column; then grep the database file and the journal for the test
