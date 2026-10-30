@@ -4,7 +4,7 @@
   "description": "VliegVuil web - React + TypeScript + Vite frontend",
   "type": "module",
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && tsx scripts/gen-static-pages.ts",
     "dev": "vite",
     "lint": "eslint . --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",

@@ -276,8 +276,33 @@ sudo -u vliegvuil bash -c '
 ```
 
 The built app ends up in `/srv/vliegvuil/web/dist` — the path the Caddyfile
-expects. Later sessions add build-time variables (for example
-`VITE_SITE_ORIGIN`); document them here when they exist.
+expects.
+
+### Build-time site configuration (session 25b)
+
+The build bakes the site origin and name into the prerendered pages,
+sitemap and robots.txt. The variables (see `web/src/config/site.ts` and
+`web/scripts/gen-static-pages.ts`):
+
+- `VITE_SITE_ORIGIN` — the canonical origin, e.g. `https://vliegvuil.nl`
+  (default). Used in every canonical URL, hreflang alternate, `og:url` and
+  the sitemap.
+- `VITE_SITE_NAME` — the visible site name (default `VliegVuil.nl`).
+
+**Building for another origin** (for example a sibling site on another
+domain — the code contains no hard-coded domain):
+
+```bash
+VITE_SITE_ORIGIN=https://example.eu VITE_SITE_NAME="Example.eu" \
+  pnpm --filter web build
+```
+
+The same command produces `dist/{nl,en}/…` prerendered pages, robots.txt and
+sitemap.xml pointing at `https://example.eu`. No other change is needed;
+the Caddyfile's root redirect and `x-default` hreflang target follow the
+redirect rules above, and `dist/robots.txt`'s `Sitemap:` line uses the new
+origin. Nothing about the deployment itself is origin-specific beyond these
+variables and the site block in the Caddyfile.
 
 ## 4. Install the Caddyfile
 
