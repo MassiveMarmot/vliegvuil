@@ -142,3 +142,15 @@ describe('WebGL canvas stacking (Firefox nightly regression, 2026-10-30)', (): v
     );
   });
 });
+
+describe('compass compositing hint (Firefox canvas-hoist follow-up, PR #124)', (): void => {
+  it('the compass corner carries will-change:transform (own composited layer)', (): void => {
+    // PR #124 isolated the map container, fixing the page chrome, but the
+    // compass is INSIDE the container next to the WebGL canvas and stayed
+    // buried under the hoisted canvas layer on the affected Firefox
+    // nightly + radeonsi. will-change:transform promotes the corner onto
+    // its own composited layer; the library already provides the corner's
+    // position:absolute + z-index:2 (pinned in maplibreStylesheet.test.ts).
+    expect(rule('.maplibregl-ctrl-top-right')).toMatch(/will-change:\s*transform/);
+  });
+});

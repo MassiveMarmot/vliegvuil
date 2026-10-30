@@ -1457,6 +1457,19 @@ body {
 .maplibregl-ctrl-top-right .maplibregl-ctrl-compass {
   background-color: var(--vv-surface);
 }
+/* Firefox regression follow-up (PR #124 isolated the map container into
+   its own stacking context, which fixed the page chrome — counter card,
+   noise toggle — but the compass lives INSIDE that container, in the same
+   stacking context as the WebGL canvas, so the hoisted canvas layer still
+   painted over it on the affected Firefox nightly + radeonsi. The library
+   already gives the corner position:absolute + z-index:2; what is added
+   here is ONLY the compositing hint: will-change:transform promotes the
+   corner onto its own composited layer, lifting it out of the canvas's
+   layer tree. Harmless in spec-compliant engines. */
+.maplibregl-ctrl-top-right {
+  will-change: transform;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   /* Pop the compass in gently; MapLibre's own reset animation is already
      disabled by the library under prefers-reduced-motion. */
