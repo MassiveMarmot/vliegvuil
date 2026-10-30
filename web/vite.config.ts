@@ -96,6 +96,11 @@ export default defineConfig({
           /^\/fonts\//,
           /^\/data\//,
           /^\/noise-contours\.geojson$/,
+          // Session 25c: the analytics count endpoint and script are never
+          // cached and never served by the navigation fallback (the count
+          // must always reach GoatCounter; a cached response would lose
+          // the visit, and a fallback response would corrupt it).
+          /^\/count(\.js)?$/,
           /\.[a-z0-9]+$/i,
         ],
         runtimeCaching: [],

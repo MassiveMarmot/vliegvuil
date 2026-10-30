@@ -77,6 +77,15 @@ export const ATTRIBUTION_SECTIONS: readonly AttributionSectionConfig[] = [
       'The basemap shows the Netherlands in detail; abroad only country borders are shown. Borders are indicative, not a legal boundary.',
   },
   {
+    id: 'analytics',
+    headingKey: 'attribution.sectionAnalytics',
+    headingDefault: 'Analytics',
+    sourceIds: ['geolite2-country'],
+    caveatKey: 'attribution.caveatAnalytics',
+    caveatDefault:
+      'The country code attached to page views comes from MaxMind’s GeoLite2 database (embedded in the self-hosted GoatCounter). The IP address itself is never stored or logged.',
+  },
+  {
     id: 'aircraft-database',
     headingKey: 'attribution.sectionAircraftDatabase',
     headingDefault: 'Aircraft database',

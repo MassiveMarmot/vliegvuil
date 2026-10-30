@@ -4,21 +4,25 @@ VliegVuil.nl is privacy-first by design. This page documents what the site does 
 
 ## What we collect
 
-**Nothing about you.** Specifically:
+**Aggregate page-view counts only, and nothing that identifies you.** Specifically:
 
-- **No analytics** — no page-view tracking, no session recording, no heatmaps
-- **No third-party scripts, fonts, or pixels** — everything is served from our own origin
-- **No cookies** — settings (language, units) are stored in your browser's localStorage and never sent to us
+- **Minimal, self-hosted analytics** — we count page views, unique visits, date/time and country of origin with a self-hosted GoatCounter on our own server. There is no analytics account with any third party and no data leaves our server.
+  - Your IP address is processed **in memory** on our own server, only on the internal route to the analytics service, to derive your country and a session key (browser + address + site) so visits can be counted as unique. It is **never stored in the database and never logged**. Because the analytics service is stopped non-gracefully (`KillSignal=SIGKILL`), the in-memory session key is never written to disk; if that ever changes, this page will say so honestly.
+  - We do **not** collect referrers, screen sizes, regions or languages, and there is no event tracking.
+  - Bot filtering is best-effort: self-identified bots are marked as such in the aggregate numbers; disguised bots may be counted, crawlers without JavaScript are never seen.
+- **No third-party scripts, fonts, or pixels** — everything, including the analytics count, is served from our own origin
+- **No cookies** — settings (language, units) are stored in your browser's localStorage and never sent to us; the analytics uses no cookies or localStorage
 - **No access logs** — the Caddy web server has access logging disabled
-- **No client IP forwarded upstream** — requests proxied to the ADS-B data provider (adsb.fi) are stripped of your IP address and identifying headers
+- **No client IP forwarded upstream** — requests proxied to the ADS-B data provider (adsb.fi) are stripped of your IP address and identifying headers; the only place your address is used at all is the internal analytics route described above
 - **No accounts or profiling** — there is nothing to log into and no behavioural tracking of any kind
 
 ## Third-party requests
 
 **None.** The basemap tiles (PDOK BRT Achtergrondkaart) are self-hosted on
 our own server: the browser loads them from vliegvul.nl itself and never
-contacts service.pdok.nl. The site therefore does not depend on any
-third-party server being reachable at request time.
+contacts service.pdok.nl. The analytics count is same-origin as well (see
+above), so the site does not depend on, or contact, any third-party server
+at request time.
 ## Strict CSP
 
 The Content-Security-Policy only allows resources from our own origin — `service.pdok.nl` is no longer listed anywhere in the policy. See `Caddyfile` and `docs/deploy.md` for the exact policy.

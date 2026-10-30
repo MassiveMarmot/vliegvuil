@@ -26,6 +26,7 @@ const Map = lazy(() => import('./components/Map'));
 /** Session 26: id of the list panel, referenced by the counter toggle's aria-controls */
 const AIRCRAFT_LIST_ID = 'aircraft-list-panel';
 import { useAircraftData } from './hooks';
+import { countRouteChange } from './analytics';
 import { useSmoothedAircraft } from './movement/useSmoothedAircraft';
 import { useTranslation } from 'react-i18next';
 import { DEFAULT_POLLING_CONFIG, type DisplayAircraft } from './types';
@@ -162,6 +163,10 @@ function App(): React.ReactElement {
   // announce via the live region (spec section 6).
   useEffect((): void => {
     document.documentElement.lang = language;
+    // Session 25c: count the route change (same-origin /count, production
+    // builds only; the module no-ops elsewhere). Counted for every route
+    // incl. not-found, per the session plan.
+    countRouteChange(window.location.pathname);
     const titles: Record<string, string> = {
       map: t('title.map', 'VliegVuil.nl - live vliegverkeer en geluidscontouren'),
       about: t('title.about', 'Over - VliegVuil.nl'),

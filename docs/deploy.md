@@ -16,6 +16,11 @@ CORS is not needed and no CORS headers are sent.
 │   ├── static app  ────────────┼──► Caddy ── /api/* ───────►│
 │   └── /api/*      (same origin)│  (VPS)  ~5s micro-cache    │
 └───────────────────────────────┘        no client IP sent   │
+                                         ┌──────────────────────┐
+   /count (same origin): page view;  │ GoatCounter 127.0.0.1 │
+   country + session key derived     │ (loopback only;       │
+   in memory; IP never stored or     │  dashboard NOT proxied)│
+   logged - see 6b and privacy.md    │                      │
                                          └──────────────────┘
 ```
 
@@ -493,7 +498,16 @@ this fixes.
   `User-Agent: VliegVuil.nl/1.0 (+https://vliegvuil.nl)`. adsb.fi never
   learns the visitor IP.
 - **Same-origin API.** The app makes no third-party API calls and no CORS
-  headers exist. `connect-src` is `'self'` only.
+  headers exist. `connect-src` is `'self'` only. The analytics count
+  (session 25c) is same-origin too: `/count` and `/count.js` are proxied
+  by Caddy to the loopback GoatCounter (see 6b), so the browser still
+  contacts only vliegvuil.nl.
+- **One route sees the visitor IP, on purpose:** the Caddy-to-GoatCounter
+  localhost route passes `X-Forwarded-For` so GoatCounter can derive the
+  country and the session key **in memory**. With `KillSignal=SIGKILL`
+  (see 6b) the session key is never written to disk; the IP is never
+  stored in the database or logged by either Caddy or GoatCounter. Every
+  other route - and the entire ADS-B proxy - still strips the IP.
 - **Third-party requests from the browser:** none. The basemap tiles are
   self-hosted at `/tiles/{z}/{x}/{y}.png`; `service.pdok.nl` appears in no
   CSP directive.
@@ -630,6 +644,144 @@ curl -sS -D - -o /dev/null "$URL" | grep -iE 'cache-status|nel|report-to|reporti
 # headers may appear. If nothing prints at all, Cache-Status was not sent
 # either; investigate before accepting the deploy.
 ```
+
+## 6b. Privacy-first analytics (self-hosted GoatCounter, session 25c)
+
+VliegVuil counts page views with a self-hosted GoatCounter (EUPL-1.2) -
+unique visitors, date/time and country of origin only. The verified
+release is **v2.7.0** (2025-12-15); every claim below was re-verified
+against its source (see the 25c PR for the file/line evidence).
+
+### What it collects and what it does not
+
+- **Counted:** page path, date/time, and - derived **in memory** from the
+  visitor IP on the Caddy-to-GoatCounter localhost route - a country
+  (embedded GeoLite2-Country DB, no MaxMind key) and the session key
+  `user-agent + IP + site id` for unique-visit counting (8 h in memory).
+- **Not stored, not logged:** the IP is never written to a column or a
+  log. One caveat by design: on a **graceful** shutdown (TERM/INT) the
+  session keys are flushed as JSON into the `store` table and deleted at
+  the next start. The systemd unit below sets `KillSignal=SIGKILL`
+  (verified in the v2.7.0 source: the flush hooks only SIGHUP/SIGTERM/
+  SIGINT, so SIGKILL prevents it) - with that in place the service never
+  persists the store. If you change the unit, keep this guarantee or
+  change the privacy wording everywhere.
+- **Dashboard:** NOT reachable through the main origin. Default access
+  (pending maintainer approval): SSH tunnel only:
+  tunnel local port 8091 to 127.0.0.1:8091 on the VPS, then open
+  http://127.0.0.1:8091 locally. Alternatives: a Caddy basic_auth host
+  or a separate protected host name, both documented here once chosen.
+- **Staging:** staging traffic is never counted (staging has no
+  GoatCounter route; the site entry below uses the production vhost).
+
+### Install
+
+```bash
+sudo useradd --system --home /var/lib/goatcounter --shell /usr/sbin/nologin goatcounter
+sudo -u goatcounter sh -c 'mkdir -p /var/lib/goatcounter/db'
+
+# Download the v2.7.0 linux-amd64 binary from the GitHub release:
+#   https://github.com/zgoat/goatcounter/releases/tag/v2.7.0
+#   (asset: goatcounter-v2.7.0-linux-amd64.gz)
+sudo -u goatcounter sh -c '
+  gunzip -c /tmp/goatcounter-v2.7.0-linux-amd64.gz > /usr/local/bin/goatcounter
+  chmod +x /usr/local/bin/goatcounter
+'
+
+# Create the site (the vhost MUST match the Caddy Host header):
+sudo -u goatcounter /usr/local/bin/goatcounter db \
+  -db sqlite:///var/lib/goatcounter/db/goatcounter.sqlite \
+  create site -vhost vliegvuil.nl -user.email=<admin-email>
+```
+
+### systemd unit
+
+`/etc/systemd/system/goatcounter.service`:
+
+```ini
+[Unit]
+Description=GoatCounter analytics (vliegvuil.nl)
+After=network.target
+
+[Service]
+Type=notify
+User=goatcounter
+Group=goatcounter
+WorkingDirectory=/var/lib/goatcounter
+# -listen: loopback ONLY. GoatCounter's RealIP middleware trusts
+# X-Forwarded-For/X-Real-Ip with no trusted-proxy setting (verified in
+# v2.7.0), so the listener must never be reachable except via Caddy.
+# -smtp stdout, no -errors: no mail is sent.
+# -ratelimit count: keep the default /count rate limit (4/s).
+# NEVER add -debug: the session debug log prints the session key.
+# NO -geodb: the country DB is embedded; this flag is only for the
+# optional City DB, which we do not use.
+KillSignal=SIGKILL
+ExecStart=/usr/local/bin/goatcounter serve \
+  -listen 127.0.0.1:8091 \
+  -db sqlite:///var/lib/goatcounter/db/goatcounter.sqlite \
+  -ratelimit count
+Restart=on-failure
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/goatcounter
+
+[Install]
+WantedBy=multi-user.target
+```
+
+`KillSignal=SIGKILL` is deliberate (see above): it prevents the shutdown
+flush of session keys to the `store` table. Verified against the v2.7.0
+source: `signal.Notify(sig, SIGHUP, SIGTERM, os.Interrupt)` - SIGKILL is
+not catchable, so `Memstore.StoreSessions` never runs.
+
+### Site settings (apply once, in the dashboard)
+
+- **Data collection** (Settings, Data collection): switch OFF
+  **Referrer** and **Screen size**; switch OFF **Region** (needs the City
+  DB we do not use). Keep **User agent**, **Location** (country) and
+  **Session** - the session key needs the user agent, and unique visits
+  need the session. These map to the v2.7.0 settings.collect bitflags
+  (CollectReferrer 2, CollectUserAgent 4, CollectScreenSize 8,
+  CollectLocation 16, CollectLocationRegion 32, CollectSession 128;
+  default = Referrer|UserAgent|ScreenSize|Location|LocationRegion|Session).
+- **Data retention** (Settings, in days; native since 2.x via
+  settings.data_retention, range 31-1825, applied by a daily cron
+  vacuum): **pending maintainer decision** - propose 730 (2 years); set
+  it once and record the chosen value here.
+- **Admin 2FA**: enable TOTP (User, Multi-factor authentication).
+  v2.7.0 has **no recovery codes** (verified: only enable/disable TOTP
+  endpoints exist). If 2FA locks you out, recovery is via the database:
+  query the users table and clear totp_secret/totp_enabled for your
+  user - then log in and set it up again immediately.
+
+### Verification checklist (run on the VPS; see also privacy.md)
+
+- [ ] systemctl status goatcounter - active, and
+      ss -tlnp | grep 8091 shows ONLY 127.0.0.1:8091 (no public
+      listener).
+- [ ] curl -sSI https://vliegvuil.nl/count.js | head -5 - served from
+      the main origin (Caddy proxy).
+- [ ] A test visit shows up in the dashboard with a country.
+- [ ] Inspect the hits table schema (sqlite3 .schema hits) - no IP
+      column; then grep the database file and the journal for the test
+      IP: no hit.
+- [ ] **Store-table check:** stop and start the goatcounter service,
+      then select key from store - with KillSignal=SIGKILL the shutdown
+      flush did not write the session keys; if it did, tell the
+      maintainer and switch the privacy wording to the honest fallback
+      ("briefly written to the local database on restart, deleted at
+      next start").
+- [ ] journalctl -u caddy --since "1 hour ago" piped through an
+      IPv4-pattern grep - still no IPs in Caddy logs.
+- [ ] scripts/verify-caddy-headers.sh still passes (ADS-B route still
+      strips client IP and headers).
+- [ ] caddy validate --config /etc/caddy/Caddyfile with the custom
+      binary passes.
 
 ## 7. Updates
 
@@ -893,6 +1045,9 @@ caddy validate --config /etc/caddy/Caddyfile
 
 # Error logs (no access logs exist)
 journalctl -u caddy -f
+# GoatCounter errors (stderr only; never enable -debug: the session debug
+# log prints the session key)
+journalctl -u goatcounter -f
 
 # Live checks
 curl -sSI https://vliegvuil.nl | head -20

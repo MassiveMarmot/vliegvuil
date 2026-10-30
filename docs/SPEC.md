@@ -47,7 +47,7 @@ Repo layout:
 Hosting (one OVHcloud VPS, EU; 2 vCPU, 4 GB RAM, 40 GB storage):
 
 Caddy serves the static app and reverse-proxies the ADS-B API with a ~5s micro-cache for the NL bounding box (roughly lat 50.5–54, lon 2.5–7.5, with a North Sea buffer for approaches).
-No access logs. No client IP or headers forwarded upstream. In-memory per-IP rate limiting.
+No access logs. No client IP or headers forwarded upstream (in-memory per-IP rate limiting). One exception (session 25c): the localhost Caddy-to-GoatCounter route passes the visitor IP so analytics can derive country and session key in memory — never stored, never logged; see 6b in docs/deploy.md.
 CORS configured for the web origin and future Capacitor origins.
 Data builds: scheduled GitHub Actions workflows run the /data-build check (weekly, opens or updates one issue) and refresh (monthly, plus manual dispatch; opens a pull request with the changed snapshots and sources.json). Validation gates and an atomic swap apply inside the workflow. Noise sources refresh only on manual dispatch after human review. The VPS runs no data jobs.
 Deploy: the server clones over HTTPS while the repo is public (read-only deploy key only if the repo is private), then build, run by hand on the VPS after merging. Nothing deploys from GitHub.
@@ -59,7 +59,7 @@ Future native apps: Capacitor wraps the same web build.
 API base URL is configurable; no critical feature depends on a service worker.
 Native MapLibre is a later option, since /core is UI-independent.
 5. Privacy
-No analytics, no third-party scripts, self-hosted fonts and assets.
+Minimal self-hosted analytics (session 25c): page views, unique visits, date/time and country of origin via GoatCounter on our own server, same-origin (Caddy proxies /count and /count.js to the loopback listener). The visitor IP is processed in memory on that localhost route only — country and session key are derived from it, never stored (KillSignal=SIGKILL prevents the shutdown flush of session keys; verified against GoatCounter v2.7.0) and never logged. Referrer, screen size, region and language collection are switched off. No third-party scripts, self-hosted fonts and assets; the site still makes no third-party requests.
 Strict CSP; the site makes no third-party requests (the PDOK BRT basemap is self-hosted; PDOK is attribution only, CC-BY 4.0).
 HSTS is enabled with `max-age=86400` (one day, no includeSubDomains, no preload); the decision plan and ramp-up are tracked in docs/BUILD.md §6 (human checkpoints).
 The proxy hides the user's IP from the ADS-B provider.
@@ -91,7 +91,7 @@ Actual flown corridors (NL/Europe) — derived, not official: density heatmap or
 Native apps
 Live noise sensors
 Schiphol flight API (free with registration)
-Self-hosted privacy-first analytics (GoatCounter, EUPL-1.2, single binary, SQLite on the VPS): unique visitors, date/time and country of origin only; the visitor IP is processed in memory on the localhost Caddy→GoatCounter route to derive a country and the session key (user-agent + IP + site id, held in memory up to 8 h and, on graceful shutdown, briefly written to the local database and deleted at next start — mitigated with `KillSignal=SIGKILL` in the systemd unit, to be verified); never logged; no hosted service, no goatcounter.com account. Planned in session 25c — see docs/sessions/25c-analytics.md and the 25c row in BUILD.md §4. Until 25c ships, the "no analytics" statements in §5 remain true and are updated in that session.
+Self-hosted privacy-first analytics (GoatCounter, EUPL-1.2, single binary, SQLite on the VPS): shipped in session 25c — see §5, docs/sessions/25c-analytics.md and the 25c row in BUILD.md §4.
 Accounts, playback, schedules
 
 Explicitly excluded (reviewed, not integrated):

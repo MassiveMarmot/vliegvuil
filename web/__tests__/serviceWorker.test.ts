@@ -65,4 +65,17 @@ describe('service worker precache manifest (app shell only)', () => {
       expect(fallback[1]).toBe('index.html');
     }
   });
+
+  // Session 25c: the analytics count endpoint and script are excluded from
+  // the navigation fallback, and never runtime-cached or precached.
+  it('never serves /count or /count.js from the service worker (session 25c)', () => {
+    if (!existsSync(swPath)) return;
+    const sw = readSw();
+    // The denylist compiled into the NavigationRoute must include /count
+    expect(sw).toContain('\\/count(');
+    expect(sw).not.toContain('registerRoute(new RegExp');
+    // Neither the endpoint nor the script may appear in the precache
+    const manifest = /precacheAndRoute\(([[\s\S]]*?)\]/.exec(sw)?.[1] ?? '';
+    expect(manifest).not.toMatch(/url:"\/count/);
+  });
 });
