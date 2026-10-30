@@ -702,11 +702,13 @@ sudo chmod +x /usr/local/bin/goatcounter
 # Create the site (the vhost MUST match the Caddy Host header). Replace
 # the example address with the real admin e-mail — do NOT keep angle
 # brackets, bash treats < and > as redirections:
-# NOTE: the connection string is "sqlite+<file>" (not sqlite:// —
-# verified in v2.7.0's 'goatcounter help db'), and -createdb makes the
-# database file on first run.
+# NOTE (verified in v2.7.0): the connection string scheme is
+# "sqlite+<file>" (not sqlite://), and the -db flag MUST be written in
+# -db=value form here — the "db" subcommand's parser treats a separate
+# "sqlite+..." token as the command name ("unknown command for db").
+# -createdb makes the database file on first run.
 sudo -u goatcounter /usr/local/bin/goatcounter db \
-  -db sqlite+/var/lib/goatcounter/db/goatcounter.sqlite -createdb \
+  -db=sqlite+/var/lib/goatcounter/db/goatcounter.sqlite -createdb \
   create site -vhost vliegvuil.nl -user.email=admin@example.com
 ```
 
@@ -735,7 +737,7 @@ WorkingDirectory=/var/lib/goatcounter
 KillSignal=SIGKILL
 ExecStart=/usr/local/bin/goatcounter serve \
   -listen 127.0.0.1:8091 \
-  -db sqlite+/var/lib/goatcounter/db/goatcounter.sqlite \
+  -db=sqlite+/var/lib/goatcounter/db/goatcounter.sqlite \
   -ratelimit count
 Restart=on-failure
 
