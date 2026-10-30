@@ -114,6 +114,9 @@ vi.mock('maplibre-gl', () => {
       options: Record<string, boolean>;
       constructor(options: Record<string, boolean>) {
         this.options = options;
+        // Firefox portal fix: onAdd is called directly now (no addControl),
+        // so the control registers itself for the wiring assertions.
+        fake.controls.push({ options, position: 'portal' });
       }
       onAdd(): HTMLButtonElement {
         return makeCompassButton();
@@ -252,8 +255,17 @@ describe('compass (session 26)', () => {
     expect(compass).toBeDefined();
     expect(compass?.options['showCompass']).toBe(true);
     expect(compass?.options['showZoom']).toBe(false);
-    // Anchored top-right: below the header, clear of every other control
-    expect(compass?.position).toBe('top-right');
+    // Firefox portal fix: the compass is NOT mounted via addControl any
+    // more (the fake control registers itself with position 'portal');
+    // the real Map.addControl path is never taken.
+    expect(compass?.position).toBe('portal');
+    // The portaled control element is rendered OUTSIDE .map-container, in
+    // the .map-compass-overlay sibling (outside the canvas stacking ctx)
+    const overlay = document.querySelector('.map-compass-overlay');
+    const portaled = overlay?.querySelector('.maplibregl-ctrl-compass');
+    const insideContainer = document.querySelector('.map-container .maplibregl-ctrl-compass');
+    expect(portaled).not.toBeNull();
+    expect(insideContainer).toBeNull();
     // Pitch disabled so the compass never needs to reset tilt
     expect(fake.ctorOptions?.['maxPitch']).toBe(0);
     // The translated label reached MapLibre's locale patch
@@ -284,9 +296,26 @@ describe('compass (session 26)', () => {
     // language switch changes the label STRING, which is the effect's
     // dependency. The locale OBJECT is new every render (inline literal in
     // Map.tsx) and must never re-create the map.
+    // Firefox portal fix: useMap now hands the control element out for
+    // Map.tsx to portal into a sibling overlay; the probe mirrors that
+    // wiring so the label effect's query path is exercised as in prod.
     const Probe = ({ label }: { label: string }): React.ReactElement => {
-      const { mapContainer } = useMapProbe({ 'NavigationControl.ResetBearing': label });
-      return <div ref={mapContainer} />;
+      const { mapContainer, compassElement } = useMapProbe({ 'NavigationControl.ResetBearing': label });
+      return (
+        <>
+          <div ref={mapContainer} />
+          {compassElement && (
+            <div
+              className="map-compass-overlay"
+              ref={(overlay): void => {
+                if (overlay && compassElement && compassElement.parentElement !== overlay) {
+                  overlay.appendChild(compassElement);
+                }
+              }}
+            />
+          )}
+        </>
+      );
     };
     const { rerender } = render(<Probe label="Kaart naar het noorden draaien" />);
     await vi.waitFor((): void => {
@@ -294,7 +323,7 @@ describe('compass (session 26)', () => {
     });
     const fake = holder.current as FakeMapInstance;
     expect(fake.ctorCount).toBe(1);
-    const btn = fake.container.querySelector('.maplibregl-ctrl-compass');
+    const btn = document.querySelector('.map-compass-overlay .maplibregl-ctrl-compass');
     expect(btn).not.toBeNull();
     expect(btn?.getAttribute('aria-label')).toBe('Kaart naar het noorden draaien');
     // A new inline locale object with a NEW label string, as a language

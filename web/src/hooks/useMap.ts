@@ -39,6 +39,11 @@ export type MapLocalePatch = Record<string, string>;
 export interface UseMapReturn {
   mapContainer: React.RefObject<HTMLDivElement>;
   map: MapLibreMap | null;
+  /** The compass control's DOM element (NavigationControl onAdd return
+   *  value), to be rendered by Map.tsx OUTSIDE .map-container — see the
+   *  Firefox stacking-order fix where it is created. Null before the map
+   *  initializes and after cleanup. */
+  compassElement: HTMLElement | null;
   /** True once the 'load' event fired (first fully rendered frame). */
   mapLoaded: boolean;
   /** True once the style is loaded ('style.load') — independent of tiles. */
@@ -58,6 +63,7 @@ export interface UseMapReturn {
 export function useMap(config: MapConfig, _style?: MapStyle, locale?: MapLocalePatch): UseMapReturn {
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<MapLibreMap | null>(null);
+  const [compassElement, setCompassElement] = useState<HTMLElement | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [styleReady, setStyleReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -77,6 +83,10 @@ export function useMap(config: MapConfig, _style?: MapStyle, locale?: MapLocaleP
     if (!mapContainer.current) {
       return;
     }
+
+    // The compass control's element once onAdd has produced it (see the
+    // Firefox fix at the control's creation site for the full rationale).
+    let compassElement: HTMLElement | null = null;
 
     try {
       // Create map instance (maplibre-gl 6 is ESM-only: named import)
@@ -180,7 +190,26 @@ export function useMap(config: MapConfig, _style?: MapStyle, locale?: MapLocaleP
       // counter + list: bottom-left; header: top bar; airport popup:
       // bottom-center), so the compass owns the top-right corner at every
       // tested width (320/360/375 px included).
-      mapInstance.addControl(compassControl, 'top-right');
+      //
+      // Firefox regression follow-up: do NOT use map.addControl. addControl
+      // mounts the control INSIDE .map-container, in the same stacking
+      // context as the WebGL canvas — and on the affected Firefox nightly
+      // + radeonsi the canvas orders above it (elementFromPoint returns the
+      // canvas at the compass position; z-index/position/will-change on the
+      // corner do not help, because Gecko's stacking order itself misorders
+      // them). The proven fix (the counter and noise toggle were rescued
+      // exactly this way, PR #124) is to render the chrome OUTSIDE the
+      // canvas's stacking context: onAdd returns the control's element
+      // unattached (IControl contract, maplibre-gl.d.ts), Map.tsx portals it
+      // into a sibling overlay of .map-container, and the overlay owns the
+      // positioning. The control still registers its map listeners through
+      // onAdd; cleanup calls onRemove (Map.remove() only detaches controls
+      // IT mounted via addControl).
+      compassElement = compassControl.onAdd(mapInstance);
+      if (compassElement) {
+        compassElement.classList.add('map-compass-portal');
+        setCompassElement(compassElement);
+      }
 
       // Store map instance
       setMap(mapInstance);
@@ -234,7 +263,8 @@ export function useMap(config: MapConfig, _style?: MapStyle, locale?: MapLocaleP
       // its style loaded.
       return (): void => {
         mapInstance.off('style.load', onStyleLoad);
-        mapInstance.removeControl(compassControl);
+        compassControl.onRemove();
+        setCompassElement(null);
         mapInstance.remove();
         setStyleReady(false);
         setMapLoaded(false);
@@ -249,19 +279,27 @@ export function useMap(config: MapConfig, _style?: MapStyle, locale?: MapLocaleP
   // Session 26 (review fix): update the compass button's label in place on a
   // language change — MapLibre 6.14 sets both `title` and `aria-label`
   // (NavigationControl#_setButtonTitle at onAdd), so a later update must
-  // set both. No map re-creation, viewport preserved.
+  // set both. No map re-creation, viewport preserved. The compass element
+  // is portaled out of the map container (Firefox fix above), so query it
+  // directly instead of through map.getContainer().
   useEffect((): void => {
     if (!map || !compassLabel) {
       return;
     }
-    const btn = map.getContainer().querySelector('.maplibregl-ctrl-compass');
+    // The control element is the ctrl container; the button lives inside
+    // it (matches() covers controls whose onAdd returns the button
+    // itself, as test fakes do).
+    const btn = compassElement?.matches('.maplibregl-ctrl-compass')
+      ? compassElement
+      : (compassElement?.querySelector('.maplibregl-ctrl-compass') ?? null);
     btn?.setAttribute('aria-label', compassLabel);
     btn?.setAttribute('title', compassLabel);
-  }, [map, compassLabel]);
+  }, [map, compassLabel, compassElement]);
 
   return {
     mapContainer,
     map,
+    compassElement,
     mapLoaded,
     styleReady,
     tileError,

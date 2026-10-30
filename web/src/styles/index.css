@@ -1470,36 +1470,43 @@ body {
 /* Compass (MapLibre NavigationControl, top-right): brand-consistent,
    playful-minimal chrome on top of maplibre-gl.css (imported in
    useMap.ts since the invisible-compass fix — the library stylesheet
-   provides the icon, the 29x29 button and the corner positioning; these
-   overrides only adjust colours to the app palette). Anchored top-right
-   by MapLibre, clear of the header (top bar), noise legend + telemetry
-   (bottom-right), counter + list (bottom-left) and the airport popup
-   (bottom-center). */
-.maplibregl-ctrl-top-right .maplibregl-ctrl-group {
+   provides the icon and the 29x29 button; the corner positioning was
+   ours since the portal fix below). Anchored top-right, clear of the
+   header (top bar), noise legend + telemetry (bottom-right), counter +
+   list (bottom-left) and the airport popup (bottom-center). */
+/* Firefox regression final fix (follow-up to #124/#125): the compass
+   control's element is PORTALED out of .map-container by useMap
+   (NavigationControl.onAdd, rendered by Map.tsx into this sibling
+   overlay) — outside the WebGL canvas's stacking context entirely, the
+   mechanism that already rescued the counter card and noise toggle in
+   #124. On the affected Firefox nightly + radeonsi, Gecko's stacking
+   order placed the canvas above the compass INSIDE the container
+   (elementFromPoint returned the canvas at the compass position) and
+   neither z-index, will-change:transform nor isolation corrected it;
+   leaving the canvas's stacking context does. Spec-compliant engines
+   are unaffected. The overlay owns the anchoring (the portaled corner
+   no longer sits in MapLibre's ctrl container). */
+.map-compass-overlay {
+  position: absolute;
+  top: 0.625rem;
+  right: 0.625rem;
+  z-index: 15;
+  pointer-events: none;
+}
+.map-compass-overlay .maplibregl-ctrl-group {
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   overflow: hidden;
 }
-.maplibregl-ctrl-top-right .maplibregl-ctrl-compass {
+.map-compass-overlay .maplibregl-ctrl-compass {
   background-color: var(--vv-surface);
-}
-/* Firefox regression follow-up (PR #124 isolated the map container into
-   its own stacking context, which fixed the page chrome — counter card,
-   noise toggle — but the compass lives INSIDE that container, in the same
-   stacking context as the WebGL canvas, so the hoisted canvas layer still
-   painted over it on the affected Firefox nightly + radeonsi. The library
-   already gives the corner position:absolute + z-index:2; what is added
-   here is ONLY the compositing hint: will-change:transform promotes the
-   corner onto its own composited layer, lifting it out of the canvas's
-   layer tree. Harmless in spec-compliant engines. */
-.maplibregl-ctrl-top-right {
-  will-change: transform;
+  pointer-events: auto;
 }
 
 @media (prefers-reduced-motion: no-preference) {
   /* Pop the compass in gently; MapLibre's own reset animation is already
      disabled by the library under prefers-reduced-motion. */
-  .maplibregl-ctrl-top-right .maplibregl-ctrl-group {
+  .map-compass-overlay .maplibregl-ctrl-group {
     animation: vv-panel-pop 160ms ease-out;
   }
 }

@@ -81,7 +81,7 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
   // (map.compass, identical keys in every locale). An inline literal is
   // safe: useMap reads it from a ref at construction (never a dependency)
   // and tracks the label STRING for in-place updates on language change.
-  const { mapContainer, map, styleReady, tileError, mapInitError } = useMap(
+  const { mapContainer, map, compassElement, styleReady, tileError, mapInitError } = useMap(
     DEFAULT_MAP_CONFIG,
     PDOK_BRT_STYLE,
     { 'NavigationControl.ResetBearing': t('map.compass', 'Kaart naar het noorden draaien') },
@@ -312,6 +312,7 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
   }, [map, styleReady, airports, onAirportClick]);
 
   return (
+    <>
     <div
       ref={mapContainer}
       className="map-container"
@@ -355,6 +356,22 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
         </div>
       )}
     </div>
+    {/* Firefox regression fix: the compass is portaled OUT of
+        .map-container (a SIBING overlay, outside the canvas's stacking
+        context) — useMap hands us the NavigationControl's element from
+        onAdd; the overlay owns the top-right anchoring (see
+        .map-compass-overlay in styles/index.css). */}
+    {compassElement && (
+      <div
+        className="map-compass-overlay"
+        ref={(overlay): void => {
+          if (overlay && compassElement && compassElement.parentElement !== overlay) {
+            overlay.appendChild(compassElement);
+          }
+        }}
+      />
+    )}
+    </>
   );
 }
 

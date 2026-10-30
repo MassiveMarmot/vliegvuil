@@ -24,8 +24,19 @@ function rule(selector: string): string {
 }
 
 describe('session 26 layout: compass never overlaps the other chrome', (): void => {
-  it('the compass is anchored top-right inside the map region (below the header)', (): void => {
-    expect(useMapSource).toContain("addControl(compassControl, 'top-right')");
+  it('the compass is portaled out of the map container, anchored top-right by the overlay (below the header)', (): void => {
+    // Firefox fix: addControl is never called; the control element comes
+    // from onAdd and Map.tsx portals it into the .map-compass-overlay
+    // SIBLING of .map-container (outside the canvas stacking context).
+    expect(useMapSource).toContain('compassControl.onAdd(mapInstance)');
+    expect(useMapSource).not.toContain('addControl(compassControl');
+    // The overlay owns the anchoring now: top-right inside the map region.
+    const overlay = rule('.map-compass-overlay');
+    expect(overlay).toMatch(/position:\s*absolute/);
+    expect(overlay).toMatch(/top:\s*0\.625rem/);
+    expect(overlay).toMatch(/right:\s*0\.625rem/);
+    // Above the canvas's stacking context (container is z-index:0)
+    expect(overlay).toMatch(/z-index:\s*15/);
   });
 
   it('the header is a top bar; the map region (compass anchor) starts below it', (): void => {
@@ -124,8 +135,10 @@ describe('maplibre stylesheet import (invisible-compass fix): control geometry',
     // position: relative, no bottom edge), so MapLibre's top:0 anchor
     // inside .map-container is already below the header bar — no extra
     // offset needed. The library's own corner rule is pinned in
-    // maplibreStylesheet.test.ts (built CSS). Here: our override.
-    const group = rule('.maplibregl-ctrl-top-right .maplibregl-ctrl-group');
+    // maplibreStylesheet.test.ts (built CSS). Here: our override — since
+    // the portal the selector is .map-compass-overlay (the corner no
+    // longer sits inside MapLibre's ctrl container).
+    const group = rule('.map-compass-overlay .maplibregl-ctrl-group');
     expect(group).toMatch(/border-radius:\s*10px/);
   });
 
@@ -175,13 +188,14 @@ describe('WebGL canvas stacking (Firefox nightly regression, 2026-10-30)', (): v
 });
 
 describe('compass compositing hint (Firefox canvas-hoist follow-up, PR #124)', (): void => {
-  it('the compass corner carries will-change:transform (own composited layer)', (): void => {
-    // PR #124 isolated the map container, fixing the page chrome, but the
-    // compass is INSIDE the container next to the WebGL canvas and stayed
-    // buried under the hoisted canvas layer on the affected Firefox
-    // nightly + radeonsi. will-change:transform promotes the corner onto
-    // its own composited layer; the library already provides the corner's
-    // position:absolute + z-index:2 (pinned in maplibreStylesheet.test.ts).
-    expect(rule('.maplibregl-ctrl-top-right')).toMatch(/will-change:\s*transform/);
+  it('the compass is portaled outside the canvas stacking context (final Firefox fix)', (): void => {
+    // Supersedes the #125 will-change hint: elementFromPoint still
+    // returned the canvas at the compass position with it, because
+    // Gecko's stacking order itself misorders the canvas above the
+    // control INSIDE the container. The portal (onAdd + sibling overlay)
+    // removes the compass from that stacking context entirely — the same
+    // mechanism that fixed the counter and noise toggle in #124.
+    expect(useMapSource).toContain('compassControl.onAdd(mapInstance)');
+    expect(css).toMatch(/\.map-compass-overlay\s*\{[^}]*z-index:\s*15/);
   });
 });
