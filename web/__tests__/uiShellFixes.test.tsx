@@ -68,7 +68,7 @@ describe('route change closes overlays (finding 3)', () => {
 
   it('closes the aircraft list when navigating to Attribution', (): void => {
     const { container } = render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: /^lijst$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /vliegtuigen: \d+/i }));
     expect(container.querySelector('.aircraft-list')).not.toBeNull();
     openMenuAndNavigate(/^bronnen$/i, '/nl/attribution');
     expect(container.querySelector('.aircraft-list')).toBeNull();
@@ -85,7 +85,7 @@ describe('route change closes overlays (finding 3)', () => {
 
   it('panels stay closed when navigating back to the map', async (): Promise<void> => {
     const { container } = render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: /^lijst$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /vliegtuigen: \d+/i }));
     openMenuAndNavigate(/^bronnen$/i, '/nl/attribution');
     await act(async (): Promise<void> => {
       window.history.back();
@@ -172,7 +172,9 @@ describe('search modes (finding 1)', () => {
     const tools = container.querySelector('.header-tools');
     expect(tools).not.toBeNull();
     expect(tools?.querySelector('.search-box')).not.toBeNull();
-    expect(tools?.textContent).toMatch(/lijst/i);
+    // Session 26: the Lijst button moved out of the header (the flight
+    // counter is the list toggle now); the cluster is search + Menu.
+    expect(tools?.textContent).toMatch(/menu/i);
   });
 
   it('narrow viewports keep the expanding icon button', (): void => {
@@ -198,8 +200,11 @@ describe('shell layout classes (finding 4)', () => {
     const css = readFileSync(join(__dirname, '..', 'src', 'styles', 'index.css'), 'utf8');
     const listBlock = (/\.aircraft-list\s*\{[\s\S]*?\n\}/.exec(css)?.[0] ?? '')
       .replace(/\/\*[\s\S]*?\*\//g, '');
-    expect(listBlock).toMatch(/bottom: 1rem;/);
-    expect(listBlock).not.toMatch(/100vh|100dvh/);
+    // Session 26: the list is a pop-out anchored above the counter
+    // (bottom: 4rem), capped by max-height, still scrolling internally.
+    expect(listBlock).toMatch(/bottom: 4rem;/);
+    expect(listBlock).toMatch(/max-height: min\(70vh, 32rem\)/);
+    expect(listBlock).not.toMatch(/(^|;)\s*top:/);
     const tableBlock = /\.aircraft-list-table\s*\{[\s\S]*?\n\}/.exec(css)?.[0] ?? '';
     expect(tableBlock).toMatch(/overflow-y: auto;/);
     expect(tableBlock).toMatch(/min-height: 0;/);

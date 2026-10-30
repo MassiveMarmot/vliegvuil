@@ -16,7 +16,8 @@
     "reload": "Reload",
     "tileError": "The map background could not be loaded",
     "webgl2Unavailable": "Your browser doesn't provide WebGL2 (this can be disabled by privacy settings). The list still works.",
-    "openList": "Open the aircraft list"
+    "openList": "Open the aircraft list",
+    "compass": "Reset map to north"
   },
   "noise": {
     "legendTitle": "Noise contours legend",
@@ -111,7 +112,8 @@
   },
   "info": {
     "aircraftCount": "Aircraft: {{count}}",
-    "lastUpdate": "Last update: {{time}}"
+    "lastUpdate": "Last update: {{time}}",
+    "listToggle": "Aircraft list ({{count}} aircraft), open or close"
   },
   "stale": {
     "connection": "Data not up to date: connection error",
@@ -130,7 +132,6 @@
     "about": "About",
     "attribution": "Sources",
     "settings": "Settings",
-    "list": "List",
     "menu": "Menu",
     "menuLabel": "Main menu",
     "language": "Language",

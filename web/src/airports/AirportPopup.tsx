@@ -65,28 +65,16 @@ export function AirportPopup({ icao, iata, name, status, onClose }: AirportPopup
       role="dialog"
       aria-label={t('airport.title', 'Luchthaveninformatie')}
       onKeyDown={handleKeyDown}
-      style={{
-        position: 'absolute',
-        bottom: '4.5rem',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        padding: '0.75rem 1rem',
-        borderRadius: '0.5rem',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-        maxWidth: '20rem',
-        zIndex: 25,
-      }}
       data-testid="airport-popup"
     >
-      <h3 style={{ margin: '0 0 0.25rem', fontSize: '1rem' }}>{name}</h3>
-      <p style={{ margin: '0 0 0.25rem', fontSize: '0.875rem' }}>
+      <h3 className="airport-popup-name">{name}</h3>
+      <p className="airport-popup-codes">
         {icao}
         {iata ? ` · ${iata}` : ''}
       </p>
       {statusText !== null && (
         <p
-          style={{ margin: '0 0 0.5rem', fontSize: '0.875rem' }}
+          className="airport-popup-status"
           data-testid="airport-status"
         >
           {statusText}
@@ -98,7 +86,6 @@ export function AirportPopup({ icao, iata, name, status, onClose }: AirportPopup
         className="airport-popup-close"
         onClick={onClose}
         aria-label={t('telemetry.close', 'Sluiten')}
-        style={{ fontSize: '0.875rem' }}
       >
         <Icon name="x" size={18} />
       </button>

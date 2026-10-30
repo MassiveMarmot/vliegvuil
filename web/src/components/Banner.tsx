@@ -98,43 +98,18 @@ export function SimpleBanner({ type, message, visible, onDismiss }: BannerProps)
     return null;
   }
 
-  const bgColor = type === 'info' ? '#dbeafe' : type === 'warning' ? '#fef3c7' : '#fee2e2';
-  const textColor = type === 'info' ? '#1e40af' : type === 'warning' ? '#92400e' : '#991b1b';
-  const borderColor = type === 'info' ? '#3b82f6' : type === 'warning' ? '#f59e0b' : '#ef4444';
-
   return (
     <div
-      style={{
-        position: 'fixed',
-        top: '1rem',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 50,
-        backgroundColor: bgColor,
-        color: textColor,
-        border: `1px solid ${borderColor}`,
-        borderRadius: '0.25rem',
-        padding: '0.5rem 1rem',
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-      }}
+      className={`banner banner-${type}`}
       role="alert"
       aria-live="polite"
     >
-      <span style={{ marginRight: '0.5rem' }}><Icon name={bannerIcon(type)} size={18} /></span>
+      <span className="banner-icon"><Icon name={bannerIcon(type)} size={18} /></span>
       <span>{message}</span>
       {onDismiss && (
         <button
           onClick={onDismiss}
-          style={{
-            marginLeft: '1rem',
-            fontSize: '1.25rem',
-            fontWeight: 'bold',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: 0,
-          }}
+          className="banner-button"
           aria-label={t('banner.close', 'Sluiten')}
         >
           <Icon name="x" size={18} />

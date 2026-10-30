@@ -264,18 +264,16 @@ body {
   border: 0;
 }
 
-/* Aircraft list view — sortable table */
+/* Aircraft list view — sortable table. Session 26: pop-out anchored
+   bottom-left, directly above the counter that toggles it. */
 .aircraft-list {
   position: absolute;
-  /* Under the header bar, above the shell bottom margin */
-  top: calc(3.5rem + 0.5rem);
-  right: 1rem;
-  bottom: 1rem;
+  /* Above the map-status counter (bottom: 1rem, ~2.6rem tall incl. padding) */
+  bottom: 4rem;
+  left: 1rem;
   width: 420px;
   max-width: calc(100vw - 2rem);
-  /* height derives from the inset (top/bottom), not from 100vh; the panel
-     itself is the scroll container. */
-  max-height: none;
+  max-height: min(70vh, 32rem);
   background-color: rgba(255, 255, 255, 0.96);
   border: 1px solid #d4d0c8;
   border-radius: 12px;
@@ -285,6 +283,25 @@ body {
   z-index: 20;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
+
+/* Session 26: pop-out slide/fade motion, fully disabled under
+   prefers-reduced-motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .aircraft-list {
+    animation: vv-panel-pop 160ms ease-out;
+  }
+}
+@keyframes vv-panel-pop {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .aircraft-list-header {
@@ -618,7 +635,8 @@ body {
     right: 0.5rem;
     width: auto;
     max-width: none;
-    top: 5.5rem;
+    bottom: 3.5rem;
+    max-height: 60vh;
   }
 
   .banner {
@@ -718,6 +736,11 @@ body {
   border: 1px solid rgba(0, 0, 0, 0.3);
   border-radius: 2px;
   flex-shrink: 0;
+  /* Session 26: band colours/patterns are data-derived (colour-blind-safe
+     gradient), so they arrive as custom properties set inline by the
+     component; the static layout lives here. */
+  background-color: var(--noise-swatch-color);
+  background-image: var(--noise-swatch-pattern);
 }
 
 .noise-legend-caveat,
@@ -1236,6 +1259,28 @@ body {
   pointer-events: none;
 }
 
+/* Session 26: the count line is the list toggle — a real button, visually
+   consistent with the status card it replaced (playful-minimal chrome). */
+.map-status-toggle {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.map-status-toggle:focus-visible {
+  outline: 2px solid var(--vv-accent, #e8735a);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.map-status-toggle:hover {
+  text-decoration: underline;
+}
+
 /* Map status line (aircraft count + last update), replaces the old card */
 .map-status {
   position: absolute;
@@ -1277,5 +1322,131 @@ body {
       opacity: 1;
       transform: none;
     }
+  }
+}
+
+/* ===== Session 26: styles moved from inline (Map notices, Banner,
+   MapErrorBoundary, AirportPopup). No visual change vs the inline values. ===== */
+
+/* Map container: the existing .map-container rule already carries the
+   former inline values (width/height 100%, min-height 400px). */
+
+/* Fatal init failure (WebGL2 unavailable) blocking notice */
+.map-init-error-notice {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  text-align: center;
+  background-color: #f5f2ec;
+  color: #3b352f;
+  font-size: 0.9375rem;
+  z-index: 30;
+}
+.map-init-error-text {
+  margin: 0;
+  max-width: 34rem;
+}
+.map-init-error-button {
+  padding: 0.4rem 1rem;
+  border-radius: 0.375rem;
+  border: 1px solid #8c7f6b;
+  background-color: #fff;
+  color: #3b352f;
+}
+.map-init-error-button:focus-visible {
+  outline: 2px solid var(--vv-accent);
+  outline-offset: 2px;
+}
+
+/* Non-blocking basemap tile failure notice */
+.tile-error-notice {
+  position: absolute;
+  top: 4.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(255, 245, 235, 0.95);
+  color: #7a4a1a;
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.8125rem;
+  border: 1px solid #e5c9a8;
+  z-index: 25;
+  pointer-events: none;
+}
+
+/* Session 26: banner icon spacing (moved from inline; the .banner,
+   .banner-info/-warning/-error and .banner-button blocks above are now the
+   only banner styling). */
+.banner-icon {
+  margin-right: 0.5rem;
+}
+.banner-button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* Map error boundary fallback (was inline) */
+.map-error-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+.map-error-fallback p {
+  margin: 0;
+}
+
+/* Airport popup (was inline) */
+.airport-popup {
+  position: absolute;
+  bottom: 4.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(255, 255, 255, 0.95);
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  max-width: 20rem;
+  z-index: 25;
+}
+.airport-popup-name {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+.airport-popup-codes {
+  margin: 0 0 0.25rem;
+  font-size: 0.875rem;
+}
+.airport-popup-status {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+}
+.airport-popup .airport-popup-close {
+  font-size: 0.875rem;
+}
+
+/* Compass (MapLibre NavigationControl, bottom-right): brand-consistent,
+   playful-minimal chrome; positioned by MapLibre with bottom-right anchor,
+   clear of the header (top), noise legend (top-left), telemetry panel
+   (bottom-left) and the list counter (bottom-left). */
+.maplibregl-ctrl-top-right .maplibregl-ctrl-group {
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+.maplibregl-ctrl-top-right .maplibregl-ctrl-compass {
+  background-color: var(--vv-surface);
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* Pop the compass in gently; MapLibre's own reset animation is already
+     disabled by the library under prefers-reduced-motion. */
+  .maplibregl-ctrl-top-right .maplibregl-ctrl-group {
+    animation: vv-panel-pop 160ms ease-out;
   }
 }

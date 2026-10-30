@@ -30,6 +30,11 @@ function fakeMapApi(): Record<string, unknown> {
       return {};
     },
     off: (): object => ({}),
+    // Session 26: the compass label-update effect queries the container.
+    getContainer: (): HTMLDivElement => document.createElement('div'),
+    // Session 26: useMap registers the compass NavigationControl.
+    addControl: (_control: unknown, _position: string): object => ({}),
+    removeControl: (): void => undefined,
     once: (): object => ({}),
     addImage: (): void => undefined,
     hasImage: (): boolean => false,
@@ -64,6 +69,15 @@ vi.mock('maplibre-gl', () => {
       constructor(_sw: unknown, _ne: unknown) {
         // no-op in the fake
       }
+    },
+    // Session 26: useMap constructs a compass-only NavigationControl.
+    NavigationControl: class {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      constructor(_options: unknown) {}
+      onAdd(): null {
+        return null;
+      }
+      onRemove(): void {}
     },
   };
 });

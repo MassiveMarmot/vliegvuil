@@ -24,7 +24,6 @@ export interface HeaderProps {
   route: RouteName;
   onNavigate: (path: string) => void;
   onOpenSettings: () => void;
-  onToggleList: () => void;
   /** Search box renders inside the header (icon button, expands on demand) */
   search?: React.ReactNode;
   /** Skip-link target id ("map" region or list view) */
@@ -33,7 +32,7 @@ export interface HeaderProps {
 
 
 
-export function Header({ language, route, onNavigate, onOpenSettings, onToggleList, search, skipTargetId }: HeaderProps): React.ReactElement {
+export function Header({ language, route, onNavigate, onOpenSettings, search, skipTargetId }: HeaderProps): React.ReactElement {
   const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -119,13 +118,6 @@ export function Header({ language, route, onNavigate, onOpenSettings, onToggleLi
         </a>
         <div className="header-tools">
           {search}
-          <button
-            type="button"
-            className="header-button"
-            onClick={onToggleList}
-          >
-            {t('nav.list', 'Lijst')}
-          </button>
           <button
             type="button"
             className="header-button menu-toggle"
