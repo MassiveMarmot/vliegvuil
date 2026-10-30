@@ -276,7 +276,9 @@ The repository's `preinstall` script runs `npx only-allow pnpm`, which is why
 sudo -u vliegvuil bash -c '
   cd /srv/vliegvuil
   pnpm install --frozen-lockfile
-  pnpm --filter web build
+  # VITE_ANALYTICS=1: production builds count page views (session 25c);
+  # dev, tests and CI builds run without it and never count.
+  VITE_ANALYTICS=1 pnpm --filter web build
 '
 ```
 
@@ -298,7 +300,7 @@ sitemap and robots.txt. The variables (see `web/src/config/site.ts` and
 domain — the code contains no hard-coded domain):
 
 ```bash
-VITE_SITE_ORIGIN=https://example.eu VITE_SITE_NAME="Example.eu" \
+VITE_SITE_ORIGIN=https://example.eu VITE_SITE_NAME="Example.eu" VITE_ANALYTICS=1 \
   pnpm --filter web build
 ```
 
@@ -812,7 +814,8 @@ sudo -u vliegvuil bash -c '
   cd /srv/vliegvuil
   git pull --ff-only
   pnpm install --frozen-lockfile
-  pnpm --filter web build
+  # VITE_ANALYTICS=1: production builds count page views (session 25c)
+  VITE_ANALYTICS=1 pnpm --filter web build
 '
 # Only if the Caddyfile changed in this update:
 sudo cp /srv/vliegvuil/Caddyfile /etc/caddy/Caddyfile
