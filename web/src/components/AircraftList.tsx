@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { Icon } from '../icons/Icon';
 import type { IconName } from '../icons/paths';
 import type { DisplayAircraft } from '../types';
+import { formatAltitude, formatSpeed, DEFAULT_UNITS, type UnitSettings } from '../units';
 
 export type SortColumn = 'callsign' | 'registration' | 'altitude' | 'speed';
 export type SortDirection = 'asc' | 'desc';
@@ -20,6 +21,8 @@ export interface AircraftListProps {
   selectedAircraftId: string | null;
   onSelect: (id: string) => void;
   onClose: () => void;
+  /** Loaded unit settings (session 25d): altitude/speed cells use them */
+  units?: UnitSettings;
 }
 
 /** Numeric-safe comparator: nulls always sort last regardless of direction */
@@ -78,6 +81,7 @@ export function AircraftList({
   selectedAircraftId,
   onSelect,
   onClose,
+  units = DEFAULT_UNITS,
 }: AircraftListProps): React.ReactElement {
   const { t } = useTranslation();
   const [sortColumn, setSortColumn] = useState<SortColumn>('callsign');
@@ -188,8 +192,8 @@ export function AircraftList({
               >
                 <td className="aircraft-list-cell primary">{ac.callsign ?? ac.icao24}</td>
                 <td className="aircraft-list-cell secondary">{ac.registration ?? '—'}</td>
-                <td className="aircraft-list-cell numeric">{ac.alt != null ? `${Math.round(ac.alt).toLocaleString()} ft` : '—'}</td>
-                <td className="aircraft-list-cell numeric">{ac.speed != null ? `${Math.round(ac.speed)} kt` : '—'}</td>
+                <td className="aircraft-list-cell numeric">{formatAltitude(ac.alt, units.altitude)}</td>
+                <td className="aircraft-list-cell numeric">{formatSpeed(ac.speed, units.speed)}</td>
               </tr>
             );
           })}

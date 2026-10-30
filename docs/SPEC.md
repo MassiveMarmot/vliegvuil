@@ -24,7 +24,7 @@ Search: callsign, registration or ICAO24.
 Airport labels from OurAirports, with a status flag (commercial / military-shared / planned) shown in the popup.
 Aircraft list view (sortable table) as the keyboard/screen-reader alternative to the map.
 Status banner when data is stale or upstream is down.
-Settings: units (ft/m, kt/km/h), stored in localStorage only. Language (NL default, EN) is the first URL path segment (/{lang}/...), set by the menu language switcher, not stored (session 25).
+Settings: units (ft/m, kt/km/h), stored in localStorage only; a saved choice always wins, and with no saved value the default derives from the browser language (nl → m/km/h, otherwise ft/kt; session 25d). Language (NL default, EN) is the first URL path segment (/{lang}/...), set by the menu language switcher, not stored (session 25).
 Attribution/licenses page, generated from sources.json.
 3. Visual design: "playful minimalism"
 Type: rounded, friendly sans (e.g. Space Grotesk or Inter) for UI; a soft serif (e.g. Fraunces) optional for headings on the about/landing page only.

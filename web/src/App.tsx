@@ -502,6 +502,7 @@ function App(): React.ReactElement {
             selectedAircraftId={selectedAircraftId}
             onSelect={handleAircraftSelect}
             onClose={handleToggleList}
+            units={units}
           />
         )}
 
