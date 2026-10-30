@@ -86,3 +86,31 @@ describe('session 26: aircraft icons keep their true heading while rotated', ():
     expect(useMapSource).toContain('maxPitch: 0');
   });
 });
+
+describe('maplibre stylesheet import (invisible-compass fix): control geometry', (): void => {
+  it('the compass chrome override keeps the app palette (anchor stays MapLibre\'s own top-right)', (): void => {
+    // The header is in normal flow above the map region (asserted above:
+    // position: relative, no bottom edge), so MapLibre's top:0 anchor
+    // inside .map-container is already below the header bar — no extra
+    // offset needed. The library's own corner rule is pinned in
+    // maplibreStylesheet.test.ts (built CSS). Here: our override.
+    const group = rule('.maplibregl-ctrl-top-right .maplibregl-ctrl-group');
+    expect(group).toMatch(/border-radius:\s*10px/);
+  });
+
+  it('the attribution control moves to bottom-center, clear of the noise legend, telemetry panel and counter', (): void => {
+    // MapLibre anchors the attribution bottom-right by default — the same
+    // corner as .noise-overlay and .telemetry-panel. Our override moves
+    // it to the bottom-center; the airport popup sits higher
+    // (bottom: 4.5rem), so no overlap at 320/360/375 px either. The
+    // corner rule uses a two-selector list, so match it directly.
+    expect(css).toMatch(
+      /\.maplibregl-ctrl-bottom-right,\s*\.maplibregl-ctrl-bottom-left\s*\{[^}]*left:\s*50%[^}]*bottom:\s*0\.25rem[^}]*transform:\s*translateX\(-50%\)/
+    );
+    expect(css).toMatch(
+      /\.maplibregl-ctrl-bottom-right,\s*\.maplibregl-ctrl-bottom-left\s*\{[^}]*right:\s*auto/
+    );
+    // Still visible (required PDOK/Kadaster attribution): not display:none
+    expect(rule('.maplibregl-ctrl-attrib')).not.toMatch(/display:\s*none/);
+  });
+});

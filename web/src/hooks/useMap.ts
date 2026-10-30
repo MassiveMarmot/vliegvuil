@@ -5,6 +5,13 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Map as MapLibreMap, LngLatBounds, NavigationControl } from 'maplibre-gl';
+// MapLibre's own stylesheet: the compass icon (data-URI background on
+// .maplibregl-ctrl-icon), the 29x29 ctrl button size and the control-corner
+// positioning all live here. Without it the NavigationControl renders an
+// empty, size-less button (the invisible-compass bug). Vite emits it as an
+// own-origin hashed CSS file, so the CSP's style-src 'self' keeps working;
+// the data: SVG backgrounds fall under img-src, which already allows data:.
+import 'maplibre-gl/dist/maplibre-gl.css';
 import type { MapConfig, MapStyle } from '../types';
 import { NETHERLANDS_BBOX, getBasemapUrl, PDOK_BRT_ATTRIBUTION } from '../types';
 import { AIRPORT_GLYPHS_URL } from '../airports/airportLayer';
