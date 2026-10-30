@@ -39,7 +39,10 @@ sudo -u vliegvuil bash -c "
   set -e
   cd '$REPO_DIR'
   pnpm install --frozen-lockfile
-  pnpm --filter web build
+  # VITE_ANALYTICS=1 enables the same-origin page-view count (session
+  # 25c; web/src/analytics.ts). Off everywhere else by design: dev, tests
+  # and CI builds must NOT count. Production (this script) must have it.
+  VITE_ANALYTICS=1 pnpm --filter web build
 "
 
 echo
