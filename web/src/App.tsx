@@ -511,8 +511,12 @@ function App(): React.ReactElement {
 
             {/* Session 26: the flight counter IS the list toggle (the
                 header Lijst button is gone). A real button with an
-                accessible name that carries the count and the action,
-                aria-expanded/aria-controls for the pop-out panel above. */}
+                accessible name that carries the count and the action
+                (aria-label: open the list / close the list), plus a
+                visible affordance: an aria-hidden list icon and a
+                chevron that flips with aria-expanded (up when closed,
+                because the panel pops out ABOVE the counter).
+                aria-expanded/aria-controls wire it to the pop-out. */}
             <div className="map-status">
               <button
                 type="button"
@@ -520,9 +524,26 @@ function App(): React.ReactElement {
                 ref={listToggleButtonRef}
                 aria-expanded={showList}
                 aria-controls={AIRCRAFT_LIST_ID}
+                aria-label={t(
+                  showList
+                    ? 'info.listToggleClose'
+                    : 'info.listToggleOpen',
+                  showList
+                    ? 'Vliegtuigen: {{count}}, lijst sluiten'
+                    : 'Vliegtuigen: {{count}}, lijst met alle vluchten openen',
+                  { count: aircraft.size }
+                )}
                 onClick={handleToggleList}
               >
+                <svg className="map-status-icon" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16">
+                  <rect x="1.5" y="2.5" width="13" height="2" rx="1" fill="currentColor" />
+                  <rect x="1.5" y="7" width="13" height="2" rx="1" fill="currentColor" />
+                  <rect x="1.5" y="11.5" width="9" height="2" rx="1" fill="currentColor" />
+                </svg>
                 {t('info.aircraftCount', 'Vliegtuigen: {{count}}', { count: aircraft.size })}
+                <svg className="map-status-chevron" aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16">
+                  <path d="M4 10 L8 6 L12 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               </button>
               <div aria-hidden="true">
                 {t('info.lastUpdate', 'Laatste update: {{time}}', {

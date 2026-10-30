@@ -115,7 +115,9 @@
   "info": {
     "aircraftCount": "Aircraft: {{count}}",
     "lastUpdate": "Last update: {{time}}",
-    "listToggle": "Aircraft list ({{count}} aircraft), open or close"
+    "listToggle": "Aircraft list ({{count}} aircraft), open or close",
+    "listToggleOpen": "Aircraft: {{count}}, open the list of all flights",
+    "listToggleClose": "Aircraft: {{count}}, close the list"
   },
   "stale": {
     "connection": "Data not up to date: connection error",

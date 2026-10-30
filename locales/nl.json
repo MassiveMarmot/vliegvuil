@@ -115,7 +115,9 @@
   "info": {
     "aircraftCount": "Vliegtuigen: {{count}}",
     "lastUpdate": "Laatste update: {{time}}",
-    "listToggle": "Vliegtuigenlijst ({{count}} vliegtuigen), openen of sluiten"
+    "listToggle": "Vliegtuigenlijst ({{count}} vliegtuigen), openen of sluiten",
+    "listToggleOpen": "Vliegtuigen: {{count}}, lijst met alle vluchten openen",
+    "listToggleClose": "Vliegtuigen: {{count}}, lijst sluiten"
   },
   "stale": {
     "connection": "Gegevens niet up-to-date: verbindingsfout",
