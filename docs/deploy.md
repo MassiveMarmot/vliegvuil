@@ -730,15 +730,17 @@ WorkingDirectory=/var/lib/goatcounter
 # X-Forwarded-For/X-Real-Ip with no trusted-proxy setting (verified in
 # v2.7.0), so the listener must never be reachable except via Caddy.
 # -smtp stdout, no -errors: no mail is sent.
-# -ratelimit count: keep the default /count rate limit (4/s).
+# NO -ratelimit flag: the default count rate limit (count:4/1, 4/s) is
+# exactly what we want — and the flag's syntax is name:requests/seconds
+# (e.g. count:4/1), NOT a bare name; 'goatcounter serve -ratelimit count'
+# fails to start ("-ratelimit.requests: must be set").
 # NEVER add -debug: the session debug log prints the session key.
 # NO -geodb: the country DB is embedded; this flag is only for the
 # optional City DB, which we do not use.
 KillSignal=SIGKILL
 ExecStart=/usr/local/bin/goatcounter serve \
   -listen 127.0.0.1:8091 \
-  -db=sqlite+/var/lib/goatcounter/db/goatcounter.sqlite \
-  -ratelimit count
+  -db=sqlite+/var/lib/goatcounter/db/goatcounter.sqlite
 Restart=on-failure
 
 # Hardening
