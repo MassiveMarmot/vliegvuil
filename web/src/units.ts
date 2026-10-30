@@ -13,20 +13,58 @@ export interface UnitSettings {
 
 export const DEFAULT_UNITS: UnitSettings = { altitude: 'ft', speed: 'kt' };
 
+// Session 25d: when the visitor has no saved choice, the default unit system
+// derives from the browser language. One small table (primary subtag ->
+// unit system) so more languages can be added later; nl is metric like the
+// rest of Dutch life, every other language keeps the aviation ft/kt default.
+const LANGUAGE_UNIT_DEFAULTS: Readonly<Record<string, UnitSettings>> = {
+  nl: { altitude: 'm', speed: 'kmh' },
+};
+
+/** Primary subtag of a BCP-47 language tag, lowercased ("nl-BE" -> "nl") */
+export function primarySubtag(tag: string): string {
+  const base = tag.split('-')[0] ?? '';
+  return base.toLowerCase();
+}
+
+/** Browser-language-derived default units (session 25d): the first entry of
+ *  navigator.languages (falling back to navigator.language) whose primary
+ *  subtag has a table entry wins; otherwise ft/kt. Never persisted. */
+export function defaultUnitsForLanguages(languages: readonly string[] | undefined): UnitSettings {
+  for (const tag of languages ?? []) {
+    if (typeof tag !== 'string' || tag === '') continue;
+    const mapped = LANGUAGE_UNIT_DEFAULTS[primarySubtag(tag)];
+    if (mapped) return mapped;
+  }
+  return DEFAULT_UNITS;
+}
+
+/** The browser's Accept-Language-ish list as one array (test seam) */
+function browserLanguages(): readonly string[] {
+  const langs = typeof navigator !== 'undefined' ? navigator.languages : undefined;
+  if (langs && langs.length > 0) return langs;
+  const lang = typeof navigator !== 'undefined' ? navigator.language : undefined;
+  return lang ? [lang] : [];
+}
+
 const STORAGE_KEY_UNITS = 'vliegvuil.units';
 
-/** Read persisted units, falling back to ft/kt */
+/** Read persisted units; a saved choice always wins. With no saved value the
+ *  default derives from the browser language (session 25d) and is NOT
+ *  persisted — a later language change must be able to change the default. */
 export function loadUnits(): UnitSettings {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY_UNITS);
-    if (raw === null) return DEFAULT_UNITS;
+    if (raw === null) return defaultUnitsForLanguages(browserLanguages());
     const parsed = JSON.parse(raw) as Partial<UnitSettings>;
     return {
       altitude: parsed.altitude === 'm' ? 'm' : 'ft',
       speed: parsed.speed === 'kmh' ? 'kmh' : 'kt',
     };
   } catch {
-    return DEFAULT_UNITS;
+    // localStorage unavailable (blocked/corrupt): the language-derived
+    // default still applies.
+    return defaultUnitsForLanguages(browserLanguages());
   }
 }
 
