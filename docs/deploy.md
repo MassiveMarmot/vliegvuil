@@ -710,10 +710,12 @@ sudo -u goatcounter sh -c '
   chmod +x /usr/local/bin/goatcounter
 '
 
-# Create the site (the vhost MUST match the Caddy Host header):
+# Create the site (the vhost MUST match the Caddy Host header). Replace
+# the example address with the real admin e-mail — do NOT keep angle
+# brackets, bash treats < and > as redirections:
 sudo -u goatcounter /usr/local/bin/goatcounter db \
   -db sqlite:///var/lib/goatcounter/db/goatcounter.sqlite \
-  create site -vhost vliegvuil.nl -user.email=<admin-email>
+  create site -vhost vliegvuil.nl -user.email=admin@example.com
 ```
 
 ### systemd unit
