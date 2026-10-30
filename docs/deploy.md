@@ -693,7 +693,14 @@ against its source (see the 25c PR for the file/line evidence).
 
 ```bash
 sudo useradd --system --home /var/lib/goatcounter --shell /usr/sbin/nologin goatcounter
-sudo -u goatcounter sh -c 'mkdir -p /var/lib/goatcounter/db'
+# useradd --system does NOT create the home directory on several distros,
+# and the fresh goatcounter user cannot mkdir inside a root-owned /var/lib
+# (that fails with "Permission denied") — create the tree as root and
+# hand over ownership:
+sudo mkdir -p /var/lib/goatcounter/db
+sudo chown -R goatcounter:goatcounter /var/lib/goatcounter
+# sanity: the user can now write its database directory
+sudo -u goatcounter test -w /var/lib/goatcounter/db && echo writable
 
 # Download the v2.7.0 linux-amd64 binary from the GitHub release:
 #   https://github.com/zgoat/goatcounter/releases/tag/v2.7.0
