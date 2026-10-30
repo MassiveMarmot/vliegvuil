@@ -72,6 +72,9 @@ Free plan is 2 sessions/day, so expect this to take ~a week; paid allows far mor
 Parked follow-ups (small PRs, not scheduled sessions):
 
 - **Derive the map layers' `icon-size` from `MAP_ICON_PX`** (session 17 / PRs #94–#95 follow-up): the `icon-size` 1.0 / 1.1 constants in `web/src/components/Map.tsx` are tuned to the 2x baked icons (48px images for a 24px badge, pixelRatio 2). Deriving them from `MAP_ICON_PX` would make the producer/consumer unit coupling structural instead of comment-only, so a future format change (e.g. different pixel ratio) cannot silently halve the markers again.
+- **Hide the live aircraft view**: let users turn the live planes off, planned for when more pollution layers make the live planes a distraction.
+- **Pull-based deployment**: replace the current push-to-deploy with the server pulling releases; deploys stay manual for now.
+- **Staging site on a subdomain**: wanted, not yet set up (see also deploy.md's staging notes).
 
 ## 5. Session prompt template
 

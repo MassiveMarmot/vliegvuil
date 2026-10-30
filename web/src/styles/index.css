@@ -1270,17 +1270,25 @@ body {
 }
 
 /* Session 26: the count line is the list toggle — a real button, visually
-   consistent with the status card it replaced (playful-minimal chrome). */
+   consistent with the status card it replaced (playful-minimal chrome).
+   The affordance (list icon + chevron) makes it visibly clickable; the
+   whole button keeps a 44x44 px minimum touch target. */
 .map-status-toggle {
   appearance: none;
   background: none;
   border: none;
-  padding: 0;
-  margin: 0;
+  padding: 0.5rem;
+  margin: -0.5rem;
   font: inherit;
   color: inherit;
   cursor: pointer;
   text-align: left;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 44px;
+  min-height: 44px;
+  box-sizing: content-box;
 }
 .map-status-toggle:focus-visible {
   outline: 2px solid var(--vv-accent, #e8735a);
@@ -1289,6 +1297,24 @@ body {
 }
 .map-status-toggle:hover {
   text-decoration: underline;
+}
+.map-status-icon,
+.map-status-chevron {
+  flex: none;
+  color: currentColor;
+}
+/* The chevron points up while the panel is closed (the pop-out opens
+   ABOVE the counter) and down while open, mirroring aria-expanded. */
+.map-status-chevron {
+  transform: rotate(0deg);
+}
+.map-status-toggle[aria-expanded='true'] .map-status-chevron {
+  transform: rotate(180deg);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .map-status-chevron {
+    transition: transform 0.15s ease-out;
+  }
 }
 
 /* Map status line (aircraft count + last update), replaces the old card */

@@ -87,6 +87,37 @@ describe('session 26: aircraft icons keep their true heading while rotated', ():
   });
 });
 
+describe('counter affordance (session 26 follow-up): geometry at 320/360/375 px', (): void => {
+  it('the toggle keeps a 44x44 px target without claiming new space', (): void => {
+    // min-width/min-height 44px with negative margin: the visual box
+    // stays the old card size; the touch target grows in place, so the
+    // counter cannot grow into the compass (top-right), noise legend
+    // (bottom-right), attribution or the airport popup (bottom-center).
+    const toggle = rule('.map-status-toggle');
+    expect(toggle).toMatch(/min-width:\s*44px/);
+    expect(toggle).toMatch(/min-height:\s*44px/);
+    expect(toggle).toMatch(/margin:\s*-0\.5rem/);
+    // Still inside .map-status (bottom-left), which the test above pins
+    // to bottom: 1rem / left: 1rem — a different corner than everything
+    // else, at every width including the 320/360/375 px range.
+    expect(rule('.map-status')).toMatch(/bottom:\s*1rem/);
+    expect(rule('.map-status')).toMatch(/left:\s*1rem/);
+  });
+
+  it('the chevron flip is keyed on aria-expanded and reduced-motion-safe', (): void => {
+    // Up (base orientation) while closed; the panel pops out ABOVE the
+    // counter, so [aria-expanded='true'] rotates it 180deg (down). The
+    // transition lives under prefers-reduced-motion: no-preference only.
+    expect(css).toMatch(
+      /\.map-status-toggle\[aria-expanded='true'\]\s*\.map-status-chevron\s*\{[^}]*transform:\s*rotate\(180deg\)/
+    );
+    const motion = [...css.matchAll(/@media \(prefers-reduced-motion: no-preference\)\s*\{([\s\S]*?)\n\}/g)].map((m): string => m[1] ?? '').join('\n');
+    expect(motion).toMatch(/\.map-status-chevron\s*\{[^}]*transition:\s*transform/);
+    // No transition outside the motion-safe media query
+    expect(rule('.map-status-chevron')).not.toMatch(/transition/);
+  });
+});
+
 describe('maplibre stylesheet import (invisible-compass fix): control geometry', (): void => {
   it('the compass chrome override keeps the app palette (anchor stays MapLibre\'s own top-right)', (): void => {
     // The header is in normal flow above the map region (asserted above:
