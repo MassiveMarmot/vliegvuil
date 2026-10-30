@@ -22,6 +22,9 @@ import MapErrorBoundary from './components/MapErrorBoundary';
 // The direct module path keeps the components barrel (which re-exports Map)
 // from pulling maplibre-gl into the initial bundle.
 const Map = lazy(() => import('./components/Map'));
+
+/** Session 26: id of the list panel, referenced by the counter toggle's aria-controls */
+const AIRCRAFT_LIST_ID = 'aircraft-list-panel';
 import { useAircraftData } from './hooks';
 import { useSmoothedAircraft } from './movement/useSmoothedAircraft';
 import { useTranslation } from 'react-i18next';
@@ -99,6 +102,9 @@ function App(): React.ReactElement {
 
   const [selectedAircraftId, setSelectedAircraftId] = useState<string | null>(null);
   const [showList, setShowList] = useState(false);
+  // Session 26: the list toggle is the flight counter; focus returns to it
+  // when the list closes (the header Lijst button is gone).
+  const listToggleButtonRef = useRef<HTMLButtonElement>(null);
   const [liveMessage, setLiveMessage] = useState('');
   const [noiseEnabled, setNoiseEnabled] = useState(false);
   const [noiseContours, setNoiseContours] = useState<NoiseContours | null>(null);
@@ -290,6 +296,20 @@ function App(): React.ReactElement {
     });
   }, [route, navigate, language, announce, t]);
 
+  // Session 26 focus management for the counter-anchored list: focus moves
+  // into the panel on open and returns to the counter button on close
+  // (the toggle is the counter; the header Lijst button is gone).
+  const prevShowListRef = useRef(false);
+  useEffect((): void => {
+    const wasOpen = prevShowListRef.current;
+    prevShowListRef.current = showList;
+    if (showList && !wasOpen) {
+      document.getElementById(AIRCRAFT_LIST_ID)?.focus();
+    } else if (!showList && wasOpen && route === 'map') {
+      listToggleButtonRef.current?.focus();
+    }
+  }, [showList, route]);
+
   // Fatal map-init failure (WebGL2 unavailable): open the list view from
   // the notice — a pure open, never a toggle-close (spec: the list is the
   // data alternative to the map).
@@ -395,7 +415,6 @@ function App(): React.ReactElement {
         route={route}
         onNavigate={navigate}
         onOpenSettings={handleOpenSettings}
-        onToggleList={handleToggleList}
         search={<SearchBox aircraft={aircraft} onSelect={handleAircraftSelect} />}
         skipTargetId="map-region"
       />
@@ -435,8 +454,16 @@ function App(): React.ReactElement {
         </div>
 
         {/* Map (lazy-loaded MapLibre chunk); the boundary catches a 404 on
-          the old hashed chunk right after a deploy (session 24) */}
-        <div id={'map-region'} className={route === 'map' ? 'map-view' : 'map-view map-view-hidden'}>
+          the old hashed chunk right after a deploy (session 24). Session 26:
+          the map region is a <main> landmark with a label (one main per
+          page: the page-content <main>s render only on non-map routes,
+          and this region is display:none there anyway). */}
+        <main
+          id={'map-region'}
+          ref={mainRef}
+          aria-label={t('nav.map', 'Kaart')}
+          className={route === 'map' ? 'map-view' : 'map-view map-view-hidden'}
+        >
           <MapErrorBoundary t={t}>
             <Suspense
               fallback={
@@ -462,7 +489,7 @@ function App(): React.ReactElement {
               />
             </Suspense>
           </MapErrorBoundary>
-        </div>
+        </main>
 
         {/* Map chrome (session 25 fix): only on the map route. On About,
             Attribution and not-found the map is covered and none of these
@@ -477,10 +504,22 @@ function App(): React.ReactElement {
               onOpenSources={handleOpenNoiseSources}
             />
 
-            {/* Aircraft count + last update (status line) */}
+            {/* Session 26: the flight counter IS the list toggle (the
+                header Lijst button is gone). A real button with an
+                accessible name that carries the count and the action,
+                aria-expanded/aria-controls for the pop-out panel above. */}
             <div className="map-status">
-              <div>{t('info.aircraftCount', 'Vliegtuigen: {{count}}', { count: aircraft.size })}</div>
-              <div>
+              <button
+                type="button"
+                className="map-status-toggle"
+                ref={listToggleButtonRef}
+                aria-expanded={showList}
+                aria-controls={AIRCRAFT_LIST_ID}
+                onClick={handleToggleList}
+              >
+                {t('info.aircraftCount', 'Vliegtuigen: {{count}}', { count: aircraft.size })}
+              </button>
+              <div aria-hidden="true">
                 {t('info.lastUpdate', 'Laatste update: {{time}}', {
                   time:
                     lastUpdate != null
@@ -495,9 +534,12 @@ function App(): React.ReactElement {
         )}
 
         {/* Aircraft list view (keyboard/screen-reader alternative);
-            route-gated so it never survives a route change */}
+            route-gated so it never survives a route change. Session 26:
+            pop-out anchored above the counter (id referenced by the
+            toggle's aria-controls). */}
         {route === 'map' && showList && (
           <AircraftList
+            id={AIRCRAFT_LIST_ID}
             aircraft={aircraft}
             selectedAircraftId={selectedAircraftId}
             onSelect={handleAircraftSelect}

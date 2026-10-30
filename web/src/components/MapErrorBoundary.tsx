@@ -40,7 +40,7 @@ export class MapErrorBoundary extends React.Component<MapErrorBoundaryProps, Sta
     if (this.state.hasError) {
       const { t } = this.props;
       return (
-        <div className="map-container" role="alert" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
+        <div className="map-container map-error-fallback" role="alert">
           <p>{t('map.loadError', 'The map failed to load. Reload the page to get the latest version.')}</p>
           <button type="button" onClick={this.handleReload} autoFocus>
             {t('map.reload', 'Reload')}

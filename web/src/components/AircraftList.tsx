@@ -17,6 +17,8 @@ export type SortColumn = 'callsign' | 'registration' | 'altitude' | 'speed';
 export type SortDirection = 'asc' | 'desc';
 
 export interface AircraftListProps {
+  /** Panel id (aria-controls target of the counter toggle, session 26) */
+  id?: string;
   aircraft: Map<string, DisplayAircraft>;
   selectedAircraftId: string | null;
   onSelect: (id: string) => void;
@@ -77,6 +79,7 @@ export function sortAircraft(
  * via ARIA live.
  */
 export function AircraftList({
+  id,
   aircraft,
   selectedAircraftId,
   onSelect,
@@ -108,6 +111,18 @@ export function AircraftList({
     return sortDirection === 'asc' ? 'ascending' : 'descending';
   };
 
+  // Session 26: Escape closes the list (focus returns to the counter via
+  // App's focus management; not a focus trap).
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        event.stopPropagation();
+        onClose();
+      }
+    },
+    [onClose],
+  );
+
   // Lucide arrow per sort state (kept aria-hidden; aria-sort carries state)
   const sortIconName = (column: SortColumn): IconName => {
     if (column !== sortColumn) return 'arrow-up-down';
@@ -116,9 +131,12 @@ export function AircraftList({
 
   return (
     <aside
+      id={id}
       className="aircraft-list"
       role="region"
       aria-label={t('list.title')}
+      tabIndex={-1}
+      onKeyDown={handleKeyDown}
     >
       <header className="aircraft-list-header">
         <h2 className="aircraft-list-title">

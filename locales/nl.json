@@ -16,7 +16,8 @@
     "reload": "Herlaad",
     "tileError": "Kaartachtergrond kon niet geladen worden",
     "webgl2Unavailable": "Je browser biedt geen WebGL2 (dit kan door privacy-instellingen uitgeschakeld zijn). De lijst werkt nog wel.",
-    "openList": "Vliegtuigenlijst openen"
+    "openList": "Vliegtuigenlijst openen",
+    "compass": "Kaart naar het noorden draaien"
   },
   "noise": {
     "legendTitle": "Legenda geluidscontouren",
@@ -111,7 +112,8 @@
   },
   "info": {
     "aircraftCount": "Vliegtuigen: {{count}}",
-    "lastUpdate": "Laatste update: {{time}}"
+    "lastUpdate": "Laatste update: {{time}}",
+    "listToggle": "Vliegtuigenlijst ({{count}} vliegtuigen), openen of sluiten"
   },
   "stale": {
     "connection": "Gegevens niet up-to-date: verbindingsfout",
@@ -130,7 +132,6 @@
     "about": "Over",
     "attribution": "Bronnen",
     "settings": "Instellingen",
-    "list": "Lijst",
     "menu": "Menu",
     "menuLabel": "Hoofdmenu",
     "language": "Taal",

@@ -93,10 +93,16 @@ describe('header actions from non-map routes (session 25 fix)', () => {
     expect(panel).not.toBeNull();
   });
 
-  it('the List button from About navigates to the map with the list open', async (): Promise<void> => {
+  it('session 26: the list toggle (counter) exists only on the map route', async (): Promise<void> => {
+    // The header Lijst button is gone; the counter that replaced it is map
+    // chrome, so from About there is no list affordance (session 26
+    // decision). On the map it toggles the list as before.
     await renderAndWait('/nl/about');
-    fireEvent.click(screen.getByRole('button', { name: /^lijst$/i }));
-    expect(window.location.pathname).toBe('/nl/');
+    expect(screen.queryByRole('button', { name: /vliegtuigen: \d+/i })).toBeNull();
+    cleanup();
+    await renderAndWait('/nl/');
+    const toggle = screen.getByRole('button', { name: /vliegtuigen: \d+/i });
+    fireEvent.click(toggle);
     expect(document.querySelector('.aircraft-list')).not.toBeNull();
   });
 
@@ -129,9 +135,9 @@ describe('header actions from non-map routes (session 25 fix)', () => {
     // Close settings, then toggle the list twice (open, close)
     fireEvent.click(screen.getByRole('button', { name: /sluiten/i }));
     expect(document.querySelector('.settings-panel')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: /^lijst$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /vliegtuigen: \d+/i }));
     expect(document.querySelector('.aircraft-list')).not.toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: /^lijst$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /vliegtuigen: \d+/i }));
     expect(document.querySelector('.aircraft-list')).toBeNull();
   });
 
@@ -175,14 +181,14 @@ describe('Settings and List are mutually exclusive', () => {
     fireEvent.click(screen.getByRole('button', { name: /instellingen/i }));
     expect(document.querySelector('.settings-panel')).not.toBeNull();
     // Open the list: Settings must close
-    fireEvent.click(screen.getByRole('button', { name: /^lijst$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /vliegtuigen: \d+/i }));
     expect(document.querySelector('.aircraft-list')).not.toBeNull();
     expect(document.querySelector('.settings-panel')).toBeNull();
   });
 
   it('List open, choose Settings in the menu: Settings is open and the list is closed', async (): Promise<void> => {
     await renderAndWait('/nl/');
-    fireEvent.click(screen.getByRole('button', { name: /^lijst$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /vliegtuigen: \d+/i }));
     expect(document.querySelector('.aircraft-list')).not.toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /menu/i }));
     fireEvent.click(screen.getByRole('button', { name: /instellingen/i }));
@@ -199,14 +205,14 @@ describe('Settings and List are mutually exclusive', () => {
     fireEvent.click(screen.getByRole('button', { name: /sluiten/i }));
     expect(document.querySelector('.settings-panel')).toBeNull();
     // List alone: open then close
-    fireEvent.click(screen.getByRole('button', { name: /^lijst$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /vliegtuigen: \d+/i }));
     expect(document.querySelector('.aircraft-list')).not.toBeNull();
     // The list's own close button
     const closeButton = document.querySelector('.aircraft-list-close') as HTMLElement | null;
     if (closeButton) {
       fireEvent.click(closeButton);
     } else {
-      fireEvent.click(screen.getByRole('button', { name: /^lijst$/i }));
+      fireEvent.click(screen.getByRole('button', { name: /vliegtuigen: \d+/i }));
     }
     expect(document.querySelector('.aircraft-list')).toBeNull();
     // Nothing opened

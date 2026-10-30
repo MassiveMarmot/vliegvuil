@@ -4,7 +4,7 @@
 // Hook for MapLibre GL map management
 
 import { useEffect, useRef, useState } from 'react';
-import { Map as MapLibreMap, LngLatBounds } from 'maplibre-gl';
+import { Map as MapLibreMap, LngLatBounds, NavigationControl } from 'maplibre-gl';
 import type { MapConfig, MapStyle } from '../types';
 import { NETHERLANDS_BBOX, getBasemapUrl, PDOK_BRT_ATTRIBUTION } from '../types';
 import { AIRPORT_GLYPHS_URL } from '../airports/airportLayer';
@@ -23,6 +23,12 @@ const NEIGHBOURS_BORDER_COLOR = '#8c7f6b';
 const MAP_BACKGROUND_COLOR = '#b8c6cc';
 
 // Hook return type
+/** MapLibre UI-string locale patch (session 26): the control buttons'
+ *  accessible names come from MapLibre's UI strings; we override the
+ *  compass one with the translated label (e.g. "Kaart naar het noorden
+ *  draaien"), per the locale option in the MapLibre Map constructor. */
+export type MapLocalePatch = Record<string, string>;
+
 export interface UseMapReturn {
   mapContainer: React.RefObject<HTMLDivElement>;
   map: MapLibreMap | null;
@@ -42,7 +48,7 @@ export interface UseMapReturn {
 /**
  * Initialize and manage a MapLibre GL map instance
  */
-export function useMap(config: MapConfig, _style?: MapStyle): UseMapReturn {
+export function useMap(config: MapConfig, _style?: MapStyle, locale?: MapLocalePatch): UseMapReturn {
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<MapLibreMap | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -118,6 +124,11 @@ export function useMap(config: MapConfig, _style?: MapStyle): UseMapReturn {
         maxZoom: config.maxZoom,
         pitch: config.pitch,
         bearing: config.bearing,
+        // Session 26: pitch is disabled entirely (the map is a 2D NL view;
+        // no interaction can tilt it) so the compass never needs to reset
+        // tilt — it only ever resets the bearing to 0.
+        maxPitch: 0,
+        locale,
       });
 
       // Set Netherlands bounds
@@ -126,6 +137,26 @@ export function useMap(config: MapConfig, _style?: MapStyle): UseMapReturn {
         [NETHERLANDS_BBOX[2], NETHERLANDS_BBOX[3]],
       );
       mapInstance.fitBounds(bounds, { padding: 20, duration: 0 });
+
+      // Session 26 compass: MapLibre's built-in NavigationControl with the
+      // compass only (zoom buttons off, verified against the installed 6.14
+      // source: NavigationControlOptions showZoom/showCompass). The compass
+      // is always rendered (6.x has no "show only when rotated" option;
+      // visualizePitch only tilts the icon — moot here because pitch is
+      // disabled below). Clicking it calls map.resetNorth() (a 1 s animated
+      // rotateTo(0)); MapLibre's easeTo sets duration 0 automatically under
+      // prefers-reduced-motion (browser.prefersReducedMotion in the source),
+      // so the reset is animation-free for reduced-motion users.
+      const compassControl = new NavigationControl({
+        showZoom: false,
+        showCompass: true,
+      });
+      // Anchor: top-right, BELOW the header bar. Every other chrome element
+      // occupies another corner (noise overlay + telemetry: bottom-right;
+      // counter + list: bottom-left; header: top bar; airport popup:
+      // bottom-center), so the compass owns the top-right corner at every
+      // tested width (320/360/375 px included).
+      mapInstance.addControl(compassControl, 'top-right');
 
       // Store map instance
       setMap(mapInstance);
@@ -176,6 +207,7 @@ export function useMap(config: MapConfig, _style?: MapStyle): UseMapReturn {
       // Cleanup function
       return (): void => {
         mapInstance.off('style.load', onStyleLoad);
+        mapInstance.removeControl(compassControl);
         mapInstance.remove();
       };
     } catch (error) {
@@ -183,7 +215,7 @@ export function useMap(config: MapConfig, _style?: MapStyle): UseMapReturn {
       setMapInitError(error instanceof Error ? error.message : 'Unknown map error');
       console.error('Failed to initialize map:', error);
     }
-  }, [config.center, config.zoom, config.minZoom, config.maxZoom, config.pitch, config.bearing]);
+  }, [config.center, config.zoom, config.minZoom, config.maxZoom, config.pitch, config.bearing, locale]);
 
   return {
     mapContainer,

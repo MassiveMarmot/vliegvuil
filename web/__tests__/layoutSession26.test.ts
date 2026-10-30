@@ -1,0 +1,88 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// Session 26 layout assertions: the compass (MapLibre NavigationControl,
+// top-right, inside the map region below the header) must not overlap the
+// header (top bar), noise legend/toggle (bottom-right), telemetry panel
+// (bottom-right), airport popup (bottom-center) or the flight counter
+// (bottom-left) at 320/360/375 px. jsdom has no layout engine, so this
+// asserts the CSS geometry rules that determine those boxes — a geometry
+// test, not a rendered-pixels test. Plus a guard for the aircraft icon
+// rotation semantics (symbolRotate keeps its rotate-with-map alignment so
+// icons keep their true heading on a rotated map).
+import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+const css = readFileSync(resolve(__dirname, '..', 'src', 'styles', 'index.css'), 'utf8');
+const mapSource = readFileSync(resolve(__dirname, '..', 'src', 'components', 'Map.tsx'), 'utf8');
+const useMapSource = readFileSync(resolve(__dirname, '..', 'src', 'hooks', 'useMap.ts'), 'utf8');
+
+function rule(selector: string): string {
+  const re = new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`);
+  return re.exec(css)?.[1] ?? '';
+}
+
+describe('session 26 layout: compass never overlaps the other chrome', (): void => {
+  it('the compass is anchored top-right inside the map region (below the header)', (): void => {
+    expect(useMapSource).toContain("addControl(compassControl, 'top-right')");
+  });
+
+  it('the header is a top bar; the map region (compass anchor) starts below it', (): void => {
+    // .app-header is in normal flow (position: relative, no bottom edge),
+    // and the map region is its flex sibling: nothing MapLibre anchors can
+    // reach the header bar.
+    const header = rule('.app-header');
+    expect(header).toMatch(/position:\s*relative/);
+    expect(header).not.toMatch(/position:\s*fixed/);
+    // No bottom OFFSET (border-bottom is fine); the header bar has no
+    // footprint inside the map region.
+    expect(header).not.toMatch(/(^|;)\s*bottom:/);
+  });
+
+  it('every other chrome element is anchored in a different corner than top-right', (): void => {
+    // Noise overlay (toggle + legend): bottom-right
+    expect(rule('.noise-overlay')).toMatch(/bottom:\s*1rem/);
+    expect(rule('.noise-overlay')).toMatch(/right:\s*1rem/);
+    // Telemetry panel: bottom-right
+    expect(rule('.telemetry-panel')).toMatch(/bottom:\s*1rem/);
+    expect(rule('.telemetry-panel')).toMatch(/right:\s*1rem/);
+    // Flight counter (map-status): bottom-left
+    expect(rule('.map-status')).toMatch(/bottom:\s*1rem/);
+    expect(rule('.map-status')).toMatch(/left:\s*1rem/);
+    // Airport popup: bottom-center
+    expect(rule('.airport-popup')).toMatch(/left:\s*50%/);
+    expect(rule('.airport-popup')).toMatch(/bottom:\s*4\.5rem/);
+    // Aircraft list pop-out: bottom-left, above the counter
+    expect(rule('.aircraft-list')).toMatch(/bottom:\s*4rem/);
+    expect(rule('.aircraft-list')).toMatch(/left:\s*1rem/);
+  });
+
+  it('at the narrow widths (max-width: 768px block covers 320/360/375 px) chrome stays out of the top-right corner', (): void => {
+    const mobile = /@media \(max-width: 768px\)\s*\{([\s\S]*?)\n\}\n/.exec(css)?.[1] ?? '';
+    // The list pop-out goes near-full-bleed but stays above the counter;
+    // the counter and list stay left-anchored; nothing claims the
+    // compass's top-right corner.
+    expect(mobile).toMatch(/\.aircraft-list\s*\{[^}]*bottom:\s*3\.5rem/);
+    expect(mobile).toMatch(/\.aircraft-list\s*\{[^}]*left:\s*0\.5rem/);
+    expect(mobile).not.toMatch(/\.map-status\s*\{[^}]*right/);
+    expect(mobile).not.toMatch(/top-right/);
+  });
+});
+
+describe('session 26: aircraft icons keep their true heading while rotated', (): void => {
+  it('the symbol layer uses icon-rotation-alignment "map" (rotate-with-map)', (): void => {
+    // Verified against the installed maplibre-gl 6.14.0 source: for point
+    // symbols, rotationAlignment === "map" sets rotateWithMap (drawLayer
+    // symbols, maplibre-gl-dev.mjs:49925) and the projected icon plane is
+    // rotated by the map bearing (line 40809) — the icon turns WITH the
+    // map, so icon-rotate (heading - 45) stays relative to map north and
+    // the nose keeps pointing at the true heading on a rotated map.
+    expect(mapSource).toContain("'icon-rotation-alignment': 'map'");
+    expect(mapSource).toContain("'icon-rotate': ['get', 'symbolRotate']");
+  });
+
+  it('pitch is disabled so the compass never needs to reset tilt', (): void => {
+    expect(useMapSource).toContain('maxPitch: 0');
+  });
+});

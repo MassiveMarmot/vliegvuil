@@ -74,7 +74,16 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
   // styleReady ('style.load') gates the data layers, not mapLoaded ('load'):
   // with every basemap tile 404ing, 'load' never fires (it requires the first
   // fully rendered frame) and aircraft stayed invisible until a click.
-  const { mapContainer, map, styleReady, tileError, mapInitError } = useMap(DEFAULT_MAP_CONFIG, PDOK_BRT_STYLE);
+  const { t } = useTranslation();
+  // Session 26: the NavigationControl compass button's accessible name comes
+  // from MapLibre's UI strings; the locale patch replaces the English
+  // "Drag to rotate map, click to reset north" with our translated label
+  // (map.compass, identical keys in every locale).
+  const { mapContainer, map, styleReady, tileError, mapInitError } = useMap(
+    DEFAULT_MAP_CONFIG,
+    PDOK_BRT_STYLE,
+    { 'NavigationControl.ResetBearing': t('map.compass', 'Kaart naar het noorden draaien') },
+  );
 
   // Update aircraft layer when data changes
   useEffect(() => {
@@ -300,13 +309,10 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
     }
   }, [map, styleReady, airports, onAirportClick]);
 
-  const { t } = useTranslation();
-
   return (
     <div
       ref={mapContainer}
       className="map-container"
-      style={{ width: '100%', height: '100%', minHeight: '400px' }}
     >
       {/* Fatal init failure (WebGL2 unavailable): the map never started.
           Distinct from mapError, which runtime 'error' events also set
@@ -315,23 +321,9 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
         <div
           role="status"
           data-testid="map-init-error-notice"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.75rem',
-            padding: '1.5rem',
-            textAlign: 'center',
-            backgroundColor: '#f5f2ec',
-            color: '#3b352f',
-            fontSize: '0.9375rem',
-            zIndex: 30,
-          }}
+          className="map-init-error-notice"
         >
-          <p style={{ margin: 0, maxWidth: '34rem' }}>
+          <p className="map-init-error-text">
             {t(
               'map.webgl2Unavailable',
               'Je browser biedt geen WebGL2 (dit kan door privacy-instellingen uitgeschakeld zijn). De lijst werkt nog wel.',
@@ -340,14 +332,8 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
           {onOpenList && (
             <button
               type="button"
+              className="map-init-error-button"
               onClick={onOpenList}
-              style={{
-                padding: '0.4rem 1rem',
-                borderRadius: '0.375rem',
-                border: '1px solid #8c7f6b',
-                backgroundColor: '#fff',
-                color: '#3b352f',
-              }}
             >
               {t('map.openList', 'Vliegtuigenlijst openen')}
             </button>
@@ -361,20 +347,7 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
           role="status"
           aria-live="polite"
           data-testid="tile-error-notice"
-          style={{
-            position: 'absolute',
-            top: '4.5rem',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            backgroundColor: 'rgba(255, 245, 235, 0.95)',
-            color: '#7a4a1a',
-            padding: '0.35rem 0.75rem',
-            borderRadius: '0.375rem',
-            fontSize: '0.8125rem',
-            border: '1px solid #e5c9a8',
-            zIndex: 25,
-            pointerEvents: 'none',
-          }}
+          className="tile-error-notice"
         >
           {t('map.tileError', 'Kaartachtergrond kon niet geladen worden')}
         </div>

@@ -138,10 +138,12 @@ function LegendContent({
             <span
               className="noise-swatch"
               data-testid={`noise-swatch-${row.bandLowerDb}`}
+              /* Dynamic values computed from the band data: passed as CSS
+                 custom properties (session 26), consumed in index.css */
               style={{
-                backgroundColor: noiseBandColor(row.bandLowerDb),
-                backgroundImage: noiseBandPattern(row.bandLowerDb),
-              }}
+                '--noise-swatch-color': noiseBandColor(row.bandLowerDb),
+                '--noise-swatch-pattern': noiseBandPattern(row.bandLowerDb),
+              } as React.CSSProperties}
               aria-hidden="true"
             />
             <span className="noise-legend-label">

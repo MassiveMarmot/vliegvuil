@@ -67,6 +67,10 @@ function fakeMapApi(): Record<string, unknown> {
       return {};
     },
     once: (): object => ({}),
+    // Session 26: useMap registers the compass NavigationControl (fake
+    // acceptance only; the compass itself has its own tests).
+    addControl: (_control: unknown, _position: string): object => ({}),
+    removeControl: (): void => undefined,
     addImage: (id: string): void => {
       fake.addedImages.push(id);
     },
@@ -116,6 +120,15 @@ vi.mock('maplibre-gl', () => {
       constructor(_sw: unknown, _ne: unknown) {
         // no-op in the fake
       }
+    },
+    // Session 26: compass-only NavigationControl fake (constructor acceptance).
+    NavigationControl: class {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      constructor(_options: unknown) {}
+      onAdd(): null {
+        return null;
+      }
+      onRemove(): void {}
     },
   };
 });
