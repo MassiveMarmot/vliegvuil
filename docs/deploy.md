@@ -687,13 +687,15 @@ sudo chown -R goatcounter:goatcounter /var/lib/goatcounter
 # sanity: the user can now write its database directory
 sudo -u goatcounter test -w /var/lib/goatcounter/db && echo writable
 
-# Download the v2.7.0 linux-amd64 binary from the GitHub release:
+# Download the v2.7.0 linux-amd64 binary from the GitHub release and
+# install it as ROOT (/usr/local/bin is root-owned; the goatcounter user
+# cannot write it — it only needs to execute the binary):
 #   https://github.com/zgoat/goatcounter/releases/tag/v2.7.0
 #   (asset: goatcounter-v2.7.0-linux-amd64.gz)
-sudo -u goatcounter sh -c '
-  gunzip -c /tmp/goatcounter-v2.7.0-linux-amd64.gz > /usr/local/bin/goatcounter
-  chmod +x /usr/local/bin/goatcounter
-'
+wget -O /tmp/goatcounter.gz https://github.com/zgoat/goatcounter/releases/download/v2.7.0/goatcounter-v2.7.0-linux-amd64.gz
+sudo gunzip -c /tmp/goatcounter.gz > /usr/local/bin/goatcounter
+sudo chmod +x /usr/local/bin/goatcounter
+/usr/local/bin/goatcounter version   # must print v2.7.0
 
 # Create the site (the vhost MUST match the Caddy Host header). Replace
 # the example address with the real admin e-mail — do NOT keep angle
