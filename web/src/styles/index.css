@@ -1431,10 +1431,14 @@ body {
   font-size: 0.875rem;
 }
 
-/* Compass (MapLibre NavigationControl, bottom-right): brand-consistent,
-   playful-minimal chrome; positioned by MapLibre with bottom-right anchor,
-   clear of the header (top), noise legend (top-left), telemetry panel
-   (bottom-left) and the list counter (bottom-left). */
+/* Compass (MapLibre NavigationControl, top-right): brand-consistent,
+   playful-minimal chrome on top of maplibre-gl.css (imported in
+   useMap.ts since the invisible-compass fix — the library stylesheet
+   provides the icon, the 29x29 button and the corner positioning; these
+   overrides only adjust colours to the app palette). Anchored top-right
+   by MapLibre, clear of the header (top bar), noise legend + telemetry
+   (bottom-right), counter + list (bottom-left) and the airport popup
+   (bottom-center). */
 .maplibregl-ctrl-top-right .maplibregl-ctrl-group {
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -1449,4 +1453,35 @@ body {
   .maplibregl-ctrl-top-right .maplibregl-ctrl-group {
     animation: vv-panel-pop 160ms ease-out;
   }
+}
+
+/* MapLibre attribution control (bottom-right by default). maplibre-gl.css
+   now ships, so this control is visible and styled — but the noise legend
+   and telemetry panel also live in the bottom-right corner. Keep the
+   required PDOK/Kadaster attribution visible (CC-BY 4.0) and move it to
+   the bottom-center, clear of both panels at every tested width; style
+   it to match the app chrome instead of MapLibre's default white bar. */
+.maplibregl-ctrl-bottom-right,
+.maplibregl-ctrl-bottom-left {
+  /* MapLibre only ever places the attribution in one of these corners;
+   neutralize the corner defaults and re-anchor via the inner control. */
+  right: auto;
+  left: 50%;
+  bottom: 0.25rem;
+  transform: translateX(-50%);
+}
+.maplibregl-ctrl-attrib {
+  background: var(--vv-surface);
+  border-radius: var(--vv-radius-sm);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  color: var(--vv-muted);
+  font: 0.7rem/1.4 inherit;
+  padding: 0.15rem 0.5rem;
+  margin: 0;
+}
+.maplibregl-ctrl-attrib a {
+  color: var(--vv-accent);
+}
+.maplibregl-ctrl-attrib-button {
+  display: none;
 }
