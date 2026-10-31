@@ -220,20 +220,23 @@ function App(): React.ReactElement {
 
   const handleAircraftClick = useCallback(
     (id: string): void => {
-      setSelectedAircraftId((prev) => {
-        const next = prev === id ? null : id;
-        const ac = aircraft.get(id);
-        announce(
-          next && ac
-            ? t('aria.selected', '{{callsign}} geselecteerd', {
-                callsign: ac.callsign ?? ac.icao24,
-              })
-            : ''
-        );
-        return next;
-      });
+      // Pure updaters only: the announce() side effect used to live inside
+      // the setSelectedAircraftId updater, where it double-fires under
+      // StrictMode and (worse) closures over the aircraft map are fine here
+      // but the updater must stay pure. Compute the next selection from the
+      // CURRENT id (selectedAircraftId state), set it, then announce outside.
+      const next = selectedAircraftId === id ? null : id;
+      setSelectedAircraftId(next);
+      const ac = next ? aircraft.get(id) : undefined;
+      announce(
+        next && ac
+          ? t('aria.selected', '{{callsign}} geselecteerd', {
+              callsign: ac.callsign ?? ac.icao24,
+            })
+          : ''
+      );
     },
-    [aircraft, announce, t]
+    [selectedAircraftId, aircraft, announce, t]
   );
 
   const handleCloseTelemetry = useCallback((): void => {
@@ -285,21 +288,22 @@ function App(): React.ReactElement {
       announce(t('list.opened', 'Lijstweergave geopend'));
       return;
     }
-    setShowList((prev) => {
-      const next = !prev;
-      // Opening the list closes Settings (mutually exclusive); closing the
-      // list leaves Settings alone.
-      if (next) {
-        setShowSettings(false);
-      }
-      announce(
-        next
-          ? t('list.opened', 'Lijstweergave geopend')
-          : t('list.closed', 'Lijstweergave gesloten')
-      );
-      return next;
-    });
-  }, [route, navigate, language, announce, t]);
+    // Pure updaters only: showList/showSettings changes and the announce()
+    // side effect used to live inside the setShowList updater (double-fires
+    // under StrictMode). Compute from the CURRENT state, set outside.
+    const next = !showList;
+    setShowList(next);
+    // Opening the list closes Settings (mutually exclusive); closing the
+    // list leaves Settings alone.
+    if (next) {
+      setShowSettings(false);
+    }
+    announce(
+      next
+        ? t('list.opened', 'Lijstweergave geopend')
+        : t('list.closed', 'Lijstweergave gesloten')
+    );
+  }, [route, navigate, language, showList, announce, t]);
 
   // Session 26 focus management for the counter-anchored list: focus moves
   // into the panel on open and returns to the counter button on close

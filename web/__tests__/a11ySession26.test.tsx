@@ -128,11 +128,11 @@ vi.mock('maplibre-gl', () => {
 
 import App from '../src/App';
 import { useMap as useMapOriginal } from '../src/hooks/useMap';
-import { DEFAULT_MAP_CONFIG, PDOK_BRT_STYLE } from '../src/types';
+import { DEFAULT_MAP_CONFIG } from '../src/types';
 
 /** Probe wrapper: fixed config/style, variable locale label. */
 function useMapProbe(locale: Record<string, string>): ReturnType<typeof useMapOriginal> {
-  return useMapOriginal(DEFAULT_MAP_CONFIG, PDOK_BRT_STYLE, locale);
+  return useMapOriginal(DEFAULT_MAP_CONFIG, locale);
 }
 
 function setPathSafe(path: string): void {

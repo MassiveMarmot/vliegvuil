@@ -3,12 +3,12 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // Map component with aircraft rendering
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { GeoJSONSource, GeoJSONSourceSpecification, MapLayerMouseEvent, SymbolLayerSpecification } from 'maplibre-gl';
 import type { DisplayAircraft } from '../types';
 import { useMap } from '../hooks/useMap';
-import { DEFAULT_MAP_CONFIG, PDOK_BRT_STYLE } from '../types';
+import { DEFAULT_MAP_CONFIG } from '../types';
 import { NOISE_FILL_OPACITY, noiseFillExpression } from '../noiseStyle';
 import {
   registerAircraftIcons,
@@ -75,6 +75,16 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
   // with every basemap tile 404ing, 'load' never fires (it requires the first
   // fully rendered frame) and aircraft stayed invisible until a click.
   const { t } = useTranslation();
+  // Latest-callback refs: the map click handlers are registered ONCE when
+  // their layer is created and must never re-register (that would stack
+  // duplicate handlers). But the first-render onAircraftClick / onAirportClick
+  // closes over stale state (empty aircraft map, old language). The refs are
+  // updated on every render; the registered handlers call ref.current, so a
+  // click always reaches the CURRENT callback.
+  const onAircraftClickRef = useRef(onAircraftClick);
+  onAircraftClickRef.current = onAircraftClick;
+  const onAirportClickRef = useRef(onAirportClick);
+  onAirportClickRef.current = onAirportClick;
   // Session 26: the NavigationControl compass button's accessible name comes
   // from MapLibre's UI strings; the locale patch replaces the English
   // "Drag to rotate map, click to reset north" with our translated label
@@ -83,7 +93,6 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
   // and tracks the label STRING for in-place updates on language change.
   const { mapContainer, map, compassElement, styleReady, tileError, mapInitError } = useMap(
     DEFAULT_MAP_CONFIG,
-    PDOK_BRT_STYLE,
     { 'NavigationControl.ResetBearing': t('map.compass', 'Kaart naar het noorden draaien') },
   );
 
@@ -145,15 +154,16 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
         paint: SYMBOL_PAINT,
       });
 
-      // Add click handler
+      // Add click handler (registered once; calls the latest callback via
+      // the ref — see the refs at the top of the component)
       map.on('click', AIRCRAFT_LAYER_ID, (e: MapLayerMouseEvent) => {
         const features = e.features;
         if (features && features.length > 0) {
           const feature = features[0];
           const props = (feature as { properties?: Record<string, unknown> }).properties;
           const id = props?.id as string | undefined;
-          if (id && onAircraftClick) {
-            onAircraftClick(id);
+          if (id) {
+            onAircraftClickRef.current(id);
           }
         }
       });
@@ -171,7 +181,7 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
       });
     }
 
-  }, [map, styleReady, aircraft, selectedAircraftId, onAircraftClick]);
+  }, [map, styleReady, aircraft, selectedAircraftId]);
 
   // Noise overlay layer (session 10): fill below aircraft symbols
   useEffect((): void => {
@@ -260,10 +270,11 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
       );
       map.on('click', AIRPORT_MARKER_LAYER_ID, (e: MapLayerMouseEvent) => {
         const features = e.features;
-        if (features && features.length > 0 && onAirportClick) {
+        if (features && features.length > 0) {
           const props = (features[0] as { properties?: Record<string, unknown> }).properties;
-          if (props) {
-            onAirportClick({
+          const airportClick = onAirportClickRef.current;
+          if (props && airportClick) {
+            airportClick({
               icao: String(props['icao']),
               name: String(props['name']),
               status:
@@ -309,7 +320,7 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
         AIRCRAFT_LAYER_ID,
       );
     }
-  }, [map, styleReady, airports, onAirportClick]);
+  }, [map, styleReady, airports]);
 
   return (
     <>

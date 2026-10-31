@@ -15,6 +15,11 @@ const holder = vi.hoisted(() => ({
   // When true, the fake Map constructor throws a GPUInitializationError-
   // shaped Error, as maplibre-gl 6 does without WebGL2.
   throwOnConstruct: false,
+  // When true, fitBounds throws AFTER a successful construction — the
+  // post-constructor failure path the map-removal fix covers.
+  throwOnFitBounds: false,
+  // remove() spy so tests can assert the map instance is cleaned up.
+  removeCount: 0,
   // Runtime 'error' listeners registered by useMap (kept so a test can
   // fire a tile-style error event).
   listeners: new Map<string, Array<(ev?: unknown) => void>>(),
@@ -38,7 +43,6 @@ function fakeMapApi(): Record<string, unknown> {
     once: (): object => ({}),
     addImage: (): void => undefined,
     hasImage: (): boolean => false,
-    remove: (): void => undefined,
     isStyleLoaded: (): boolean => false,
     getCanvas: (): { style: Record<string, string> } => ({ style: {} }),
     getLayer: (): boolean => false,
@@ -46,7 +50,14 @@ function fakeMapApi(): Record<string, unknown> {
     addSource: (): void => undefined,
     addLayer: (): void => undefined,
     setLayoutProperty: (): void => undefined,
-    fitBounds: (): void => undefined,
+    fitBounds: (): void => {
+      if (holder.throwOnFitBounds) {
+        throw new Error('fitBounds failed after construction');
+      }
+    },
+    remove: (): void => {
+      holder.removeCount += 1;
+    },
   };
 }
 
@@ -87,6 +98,8 @@ import { Map as MapComponent } from '../src/components/Map';
 describe('fatal map init failure (WebGL2 unavailable)', () => {
   beforeEach(() => {
     holder.throwOnConstruct = false;
+    holder.throwOnFitBounds = false;
+    holder.removeCount = 0;
     holder.listeners = new Map();
   });
 
@@ -230,5 +243,48 @@ describe('App with WebGL2 unavailable', () => {
     fireEvent.click(within(notice).getByRole('button', { name: /lijst/i }));
     expect(await screen.findByRole('table')).not.toBeNull();
     expect(screen.getByText('KLM123')).not.toBeNull();
+  });
+});
+
+// Map-removal fix: if fitBounds (or the compass onAdd) throws AFTER the
+// MapLibreMap constructor succeeded, the constructed instance must be
+// removed — otherwise its listeners and WebGL context leak with no
+// cleanup path (the success path's cleanup never runs after a throw).
+describe('post-constructor failure removes the map', () => {
+  beforeEach(() => {
+    holder.throwOnConstruct = false;
+    holder.throwOnFitBounds = false;
+    holder.removeCount = 0;
+    holder.listeners = new Map();
+  });
+
+  it('a fitBounds throw after construction removes the constructed map (no leak)', () => {
+    holder.throwOnFitBounds = true;
+    render(
+      <MapComponent
+        aircraft={new Map()}
+        selectedAircraftId={null}
+        onAircraftClick={(): void => undefined}
+      />,
+    );
+    // The blocking init-error notice is shown (the throw is surfaced the
+    // same way as a constructor throw) AND the constructed map was removed
+    // exactly once — the leak fix.
+    expect(screen.getByTestId('map-init-error-notice')).not.toBeNull();
+    expect(holder.removeCount).toBe(1);
+  });
+
+  it('a successful init removes the map exactly once on unmount (regression guard)', () => {
+    const { unmount } = render(
+      <MapComponent
+        aircraft={new Map()}
+        selectedAircraftId={null}
+        onAircraftClick={(): void => undefined}
+      />,
+    );
+    expect(screen.queryByTestId('map-init-error-notice')).toBeNull();
+    expect(holder.removeCount).toBe(0);
+    unmount();
+    expect(holder.removeCount).toBe(1);
   });
 });
