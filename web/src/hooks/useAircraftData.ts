@@ -109,6 +109,14 @@ export function useAircraftData(
     new Map(),
   );
   const [lastUpdate, setLastUpdate] = useState<number | null>(null);
+  // Mirror of lastUpdate for the stale-check interval: state updaters must
+  // stay pure (no side effects — they double-fire under StrictMode), so the
+  // periodic check reads the ref instead of doing work inside setLastUpdate.
+  const lastUpdateRef = useRef<number | null>(null);
+  const setLastUpdateTracked = useCallback((value: number | null): void => {
+    lastUpdateRef.current = value;
+    setLastUpdate(value);
+  }, []);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPolling, setIsPolling] = useState(false);
@@ -177,7 +185,7 @@ export function useAircraftData(
         }
         return updated;
       });
-      setLastUpdate(Date.now());
+      setLastUpdateTracked(Date.now());
       setIsLoading(false);
       hasLoadedOnceRef.current = true;
       setError(null);
@@ -185,7 +193,7 @@ export function useAircraftData(
       setShowStaleBanner(false);
       setStaleMessage(null);
     },
-    [],
+    [setLastUpdateTracked],
   );
 
   // (Re)arm the poll interval; always clears the previous one first so
@@ -307,13 +315,14 @@ export function useAircraftData(
       clearInterval(staleCheckRef.current);
     }
     staleCheckRef.current = setInterval((): void => {
-      setLastUpdate((last) => {
-        if (last != null && Date.now() - last > configRef.current.interval * 3) {
-          setShowStaleBanner(true);
-          setStaleMessage(i18n.t('stale.outdated', 'Gegevens mogelijk verouderd'));
-        }
-        return last;
-      });
+      // Pure-updater fix: read the mirrored lastUpdate from the ref and set
+      // the banner state directly (the updater used to carry these side
+      // effects and return the value unchanged).
+      const last = lastUpdateRef.current;
+      if (last != null && Date.now() - last > configRef.current.interval * 3) {
+        setShowStaleBanner(true);
+        setStaleMessage(i18n.t('stale.outdated', 'Gegevens mogelijk verouderd'));
+      }
     }, configRef.current.interval);
   }, [armInterval, refreshAircraft]);
 

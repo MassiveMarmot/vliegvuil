@@ -12,7 +12,7 @@ import { Map as MapLibreMap, LngLatBounds, NavigationControl } from 'maplibre-gl
 // own-origin hashed CSS file, so the CSP's style-src 'self' keeps working;
 // the data: SVG backgrounds fall under img-src, which already allows data:.
 import 'maplibre-gl/dist/maplibre-gl.css';
-import type { MapConfig, MapStyle } from '../types';
+import type { MapConfig } from '../types';
 import { NETHERLANDS_BBOX, getBasemapUrl, PDOK_BRT_ATTRIBUTION, DEFAULT_MAP_CONFIG } from '../types';
 import { AIRPORT_GLYPHS_URL } from '../airports/airportLayer';
 
@@ -60,7 +60,7 @@ export interface UseMapReturn {
 /**
  * Initialize and manage a MapLibre GL map instance
  */
-export function useMap(config: MapConfig, _style?: MapStyle, locale?: MapLocalePatch): UseMapReturn {
+export function useMap(config: MapConfig, locale?: MapLocalePatch): UseMapReturn {
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<MapLibreMap | null>(null);
   const [compassElement, setCompassElement] = useState<HTMLElement | null>(null);
@@ -87,10 +87,14 @@ export function useMap(config: MapConfig, _style?: MapStyle, locale?: MapLocaleP
     // The compass control's element once onAdd has produced it (see the
     // Firefox fix at the control's creation site for the full rationale).
     let compassElement: HTMLElement | null = null;
+    // Hoisted so the catch path can remove a constructed map: if onAdd or
+    // fitBounds throws after the constructor, the instance would otherwise
+    // leak (event listeners, WebGL context) with no removal path.
+    let mapInstance: MapLibreMap | null = null;
 
     try {
       // Create map instance (maplibre-gl 6 is ESM-only: named import)
-      const mapInstance = new MapLibreMap({
+      mapInstance = new MapLibreMap({
         container: mapContainer.current,
         style: {
           version: 8,
@@ -261,15 +265,22 @@ export function useMap(config: MapConfig, _style?: MapStyle, locale?: MapLocaleP
       // ever re-runs (it should not, but a config change would), the
       // data-layer effects would otherwise run against the new map before
       // its style loaded.
+      // The success path always has a constructed map here; the hoisted
+      // binding is nullable only for the catch path.
+      const constructedMap = mapInstance as MapLibreMap;
       return (): void => {
-        mapInstance.off('style.load', onStyleLoad);
+        constructedMap.off('style.load', onStyleLoad);
         compassControl.onRemove();
         setCompassElement(null);
-        mapInstance.remove();
+        constructedMap.remove();
         setStyleReady(false);
         setMapLoaded(false);
       };
     } catch (error) {
+      // A constructed map must be removed even when a later step (fitBounds,
+      // the compass onAdd) throws — otherwise the instance leaks.
+      mapInstance?.remove();
+      setCompassElement(null);
       setMapError(error instanceof Error ? error.message : 'Unknown map error');
       setMapInitError(error instanceof Error ? error.message : 'Unknown map error');
       console.error('Failed to initialize map:', error);

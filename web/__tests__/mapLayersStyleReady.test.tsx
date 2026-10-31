@@ -318,3 +318,114 @@ describe('regression: existing behaviour unchanged', () => {
     expect(featureCount(fake, 'aircraft')).toBe(1);
   });
 });
+
+// Stale-closure fix (map click handlers) + pure state updaters: the click
+// handlers are registered ONCE at layer creation; before the fix they closed
+// over the first-render callbacks, so a click announced with empty aircraft
+// data or the old language. The latest-callback refs must route every click
+// to the CURRENT prop. The App-level announcement paths are exercised in
+// staleClosures.test.tsx (live region + StrictMode double-invoke).
+describe('latest-callback refs: map clicks reach the CURRENT callback', () => {
+  beforeEach(() => {
+    holder.current = null;
+    holder.autoStyleLoad = true;
+    holder.preLoadedStyle = false;
+  });
+
+  it('a click after a prop change calls the NEW onAircraftClick, not the first-render one', async () => {
+    const first = vi.fn();
+    const latest = vi.fn();
+    const { rerender } = render(
+      <MapComponent
+        aircraft={new Map()}
+        selectedAircraftId={null}
+        onAircraftClick={first}
+      />,
+    );
+    await vi.waitFor(() => {
+      expect(holder.current?.sources.has('aircraft')).toBe(true);
+    });
+    // Prop changes after layer creation (the stale-closure scenario)
+    rerender(
+      <MapComponent
+        aircraft={makeAircraft('a9', '484019')}
+        selectedAircraftId={null}
+        onAircraftClick={latest}
+      />,
+    );
+    const fake = holder.current as FakeMapInstance;
+    // Still exactly one handler (registered once, never re-registered)
+    expect(fake.listeners.get('click:aircraft-symbols')).toHaveLength(1);
+    const handler = (fake.listeners.get('click:aircraft-symbols') as Array<(ev?: unknown) => void>)[0];
+    expect(handler).toBeDefined();
+    handler?.({ features: [{ properties: { id: 'a9' } }] });
+    expect(first).not.toHaveBeenCalled();
+    expect(latest).toHaveBeenCalledWith('a9');
+  });
+
+  it('a click after a prop change calls the NEW onAirportClick, not the first-render one', async () => {
+    const first = vi.fn();
+    const latest = vi.fn();
+    const airports = [
+      { icao: 'EHAM', iata: 'AMS', name: 'Schiphol', latitude: 52.3, longitude: 4.76, elevation: -3, type: 'large_airport', status: 'commercial', source: 'OurAirports', license: 'ODbL-1.0', date: '2026-10-30' },
+    ];
+    const { rerender } = render(
+      <MapComponent
+        aircraft={new Map()}
+        selectedAircraftId={null}
+        onAircraftClick={(): void => undefined}
+        airports={airports}
+        onAirportClick={first}
+      />,
+    );
+    await vi.waitFor(() => {
+      expect(holder.current?.sources.has('aircraft')).toBe(true);
+    });
+    rerender(
+      <MapComponent
+        aircraft={new Map()}
+        selectedAircraftId={null}
+        onAircraftClick={(): void => undefined}
+        airports={airports}
+        onAirportClick={latest}
+      />,
+    );
+    const fake = holder.current as FakeMapInstance;
+    expect(fake.listeners.get('click:airport-markers')).toHaveLength(1);
+    const handler = (fake.listeners.get('click:airport-markers') as Array<(ev?: unknown) => void>)[0];
+    expect(handler).toBeDefined();
+    handler?.({ features: [{ properties: { icao: 'EHAM', name: 'Schiphol', status: 'commercial' } }] });
+    expect(first).not.toHaveBeenCalled();
+    expect(latest).toHaveBeenCalledWith({ icao: 'EHAM', name: 'Schiphol', status: 'commercial' });
+  });
+
+  it('an onAirportClick change alone never re-registers the click handlers', async () => {
+    const airports = [
+      { icao: 'EHAM', iata: 'AMS', name: 'Schiphol', latitude: 52.3, longitude: 4.76, elevation: -3, type: 'large_airport', status: 'commercial', source: 'OurAirports', license: 'ODbL-1.0', date: '2026-10-30' },
+    ];
+    const { rerender } = render(
+      <MapComponent
+        aircraft={new Map()}
+        selectedAircraftId={null}
+        onAircraftClick={(): void => undefined}
+        airports={airports}
+        onAirportClick={undefined}
+      />,
+    );
+    await vi.waitFor(() => {
+      expect(holder.current?.sources.has('aircraft')).toBe(true);
+    });
+    rerender(
+      <MapComponent
+        aircraft={new Map()}
+        selectedAircraftId={null}
+        onAircraftClick={(): void => undefined}
+        airports={airports}
+        onAirportClick={(): void => undefined}
+      />,
+    );
+    const fake = holder.current as FakeMapInstance;
+    expect(fake.listeners.get('click:aircraft-symbols')).toHaveLength(1);
+    expect(fake.listeners.get('click:airport-markers')).toHaveLength(1);
+  });
+});
