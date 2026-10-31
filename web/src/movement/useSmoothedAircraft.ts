@@ -66,9 +66,13 @@ export function useSmoothedAircraft(
   useEffect(() => {
     if (reducedMotion || typeof requestAnimationFrame !== 'function') {
       // Reduced motion: no loop; positions jump to the latest fix on each
-      // data update instead of being extrapolated.
+      // data update instead of being extrapolated. The effect follows the
+      // SNAPSHOT (rebuilt whenever the aircraft input changes — App feeds
+      // it the enriched fleet), so raw positions track every data update;
+      // before, it read snapshotRef.current ONCE per reduced-motion flip
+      // and went stale after the first poll.
       const raw = new Map<string, ExtrapolatedPosition>();
-      for (const ac of snapshotRef.current) {
+      for (const ac of snapshot) {
         raw.set(ac.id, { id: ac.id, lat: ac.lat, lon: ac.lon });
       }
       setSmoothed(raw);
@@ -100,9 +104,10 @@ export function useSmoothedAircraft(
       cancelAnimationFrame(rafId);
       setIsAnimating(false);
     };
-    // The snapshot ref carries the data; the effect only reacts to the
-    // reduced-motion decision.
-  }, [reducedMotion]);
+    // The rAF branch reads data through snapshotRef (fresh every frame);
+    // the reduced-motion branch depends on the snapshot itself so raw
+    // positions follow aircraft updates without starting the loop.
+  }, [reducedMotion, snapshot]);
 
   return { smoothed, isAnimating };
 }

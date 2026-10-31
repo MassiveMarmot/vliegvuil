@@ -34,8 +34,12 @@ export function generateAircraftId(icao24: string): string {
 export function toDisplayAircraft(
   position: AircraftPosition,
   prevAircraft?: DisplayAircraft,
+  /** Server-anchored "now" in unix SECONDS (client clock when unknown);
+   *  the caller passes provider.getServerNow() so a skewed client clock
+   *  cannot mark fresh aircraft stale or vice versa. */
+  nowSeconds?: number,
 ): DisplayAircraft {
-  const now = Date.now();
+  const now = (nowSeconds ?? Date.now() / 1000) * 1000;
   const heading = position.heading ?? 0;
 
   // MapLibre icon-rotate is degrees clockwise from north (0 = north).
@@ -139,6 +143,12 @@ export function useAircraftData(
   // effects/callbacks and put start/stop in an endless ping-pong
   // (isPolling in startPolling's deps changed its identity on every flip).
   const pollingActiveRef = useRef(false);
+  // Tab-hidden pause: separate from pollingActiveRef (startPolling/
+  // stopPolling semantics unchanged) and from the 429 pause (retryRef):
+  // hidden -> clear BOTH intervals; visible -> one immediate refresh and
+  // re-arm. Polling "active" state is untouched so stopPolling stays
+  // idempotent and the 429 retry path is not disturbed.
+  const visibilityPausedRef = useRef(false);
   const inFlightRef = useRef(false);
   const aircraftSizeRef = useRef(0);
   const configRef = useRef(pollingConfig);
@@ -150,10 +160,10 @@ export function useAircraftData(
   // throwing; positions are then accompanied by the provider's lastError
   // so this poll is treated as a failure, not a success.
   const fetchAircraftData = useCallback(
-    async (): Promise<{ positions: AircraftPosition[]; error: Error | null }> => {
+    async (): Promise<{ positions: AircraftPosition[]; error: Error | null; serverNow: number }> => {
       if (import.meta.env.VITE_MOCK === '1') {
         const { fetchMockAircraft } = await import('../mock/mockAircraftData');
-        return { positions: await fetchMockAircraft(), error: null };
+        return { positions: await fetchMockAircraft(), error: null, serverNow: Date.now() / 1000 };
       }
       if (providerRef.current === null) {
         const base = import.meta.env.VITE_API_BASE ?? '/api';
@@ -166,21 +176,24 @@ export function useAircraftData(
         minLongitude: 2.5,
         maxLongitude: 7.5,
       });
-      return { positions, error: provider.getLastError() };
+      // Server-anchored clock (unix seconds; equals the client clock until
+      // a first response carried `now`): all ageing below compares
+      // upstream timestamps against THIS, so a client clock skewed by
+      // minutes cannot drop fresh aircraft or keep dead ones.
+      return { positions, error: provider.getLastError(), serverNow: provider.getServerNow() };
     },
     [],
   );
 
   // Process and update aircraft data
   const updateAircraft = useCallback(
-    (newPositions: AircraftPosition[]): void => {
-      const nowSeconds = Date.now() / 1000;
+    (newPositions: AircraftPosition[], nowSeconds: number): void => {
       setAircraft((prev) => {
         const updated = new Map(prev);
         for (const position of newPositions) {
           const id = generateAircraftId(position.icao24);
           const prevAircraft = prev.get(id);
-          updated.set(id, toDisplayAircraft(position, prevAircraft));
+          updated.set(id, toDisplayAircraft(position, prevAircraft, nowSeconds));
         }
         // Drop aircraft not seen for more than MAX_AGE_SECONDS
         for (const [id, ac] of updated) {
@@ -210,6 +223,19 @@ export function useAircraftData(
     pollingRef.current = setInterval((): void => {
       void refreshRef.current();
     }, configRef.current.interval);
+  }, []);
+
+  // Clear both timers WITHOUT touching the polling-active state (the
+  // visibility pause uses this; stopPolling has its own, fuller cleanup).
+  const clearTimers = useCallback((): void => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+    if (staleCheckRef.current) {
+      clearInterval(staleCheckRef.current);
+      staleCheckRef.current = null;
+    }
   }, []);
 
   // Handle fetch errors. Stable identity: reads volatile values via refs.
@@ -274,7 +300,7 @@ export function useAircraftData(
     setIsLoading(!hasLoadedOnceRef.current);
     setLastPollTime(Date.now());
     try {
-      const { positions, error } = await fetchAircraftData();
+      const { positions, error, serverNow } = await fetchAircraftData();
       if (!mountedRef.current) {
         return;
       }
@@ -285,7 +311,7 @@ export function useAircraftData(
         handleError(error, refreshRef.current);
         return;
       }
-      updateAircraft(positions);
+      updateAircraft(positions, serverNow);
     } catch (err) {
       if (mountedRef.current) {
         handleError(
@@ -323,6 +349,10 @@ export function useAircraftData(
       // Pure-updater fix: read the mirrored lastUpdate from the ref and set
       // the banner state directly (the updater used to carry these side
       // effects and return the value unchanged).
+      // Elapsed-time measurement is inherently skew-safe (client clock on
+      // both sides); only comparisons between the upstream aircraft
+      // timestamps (server clock) and "now" need the server anchor, which
+      // is handled in updateAircraft via nowSeconds.
       const last = lastUpdateRef.current;
       if (last != null && Date.now() - last > configRef.current.interval * 3) {
         setShowStaleBanner(true);
@@ -348,6 +378,49 @@ export function useAircraftData(
       retryRef.current = null;
     }
   }, []);
+
+  // Pause while the tab is hidden (review finding): a background tab kept
+  // polling at 12 req/min against the proxy's 60/min per-IP limit. On
+  // becoming visible: ONE immediate refresh (so data is fresh the moment
+  // the user looks) and re-arm the intervals. The 429 pause (retryRef),
+  // inFlight guard and startPolling/stopPolling idempotence are untouched:
+  // a 429 retry timer set while hidden still fires on its own schedule,
+  // and stopPolling clears everything regardless of the paused flag.
+  useEffect(() => {
+    const onVisibility = (): void => {
+      if (document.visibilityState === 'hidden') {
+        visibilityPausedRef.current = true;
+        clearTimers();
+      } else {
+        if (!visibilityPausedRef.current) {
+          return;
+        }
+        visibilityPausedRef.current = false;
+        // One immediate refresh on return (not a stacked burst), then the
+        // normal cadence resumes. refreshAircraft's inFlight guard makes
+        // this safe even if a poll was mid-flight when the tab hid.
+        void refreshRef.current();
+        if (pollingActiveRef.current) {
+          armInterval();
+          // Re-arm the stale check exactly like startPolling does.
+          if (staleCheckRef.current) {
+            clearInterval(staleCheckRef.current);
+          }
+          staleCheckRef.current = setInterval((): void => {
+            const last = lastUpdateRef.current;
+            if (last != null && Date.now() - last > configRef.current.interval * 3) {
+              setShowStaleBanner(true);
+              setStaleMessage(i18n.t('stale.outdated', 'Gegevens mogelijk verouderd'));
+            }
+          }, configRef.current.interval);
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return (): void => {
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [armInterval, clearTimers]);
 
   // Cleanup on unmount
   useEffect(() => {

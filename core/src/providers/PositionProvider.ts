@@ -135,6 +135,16 @@ export abstract class PositionProvider implements PositionProviderInterface {
     return this.lastError;
   }
 
+  /**
+   * Server-anchored clock (unix seconds). The base class has no response
+   * `now` to anchor to, so it returns the client clock; concrete
+   * providers whose upstream response carries a server timestamp override
+   * this (see AdsbfiProvider).
+   */
+  getServerNow(): number {
+    return Date.now() / 1000;
+  }
+
   isStale(): boolean {
     return this.getDataAge() > this.config.cacheTTL * 2;
   }

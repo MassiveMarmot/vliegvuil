@@ -75,6 +75,25 @@ describe('AdsbfiProvider', () => {
     expect(positions).toHaveLength(2);
   });
 
+  it('getServerNow anchors to the response `now` (client clock offset)', async () => {
+    // A response whose `now` is 600 s AHEAD of the client clock must move
+    // getServerNow() by the same +600 s, so consumers comparing upstream
+    // timestamps are immune to client clock skew.
+    const realNow = Date.now() / 1000;
+    const provider = new AdsbfiProvider();
+    // Before any fetch: the client clock (offset 0)
+    expect(provider.getServerNow()).toBeCloseTo(realNow, 0);
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: new Headers(),
+      json: () => Promise.resolve({ now: realNow + 600, aircraft: [] }),
+    } as Response);
+    await provider.fetchPositions(NETHERLANDS_BBOX);
+    expect(provider.getServerNow()).toBeCloseTo(realNow + 600, 0);
+  });
+
   it("refuses a 'now' in milliseconds (real API sends unix seconds)", async () => {
     const provider = new AdsbfiProvider({ maxRetries: 1 });
     (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
