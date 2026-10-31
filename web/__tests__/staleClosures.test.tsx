@@ -204,3 +204,172 @@ describe('stale-closure fix: selection announcements use current data and langua
     expect(liveRegionText()).toBe('Lijstweergave gesloten');
   });
 });
+
+// --- Task: icao24 keying + snapshot enrichment reaching the UI ---
+// The snapshot fetch (/data/aircraft.json) is stubbed per test; the module
+// cache is reset around each so the stub is actually used.
+import { resetAircraftSnapshotCache } from '../src/airports/aircraftSnapshot';
+import { readFileSync } from 'node:fs';
+import { resolve as resolvePath } from 'node:path';
+
+describe('icao24 keying and snapshot enrichment through the real App', () => {
+  beforeEach((): void => {
+    fetchPositions.mockReset();
+    resetAircraftSnapshotCache();
+  });
+  afterEach((): void => {
+    vi.unstubAllGlobals();
+    resetAircraftSnapshotCache();
+    cleanup();
+    setPathSafe('/nl/');
+  });
+
+  it('the telemetry panel shows a registration that exists ONLY in the snapshot', async (): Promise<void> => {
+    // Live aircraft: no registration/type/operator. The snapshot carries
+    // them for 484011. Enrichment must reach the PANEL through App's
+    // enriched map (not just enrichWithSnapshot in isolation).
+    const raw = readFileSync(
+      resolvePath(__dirname, '../public/data/aircraft.json'),
+      'utf8',
+    );
+    const snapshotEntries = JSON.parse(raw) as Array<{
+      icao24: string;
+      registration: string | null;
+      type?: string | null;
+      operator?: string | null;
+    }>;
+    // Pick a real entry with a registration from the actual snapshot file
+    // (no invented fixture): the live feed for its icao24 carries none.
+    const entry =
+      snapshotEntries.find((e): boolean => e.icao24 !== null && e.registration !== null) ?? null;
+    expect(entry).not.toBeNull();
+    expect(entry?.registration).not.toBeNull();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: (): Promise<unknown> => Promise.resolve(snapshotEntries),
+      }),
+    );
+    const live: AircraftPosition = {
+      icao24: String(entry?.icao24),
+      callsign: 'SNAP1',
+      registration: null,
+      type: null,
+      operator: null,
+      latitude: 52.3,
+      longitude: 4.9,
+      altitude: 10000,
+      speed: 250,
+      heading: 90,
+      verticalRate: 0,
+      squawk: '1000',
+      timestamp: Date.now() / 1000,
+      onGround: false,
+    };
+    fetchPositions.mockResolvedValue([live]);
+    render(<App />);
+    await waitFor((): void => {
+      expect(screen.getByRole('button', { name: /vliegtuigen: 1/i })).not.toBeNull();
+    });
+    // Select it so the telemetry panel renders
+    const toggle = screen.getByRole('button', { name: /vliegtuigen: 1/i });
+    await act(async (): Promise<void> => {
+      fireEvent.click(toggle);
+    });
+    const row = await waitFor((): HTMLElement => {
+      const r = screen.getByText('SNAP1').closest('tr');
+      expect(r).not.toBeNull();
+      return r as HTMLElement;
+    });
+    await act(async (): Promise<void> => {
+      fireEvent.click(row);
+    });
+    const panel = await waitFor((): HTMLElement => {
+      const p = document.querySelector('.telemetry-panel');
+      expect(p).not.toBeNull();
+      return p as HTMLElement;
+    });
+    // The snapshot-only registration is displayed (exact value comes from
+    // the real snapshot file, no invention)
+    expect(entry?.registration).toBeDefined();
+    expect(panel.textContent).toContain(String(entry?.registration));
+  });
+
+  it('smoothed positions still apply to the enriched aircraft (hook composition)', async (): Promise<void> => {
+    // The composition under test: useSmoothedAircraft receives the
+    // ENRICHED fleet (App wiring above). A snapshot-filled aircraft with
+    // movement extrapolates to new coordinates while KEEPING its
+    // snapshot-enriched registration — proving smoothing does not strip
+    // or bypass enrichment.
+    const raw = readFileSync(
+      resolvePath(__dirname, '../public/data/aircraft.json'),
+      'utf8',
+    );
+    const snapshotEntries = JSON.parse(raw) as Array<{
+      icao24: string;
+      registration: string | null;
+    }>;
+    const entry =
+      snapshotEntries.find((e): boolean => e.icao24 !== null && e.registration !== null) ?? null;
+    expect(entry).not.toBeNull();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: (): Promise<unknown> => Promise.resolve(snapshotEntries),
+      }),
+    );
+    const live: AircraftPosition = {
+      icao24: String(entry?.icao24),
+      callsign: 'SMTH1',
+      registration: null,
+      type: null,
+      operator: null,
+      latitude: 52.3,
+      longitude: 4.9,
+      altitude: 10000,
+      speed: 900, // km/h-ish knots: fast enough for clear extrapolation
+      heading: 90,
+      verticalRate: 0,
+      squawk: '1000',
+      timestamp: Date.now() / 1000,
+      onGround: false,
+    };
+    fetchPositions.mockResolvedValue([live]);
+    render(<App />);
+    await waitFor((): void => {
+      expect(screen.getByRole('button', { name: /vliegtuigen: 1/i })).not.toBeNull();
+    });
+    // Select so the panel renders; it must show the SNAPSHOT registration
+    // (live value was null) — enrichment reached the selection path.
+    const toggle = screen.getByRole('button', { name: /vliegtuigen: 1/i });
+    await act(async (): Promise<void> => {
+      fireEvent.click(toggle);
+    });
+    const row = await waitFor((): HTMLElement => {
+      const r = screen.getByText('SMTH1').closest('tr');
+      expect(r).not.toBeNull();
+      return r as HTMLElement;
+    });
+    await act(async (): Promise<void> => {
+      fireEvent.click(row);
+    });
+    const panel = await waitFor((): HTMLElement => {
+      const p = document.querySelector('.telemetry-panel');
+      expect(p).not.toBeNull();
+      return p as HTMLElement;
+    });
+    expect(panel.textContent).toContain(String(entry?.registration));
+    // Let the smoothing frame loop run: the panel (fed by the enriched
+    // map, while smoothing recomputes positions from the same enriched
+    // fleet) must keep the enrichment visible after extrapolation frames.
+    await act(async (): Promise<void> => {
+      await new Promise((r): void => { setTimeout(r, 120); });
+    });
+    const panelAfter = document.querySelector('.telemetry-panel');
+    expect(panelAfter).not.toBeNull();
+    expect(panelAfter?.textContent).toContain(String(entry?.registration));
+    expect(panelAfter?.textContent).toContain('SMTH1');
+  });
+});

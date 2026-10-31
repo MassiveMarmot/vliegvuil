@@ -18,8 +18,13 @@ export const MAX_AGE_SECONDS = 60;
 export const DEFAULT_RATE_LIMIT_PAUSE_MS = 60_000;
 
 /** Generate unique ID for aircraft */
-export function generateAircraftId(icao24: string, callsign: string): string {
-  return `${icao24}_${callsign}`;
+export function generateAircraftId(icao24: string): string {
+  // Keyed by icao24 only (the provider already uppercases hex addresses):
+  // a callsign appearing, changing or disappearing must never produce a
+  // second entry for the same airframe (ghost duplicates that lingered up
+  // to MAX_AGE_SECONDS and broke the selection id) — the callsign field is
+  // updated in place on the same entry instead.
+  return icao24;
 }
 
 /**
@@ -46,7 +51,7 @@ export function toDisplayAircraft(
       : false;
 
   return {
-    id: generateAircraftId(position.icao24, position.callsign ?? ''),
+    id: generateAircraftId(position.icao24),
     icao24: position.icao24,
     callsign: position.callsign,
     registration: position.registration,
@@ -173,7 +178,7 @@ export function useAircraftData(
       setAircraft((prev) => {
         const updated = new Map(prev);
         for (const position of newPositions) {
-          const id = generateAircraftId(position.icao24, position.callsign ?? '');
+          const id = generateAircraftId(position.icao24);
           const prevAircraft = prev.get(id);
           updated.set(id, toDisplayAircraft(position, prevAircraft));
         }

@@ -28,14 +28,14 @@ const AIRCRAFT_LIST_ID = 'aircraft-list-panel';
 import { useAircraftData } from './hooks';
 import { countRouteChange } from './analytics';
 import { useSmoothedAircraft } from './movement/useSmoothedAircraft';
+import { useEnrichedAircraft } from './hooks/useEnrichedAircraft';
 import { useTranslation } from 'react-i18next';
-import { DEFAULT_POLLING_CONFIG, type DisplayAircraft } from './types';
+import { DEFAULT_POLLING_CONFIG } from './types';
 import type { NoiseContours } from '@vliegvuil/core';
 import noiseSources from '../../sources.json';
 import { loadUnits, type UnitSettings, DEFAULT_UNITS } from './units';
 import { loadAirports, type AirportData, type AirportStatus } from './airports/airports';
 import { iataFor } from './airports/airportLayer';
-import { enrichFleet } from './airports/aircraftSnapshot';
 const AirportPopup = lazy(() => import('./airports/AirportPopup'));
 import type { AirportPopupData } from './airports/airportLayer';
 
@@ -84,14 +84,22 @@ function App(): React.ReactElement {
     refreshAircraft,
   } = useAircraftData({ ...DEFAULT_POLLING_CONFIG, enabled: true });
 
+  // Aircraft snapshot fallback (session 23, review fix): enrich ONCE
+  // per fleet change; live values always win, the snapshot only fills
+  // gaps. The single enriched map feeds EVERYTHING downstream —
+  // smoothing, Map, TelemetryPanel, AircraftList, SearchBox — so
+  // /data/aircraft.json is actually used (before, only Map saw it and
+  // smoothing rebuilt from the raw fleet, losing enrichment mid-flight).
+  const enrichedAircraft = useEnrichedAircraft(aircraft);
+
   // Session 16: dead-reckon aircraft between polls (capped ~10 fps);
   // jumps straight to the newest fix under prefers-reduced-motion.
-  const { smoothed: smoothedPositions } = useSmoothedAircraft(aircraft);
+  const { smoothed: smoothedPositions } = useSmoothedAircraft(enrichedAircraft);
   const smoothedAircraft = useMemo(() => {
     if (smoothedPositions.size === 0) {
-      return aircraft;
+      return enrichedAircraft;
     }
-    const merged = new globalThis.Map(aircraft);
+    const merged = new globalThis.Map(enrichedAircraft);
     for (const [id, pos] of smoothedPositions) {
       const ac = merged.get(id);
       if (ac) {
@@ -99,7 +107,7 @@ function App(): React.ReactElement {
       }
     }
     return merged;
-  }, [aircraft, smoothedPositions]);
+  }, [enrichedAircraft, smoothedPositions]);
 
   const [selectedAircraftId, setSelectedAircraftId] = useState<string | null>(null);
   const [showList, setShowList] = useState(false);
@@ -121,18 +129,6 @@ function App(): React.ReactElement {
   const [airports, setAirports] = useState<AirportData[]>([]);
   const [selectedAirport, setSelectedAirport] = useState<AirportPopupData | null>(null);
 
-  // Aircraft snapshot fallback (session 23): enrich the fleet with the
-  // lazily-loaded snapshot; live values always win, the snapshot only
-  // fills gaps. The snapshot fetch is cached, so this is a Map lookup
-  // per aircraft on every poll, not a refetch.
-  const [enrichedAircraft, setEnrichedAircraft] = useState<Map<string, DisplayAircraft> | null>(
-    null
-  );
-  useEffect((): void => {
-    void enrichFleet(aircraft).then((fleet): void => {
-      setEnrichedAircraft(fleet);
-    });
-  }, [aircraft]);
 
   // Load persisted settings on mount (spec §2: localStorage only)
   useEffect((): void => {
@@ -415,7 +411,7 @@ function App(): React.ReactElement {
     };
   }, []);
 
-  const selectedAircraft = selectedAircraftId ? (aircraft.get(selectedAircraftId) ?? null) : null;
+  const selectedAircraft = selectedAircraftId ? (enrichedAircraft.get(selectedAircraftId) ?? null) : null;
 
   return (
     <div className="app-shell">
@@ -424,7 +420,7 @@ function App(): React.ReactElement {
         route={route}
         onNavigate={navigate}
         onOpenSettings={handleOpenSettings}
-        search={<SearchBox aircraft={aircraft} onSelect={handleAircraftSelect} />}
+        search={<SearchBox aircraft={enrichedAircraft} onSelect={handleAircraftSelect} />}
         skipTargetId="map-region"
       />
       <div className="app-body">
@@ -484,9 +480,7 @@ function App(): React.ReactElement {
               }
             >
               <Map
-                aircraft={
-                  smoothedPositions.size > 0 ? smoothedAircraft : (enrichedAircraft ?? aircraft)
-                }
+                aircraft={smoothedPositions.size > 0 ? smoothedAircraft : enrichedAircraft}
 
                 selectedAircraftId={selectedAircraftId}
                 onAircraftClick={handleAircraftClick}
@@ -570,7 +564,7 @@ function App(): React.ReactElement {
         {route === 'map' && showList && (
           <AircraftList
             id={AIRCRAFT_LIST_ID}
-            aircraft={aircraft}
+            aircraft={enrichedAircraft}
             selectedAircraftId={selectedAircraftId}
             onSelect={handleAircraftSelect}
             onClose={handleToggleList}

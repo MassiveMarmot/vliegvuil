@@ -3,7 +3,7 @@
 // page (content, outbound links, null-config entries hidden), and locale
 // key parity across every supported language.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, act, cleanup, waitFor } from '@testing-library/react';
 import React from 'react';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -100,11 +100,13 @@ describe('routing', () => {
     act((): void => {
       window.history.back();
     });
-    // popstate fires asynchronously; wait for the route to settle
-    await act(async (): Promise<void> => {
-      await new Promise((r): void => { setTimeout(r, 0); });
+    // popstate fires asynchronously; wait for the route to settle. A
+    // single setTimeout(0) tick is not enough under suite load (the flake
+    // this replace fixed: the pathname assert ran before the popstate
+    // handler). waitFor polls until the route actually settles.
+    await waitFor((): void => {
+      expect(window.location.pathname).toBe('/nl/');
     });
-    expect(window.location.pathname).toBe('/nl/');
 
   });
 

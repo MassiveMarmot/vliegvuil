@@ -5,3 +5,4 @@
 // imports maplibre-gl and must stay out of the initial bundle (session 24).
 // Map.tsx imports it directly from './useMap'.
 export { useAircraftData, type UseAircraftDataReturn, toDisplayAircraft, generateAircraftId } from './useAircraftData';
+export { useEnrichedAircraft } from './useEnrichedAircraft';

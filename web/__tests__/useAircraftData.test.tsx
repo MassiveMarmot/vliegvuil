@@ -77,10 +77,51 @@ describe('useAircraftData', () => {
       minLongitude: 2.5,
       maxLongitude: 7.5,
     });
-    const ac = result.current.aircraft.get('484C5A_TRA16U');
+    const ac = result.current.aircraft.get('484C5A');
     expect(ac).toBeDefined();
     expect(ac?.alt).toBe(6925);
     expect(result.current.lastUpdate).not.toBeNull();
+  });
+
+  it('keys by icao24: a callsign change updates in place (one entry, stable id)', async () => {
+    // Same airframe (484C5A), the callsign appears then changes. Under the
+    // old icao24_callsign keying each change created a second entry (a
+    // ghost that lingered up to MAX_AGE_SECONDS) and the selection id was
+    // lost. Now: one entry, keyed by icao24, callsign updated in place.
+    fetchPositions
+      .mockResolvedValueOnce([position({ callsign: null })])
+      .mockResolvedValueOnce([position({ callsign: 'TRA16U' })])
+      .mockResolvedValue([position({ callsign: 'NEW123' })]);
+
+    const { result } = renderHook(() => useAircraftData({ interval: 1000 }));
+    act(() => {
+      result.current.startPolling();
+    });
+    await vi.waitFor(() => {
+      expect(result.current.aircraft.size).toBe(1);
+    });
+    // No callsign yet: the entry exists under its icao24 key
+    expect(result.current.aircraft.get('484C5A')?.callsign).toBeNull();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+    // A callsign APPEARS: still one entry, same id, field updated
+    expect(result.current.aircraft.size).toBe(1);
+    expect(result.current.aircraft.has('484C5A')).toBe(true);
+    expect(result.current.aircraft.get('484C5A')?.callsign).toBe('TRA16U');
+    // A selectedAircraftId of '484C5A' stays valid across the change
+    const selectedId = result.current.aircraft.keys().next().value ?? null;
+    expect(selectedId).toBe('484C5A');
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+    // The callsign CHANGES: still one entry, same id, field updated
+    expect(result.current.aircraft.size).toBe(1);
+    expect(result.current.aircraft.get('484C5A')?.callsign).toBe('NEW123');
+    // No ghost entries under any callsign-derived key
+    expect([...result.current.aircraft.keys()]).toEqual(['484C5A']);
   });
 
   it('drops aircraft not seen for more than 60 seconds', async () => {
@@ -107,8 +148,8 @@ describe('useAircraftData', () => {
       await vi.advanceTimersByTimeAsync(1000);
     });
     expect(result.current.aircraft.size).toBe(1);
-    expect(result.current.aircraft.has('484001_KLM123')).toBe(true);
-    expect(result.current.aircraft.has('484C5A_TRA16U')).toBe(false);
+    expect(result.current.aircraft.has('484001')).toBe(true);
+    expect(result.current.aircraft.has('484C5A')).toBe(false);
   });
 
   it('retries with backoff and clears timers on stopPolling', async () => {

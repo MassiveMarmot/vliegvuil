@@ -2,7 +2,7 @@
 // render no map chrome, the attribution page is a real page, the search
 // has wide/narrow modes, and the shell layout classes exist.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act, waitFor } from '@testing-library/react';
 import React from 'react';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -89,9 +89,12 @@ describe('route change closes overlays (finding 3)', () => {
     openMenuAndNavigate(/^bronnen$/i, '/nl/attribution');
     await act(async (): Promise<void> => {
       window.history.back();
-      await new Promise((r): void => { setTimeout(r, 0); });
     });
-    expect(window.location.pathname).toBe('/nl/');
+    // popstate fires asynchronously; a single setTimeout(0) tick raced the
+    // handler under suite load (flaky pathname assert). Poll instead.
+    await waitFor((): void => {
+      expect(window.location.pathname).toBe('/nl/');
+    });
     expect(container.querySelector('.aircraft-list')).toBeNull();
     expect(container.querySelector('.settings-panel')).toBeNull();
   });
