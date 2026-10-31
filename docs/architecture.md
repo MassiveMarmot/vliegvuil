@@ -55,7 +55,8 @@ Every snapshot records its source, licence, and date in `sources.json`, which al
 
 ## Key decisions
 
-- **Provider interface**: adsb.fi sits behind `PositionProvider` so fallbacks (adsb.lol, airplanes.live, OpenSky) can be added without UI changes.
+- **Provider interface**: adsb.fi sits behind `PositionProvider` so fallbacks (adsb.lol, airplanes.live, OpenSky) can be added without UI changes. The interface carries `getServerNow()`: a server-anchored clock (unix seconds) that concrete providers derive from the upstream response's `now` (measured as an offset at fetch completion; the base class returns the client clock). All ageing of aircraft timestamps in the web app (the 60 s drop, per-aircraft `isStale`) compares against this server clock, not `Date.now()`, so a skewed client clock cannot drop every aircraft or keep dead ones forever. Elapsed-time checks (the stale banner) stay on the client clock — skew cancels there.
+- **Hidden-tab pause**: polling and the stale-check interval stop on `visibilitychange` to hidden; on becoming visible exactly one immediate refresh fires and the cadence re-arms. A background tab therefore costs zero requests instead of 12/min against the proxy's per-IP rate limit.
 - **Client-side noise lookup**: avoids a spatial backend; contours are small enough for in-browser point-in-polygon.
 - **Eindhoven civil contours**: civil Lden chosen over military Ke contours; labelled "civil traffic only" in the UI.
 - **PWA app shell only**: offline caching covers the shell, not live data — the app is honest about needing a connection for positions.

@@ -94,11 +94,23 @@ function trimmedOrNull(value: string | undefined): string | null {
  * required for API access.
  */
 export class AdsbfiProvider extends PositionProvider {
+  /**
+   * serverNow - clientNow, both in unix seconds, measured when the last
+   * response arrived. getServerNow() adds this to the client clock so
+   * consumers compare upstream timestamps against the server's notion of
+   * "now" even when the client clock is skewed.
+   */
+  private serverClockOffsetSeconds = 0;
+
   constructor(config: Partial<PositionProviderConfig> = {}) {
     super({
       baseUrl: 'https://opendata.adsb.fi/api/v2',
       ...config,
     });
+  }
+
+  getServerNow(): number {
+    return Date.now() / 1000 + this.serverClockOffsetSeconds;
   }
 
   async fetchFromSource(
@@ -132,6 +144,12 @@ export class AdsbfiProvider extends PositionProvider {
     }
     // A malformed upstream payload must not break the whole batch: the
     // aircraft array is optional and a single bad entry is skipped.
+    // Anchor the server clock BEFORE parsing uses `now`: the offset is
+    // measured at fetch completion (the response's own `now` is the
+    // freshest server time we ever get).
+    if (typeof data.now === 'number') {
+      this.serverClockOffsetSeconds = data.now - Date.now() / 1000;
+    }
     const aircraft = Array.isArray(data.aircraft) ? data.aircraft : [];
     return aircraft
       .filter(

@@ -16,6 +16,7 @@ vi.mock('@vliegvuil/core', async (importOriginal) => {
       getDataAge: () => 0,
       getLastError: () => null,
       isStale: () => false,
+      getServerNow: (): number => Date.now() / 1000,
     }),
   };
 });

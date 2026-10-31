@@ -32,6 +32,16 @@ export interface PositionProvider {
   getDataAge(): number; // seconds since last update
   getLastError(): Error | null;
   isStale(): boolean;
+  /**
+   * Current time anchored to the SERVER clock, in unix SECONDS: the
+   * client clock plus an offset measured when the last response arrived
+   * (the adsb.fi response carries `now`). Until a first response anchors
+   * it, this equals the client clock (offset 0). Consumers that compare
+   * upstream aircraft timestamps against "now" must use this, not
+   * Date.now(), so a skewed client clock cannot drop every aircraft or
+   * keep dead ones forever.
+   */
+  getServerNow(): number;
 }
 
 export interface PositionProviderConfig {
