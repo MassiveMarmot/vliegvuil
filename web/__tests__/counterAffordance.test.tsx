@@ -50,6 +50,8 @@ vi.mock('maplibre-gl', () => {
     addLayer: (): void => undefined,
     setLayoutProperty: (): void => undefined,
     fitBounds: (): void => undefined,
+    getZoom: (): number => 8,
+    setZoom: (_z: number): void => undefined,
     addImage: (): void => undefined,
   });
   const FakeMap = class {

@@ -189,13 +189,39 @@ describe('WebGL canvas stacking (Firefox nightly regression, 2026-10-30)', (): v
     expect(rule('.noise-overlay')).toMatch(/z-index:\s*20/);
   });
 
-  it('the basemap source declares the real tile zoom range (no phantom tiles)', (): void => {
+  it('the basemap source declares the TILE zoom range; the MAP maxZoom is one below (no stretch)', (): void => {
     // The self-hosted tile tree is z6-14 only; the raster source used
     // to declare 0-22, so MapLibre requested z0-5 tiles that always
     // 404 (and each 404 trips the non-blocking tile-error notice).
-    expect(useMapSource).toContain(
-      'minzoom: DEFAULT_MAP_CONFIG.minZoom,\n              maxzoom: DEFAULT_MAP_CONFIG.maxZoom'
-    );
+    // The source now uses the TILE constants (decoupled from the MAP
+    // zooms — the covering zoom for 256px raster tiles is round(mapZoom
+    // + 1), so the two bases must not be fed to each other), and the
+    // MAP maxZoom (13) sits exactly one below the TILE max (14), so
+    // tiles are never stretched beyond 1:1.
+    expect(useMapSource).toContain('minzoom: TILE_MIN_ZOOM');
+    expect(useMapSource).toContain('maxzoom: TILE_MAX_ZOOM');
+    const mapSource = readFileSync(resolve(__dirname, '..', 'src', 'types', 'index.ts'), 'utf8');
+    expect(mapSource).toMatch(/TILE_MIN_ZOOM = 6/);
+    expect(mapSource).toMatch(/TILE_MAX_ZOOM = 14/);
+    expect(mapSource).toMatch(/maxZoom: 13,/);
+    // The arithmetic relationship: map max = tile max - 1 (the +1
+    // covering offset means map zoom 13 requests tile z14 at 1:1).
+    const mapMax = 13;
+    const tileMax = 14;
+    expect(mapMax).toBe(tileMax - 1);
+    // And the map never uses the tile constants directly (decoupling):
+    expect(useMapSource).not.toContain('minZoom: TILE_MIN_ZOOM');
+    expect(useMapSource).not.toContain('maxZoom: TILE_MAX_ZOOM');
+  });
+
+  it('the initial fitBounds zoom is snapped to an integer (1:1 tiles on first view)', (): void => {
+    // jsdom has no layout, so the REAL fitBounds zoom per viewport is
+    // not computable here; this asserts the snap WIRING in the source:
+    // after fitBounds, a fractional zoom is floored to an integer so
+    // the covering zoom round(mapZoom+1) lands exactly on a tile level.
+    expect(useMapSource).toContain('fitBounds(bounds, { padding: 20, duration: 0 })');
+    expect(useMapSource).toContain('Number.isInteger(fitted)');
+    expect(useMapSource).toContain('setZoom(Math.floor(fitted))');
   });
 });
 

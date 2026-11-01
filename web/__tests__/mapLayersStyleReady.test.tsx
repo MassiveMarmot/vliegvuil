@@ -100,6 +100,8 @@ function fakeMapApi(): Record<string, unknown> {
     },
     setLayoutProperty: (): void => undefined,
     fitBounds: (): void => undefined,
+    getZoom: (): number => 8,
+    setZoom: (_z: number): void => undefined,
   };
 }
 

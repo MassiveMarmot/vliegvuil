@@ -55,6 +55,8 @@ function fakeMapApi(): Record<string, unknown> {
         throw new Error('fitBounds failed after construction');
       }
     },
+    getZoom: (): number => 8,
+    setZoom: (_z: number): void => undefined,
     remove: (): void => {
       holder.removeCount += 1;
     },
