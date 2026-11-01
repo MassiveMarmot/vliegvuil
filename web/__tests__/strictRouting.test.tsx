@@ -129,6 +129,14 @@ describe('parsePath is strict', () => {
   it('trailing slash only: /nl/// is not-found', () => {
     expect(parsePath('/nl///')).toEqual({ language: 'nl', route: 'not-found' });
   });
+  it('two trailing slashes are not-found: /nl/about// (review fix)', () => {
+    // The '//' check must run BEFORE the single-trailing-slash strip;
+    // after-the-strip ordering let '/nl/about//' pass as About.
+    expect(parsePath('/nl/about//')).toEqual({ language: 'nl', route: 'not-found' });
+  });
+  it('double slash at the root segment: /nl// is not-found (review fix)', () => {
+    expect(parsePath('/nl//')).toEqual({ language: 'nl', route: 'not-found' });
+  });
   it('no language segment is not-found', () => {
     expect(parsePath('/')).toEqual({ language: 'nl', route: 'not-found' });
   });

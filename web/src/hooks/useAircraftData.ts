@@ -149,6 +149,13 @@ export function useAircraftData(
   // re-arm. Polling "active" state is untouched so stopPolling stays
   // idempotent and the 429 retry path is not disturbed.
   const visibilityPausedRef = useRef(false);
+  // 429 backoff is active: set when the RateLimitError branch starts its
+  // resume timer, cleared when that timer fires (or stopPolling runs).
+  // The visibility handler must NOT refresh or re-arm while this is
+  // true - otherwise a hide/show during the backoff would bypass
+  // Retry-After and hit the proxy again. Deliberately NOT inferred from
+  // retryRef, which is shared with ordinary error retries.
+  const rateLimitPausedRef = useRef(false);
   const inFlightRef = useRef(false);
   const aircraftSizeRef = useRef(0);
   const configRef = useRef(pollingConfig);
@@ -225,6 +232,31 @@ export function useAircraftData(
     }, configRef.current.interval);
   }, []);
 
+  // The ONE stale-check arm (review fix: the interval body was
+  // duplicated in startPolling and the visibility handler). Stable
+  // identity; always clears the previous interval first so repeated
+  // hide/show cycles can never leak intervals.
+  const armStaleCheck = useCallback((): void => {
+    if (staleCheckRef.current) {
+      clearInterval(staleCheckRef.current);
+      staleCheckRef.current = null;
+    }
+    staleCheckRef.current = setInterval((): void => {
+      // Pure-updater fix: read the mirrored lastUpdate from the ref and set
+      // the banner state directly (the updater used to carry these side
+      // effects and return the value unchanged).
+      // Elapsed-time measurement is inherently skew-safe (client clock on
+      // both sides); only comparisons between the upstream aircraft
+      // timestamps (server clock) and "now" need the server anchor, which
+      // is handled in updateAircraft via nowSeconds.
+      const last = lastUpdateRef.current;
+      if (last != null && Date.now() - last > configRef.current.interval * 3) {
+        setShowStaleBanner(true);
+        setStaleMessage(i18n.t('stale.outdated', 'Gegevens mogelijk verouderd'));
+      }
+    }, configRef.current.interval);
+  }, []);
+
   // Clear both timers WITHOUT touching the polling-active state (the
   // visibility pause uses this; stopPolling has its own, fuller cleanup).
   const clearTimers = useCallback((): void => {
@@ -259,15 +291,26 @@ export function useAircraftData(
           clearInterval(pollingRef.current);
           pollingRef.current = null;
         }
+        rateLimitPausedRef.current = true;
         const base = err.retryAfterMs ?? DEFAULT_RATE_LIMIT_PAUSE_MS;
         const delay = Math.max(base, 1000) + Math.random() * 2000;
         retryRef.current = setTimeout((): void => {
           retryRef.current = null;
+          // The backoff has elapsed: the pause ends here, whether or not
+          // the tab is visible. If it is HIDDEN, no request is made and
+          // nothing is re-armed - the visibility handler performs the
+          // single refresh on show (rateLimitPausedRef is false by then,
+          // so it is not blocked).
+          rateLimitPausedRef.current = false;
           if (!pollingActiveRef.current || !mountedRef.current) {
+            return;
+          }
+          if (visibilityPausedRef.current) {
             return;
           }
           retryCountRef.current = 0;
           armInterval();
+          armStaleCheck();
           void refresh();
         }, delay);
         return;
@@ -282,11 +325,18 @@ export function useAircraftData(
         retryCountRef.current += 1;
         retryRef.current = setTimeout((): void => {
           retryRef.current = null;
+          // ONE RULE for hidden-tab requests (review fix): no request is
+          // ever issued while the tab is hidden - a pending retry timer
+          // skips, and the visibility handler's single refresh on show
+          // covers it (fresh data anyway after a hidden period).
+          if (visibilityPausedRef.current) {
+            return;
+          }
           void refresh();
         }, configRef.current.retryDelay * retryCountRef.current);
       }
     },
-    [armInterval],
+    [armInterval, armStaleCheck],
   );
 
   // Refresh aircraft data. Stable identity; never runs two requests at once.
@@ -342,28 +392,13 @@ export function useAircraftData(
     armInterval();
 
     // Periodically check whether data is going stale
-    if (staleCheckRef.current) {
-      clearInterval(staleCheckRef.current);
-    }
-    staleCheckRef.current = setInterval((): void => {
-      // Pure-updater fix: read the mirrored lastUpdate from the ref and set
-      // the banner state directly (the updater used to carry these side
-      // effects and return the value unchanged).
-      // Elapsed-time measurement is inherently skew-safe (client clock on
-      // both sides); only comparisons between the upstream aircraft
-      // timestamps (server clock) and "now" need the server anchor, which
-      // is handled in updateAircraft via nowSeconds.
-      const last = lastUpdateRef.current;
-      if (last != null && Date.now() - last > configRef.current.interval * 3) {
-        setShowStaleBanner(true);
-        setStaleMessage(i18n.t('stale.outdated', 'Gegevens mogelijk verouderd'));
-      }
-    }, configRef.current.interval);
-  }, [armInterval, refreshAircraft]);
+    armStaleCheck();
+  }, [armInterval, armStaleCheck, refreshAircraft]);
 
   // Stop polling
   const stopPolling = useCallback((): void => {
     pollingActiveRef.current = false;
+    rateLimitPausedRef.current = false;
     setIsPolling(false);
     if (pollingRef.current) {
       clearInterval(pollingRef.current);
@@ -396,23 +431,21 @@ export function useAircraftData(
           return;
         }
         visibilityPausedRef.current = false;
+        // 429 backoff still active (review fix): the backoff timer is the
+        // designated resumption point - hide/show during Retry-After must
+        // not refresh or re-arm, or the backoff would be bypassed.
+        if (rateLimitPausedRef.current) {
+          return;
+        }
         // One immediate refresh on return (not a stacked burst), then the
         // normal cadence resumes. refreshAircraft's inFlight guard makes
-        // this safe even if a poll was mid-flight when the tab hid.
+        // this safe even if a poll was mid-flight when the tab hid. This
+        // single refresh also covers any ordinary error-retry timer that
+        // skipped while hidden (the one clear rule above).
         void refreshRef.current();
         if (pollingActiveRef.current) {
           armInterval();
-          // Re-arm the stale check exactly like startPolling does.
-          if (staleCheckRef.current) {
-            clearInterval(staleCheckRef.current);
-          }
-          staleCheckRef.current = setInterval((): void => {
-            const last = lastUpdateRef.current;
-            if (last != null && Date.now() - last > configRef.current.interval * 3) {
-              setShowStaleBanner(true);
-              setStaleMessage(i18n.t('stale.outdated', 'Gegevens mogelijk verouderd'));
-            }
-          }, configRef.current.interval);
+          armStaleCheck();
         }
       }
     };
@@ -420,7 +453,7 @@ export function useAircraftData(
     return (): void => {
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [armInterval, clearTimers]);
+  }, [armInterval, armStaleCheck, clearTimers]);
 
   // Cleanup on unmount
   useEffect(() => {

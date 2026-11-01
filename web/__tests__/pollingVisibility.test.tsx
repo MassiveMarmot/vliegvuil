@@ -222,3 +222,147 @@ function renderHookHarness(): { result: { current: ReturnType<typeof useAircraft
   });
   return rendered;
 }
+
+// --- Review defects in the visibility pause (this PR) ---
+import { RateLimitError } from '@vliegvuil/core';
+
+describe('visibility pause vs 429 backoff and error retries (review defects)', () => {
+  beforeEach((): void => {
+    vi.useFakeTimers();
+    fetchPositions.mockReset();
+    fetchPositions.mockResolvedValue([]);
+    providerServerNow.current = Date.now() / 1000;
+    setHidden(false);
+  });
+  afterEach((): void => {
+    vi.useRealTimers();
+    setHidden(false);
+  });
+
+  it('hide/show during a 429 backoff does NOT bypass Retry-After', async () => {
+    // Mount and first poll (success)
+    render(<Harness />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(fetchPositions).toHaveBeenCalledTimes(1);
+
+    // A 429 with Retry-After 30 s: the next poll hits the limit
+    fetchPositions.mockRejectedValueOnce(new RateLimitError(30_000));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000);
+    });
+    expect(fetchPositions).toHaveBeenCalledTimes(2);
+
+    // Hide and show DURING the backoff (t=10s): no request, no re-arm
+    setHidden(true);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000);
+    });
+    setHidden(false);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
+    });
+    // Nothing during hide, nothing on the premature show
+    expect(fetchPositions).toHaveBeenCalledTimes(2);
+
+    // Before the backoff elapses (30s + up to 2s jitter): still nothing
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_000);
+    });
+    expect(fetchPositions).toHaveBeenCalledTimes(2);
+
+    // After the full backoff window (30s + jitter max 2s): exactly one
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(12_000);
+    });
+    expect(fetchPositions.mock.calls.length).toBeGreaterThanOrEqual(3);
+    expect(fetchPositions.mock.calls.length).toBeLessThanOrEqual(4);
+    // ...and the normal cadence is back
+    const after = fetchPositions.mock.calls.length;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_100);
+    });
+    expect(fetchPositions.mock.calls.length).toBe(after + 1);
+  });
+
+  it('a pending error-retry timer issues no request while hidden; one refresh on show', async () => {
+    // Mount and first poll succeeds
+    render(<Harness />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(fetchPositions).toHaveBeenCalledTimes(1);
+
+    // Next poll fails with an ORDINARY error -> a retry timer is set
+    fetchPositions.mockRejectedValueOnce(new Error('network down'));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000);
+    });
+    expect(fetchPositions).toHaveBeenCalledTimes(2);
+
+    // Hide BEFORE the retry timer fires: the pending retry must skip
+    setHidden(true);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+    expect(fetchPositions).toHaveBeenCalledTimes(2); // no retry while hidden
+
+    // Show: exactly one refresh
+    const before = fetchPositions.mock.calls.length;
+    setHidden(false);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(fetchPositions.mock.calls.length).toBe(before + 1);
+  });
+
+  it('hide/show without errors still gives one immediate refresh and the normal cadence', async () => {
+    render(<Harness />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(fetchPositions).toHaveBeenCalledTimes(1);
+    setHidden(true);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+    expect(fetchPositions).toHaveBeenCalledTimes(1);
+    const before = fetchPositions.mock.calls.length;
+    setHidden(false);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(fetchPositions.mock.calls.length).toBe(before + 1);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_100);
+    });
+    expect(fetchPositions.mock.calls.length).toBe(before + 2);
+  });
+
+  it('repeated hide/show cycles leak no stale-check interval', async () => {
+    // Count active timers with vi.getTimerCount(): each show must clear
+    // the previous stale-check interval before arming the next, so the
+    // active-timer count stays constant across cycles.
+    const before = vi.getTimerCount();
+    render(<Harness />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    const mounted = vi.getTimerCount();
+    // mounted has the poll interval + the stale-check interval (+ possible SW timers)
+    for (let i = 0; i < 5; i++) {
+      setHidden(true);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1_000);
+      });
+      setHidden(false);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+    }
+    const after = vi.getTimerCount();
+    expect(after).toBe(mounted);
+    expect(before).toBeLessThan(mounted);
+  });
+});
