@@ -61,17 +61,46 @@ Parked follow-ups (small PRs, not scheduled sessions):
 
 ## 5. Session prompt template
 
-Paste into a new session, filling in the bracketed parts:
+Paste into a new session and fill in the brackets. Delete lines that do not apply.
 
 ```
-Read AGENTS.md, docs/SPEC.md and docs/BUILD.md. Task: session [N], "[title]" from
-docs/BUILD.md section 4[, details in docs/sessions/[file].md]. Scope is only that
-row; do not start other sessions. If anything in the spec is ambiguous, ask me
-before coding. Implement, run lint, typecheck and tests, then open a pull request
-against main with the results and anything you could not verify.
+# Task
+Session [N], "[title]" (docs/BUILD.md §4[; details: docs/sessions/[file].md]).
+Only this row; do not start other sessions.
+
+# Read first
+AGENTS.md, docs/SPEC.md, docs/BUILD.md[, the session file]. Read other files only
+as a step needs them.
+
+# Steps
+1. [concrete step, naming files or paths]
+2. [...]
+
+# Rules
+- Make targeted edits only; no reformatting, no whole-file rewrites.
+- Keep unchanged: [public API / exports / existing tests / ...].
+- Do not edit existing tests unless a step says so; if one fails, stop and report.
+- If something in the spec is ambiguous:
+  - if it changes behaviour or a public API: stop and ask me;
+  - otherwise: choose the least invasive option and say so in the PR.
+
+# Verify
+- Run `pnpm lint && pnpm typecheck && pnpm --filter @vliegvuil/web build && pnpm test`
+  once at the end. On failure, fix and re-run only what failed, then the full
+  command once more.
+- Revert build-generated diffs (sources.json, web/public/data/*.json) unless this
+  is a data PR.
+- Report: [measurable checks, e.g. before/after line counts, grep output].
+
+# Output
+Open a PR against main. Description: what changed, what was verified (command and
+result), what was not.
 ```
 
-For data sessions add: "Fetch and read each official source page and licence text before writing code. Do not guess endpoints or licences."
+Add-ons, one line each in `# Rules`:
+- Data session: "Fetch and read each official source page and licence text before writing code. Do not guess endpoints or licences."
+- Refactor session: "Behaviour-preserving: exports, hook order, dependency arrays and cleanup order unchanged; report them before and after."
+- Docs-only session: "No code, data or test changes; move text, do not rewrite it, and verify moved text is identical."
 
 ## Troubleshooting
 
