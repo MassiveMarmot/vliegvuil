@@ -83,3 +83,11 @@ Moved to [docs/human-checkpoints.md](human-checkpoints.md) (together with the hu
 ## 7. Sources checked
 
 Mistral Docs: Vibe Code Web get started, sandbox environment, limits and lifecycle; Mistral announcement of remote agents/Medium 3.5. Not verified: whether the web agent auto-loads `AGENTS.md`, and whether the "not yet available" controls have since shipped.
+
+## 8. Parked items
+
+- Pull-based deployment: replaces the earlier push-to-deploy idea; deploys stay manual (docs/deploy/07-updates.md, docs/release-checklist.md) until decided.
+- Staging site on a subdomain: wanted, not yet; trigger: more than a few testers, or before a risky Caddy change.
+- Rename PR (GitHub handle to org URLs): repo moves to the GitHub organisation "vliegvuil"; on hold until Mistral's GitHub connector supports organisations. Files to cover: every file containing "MassiveMarmot" (web/src/config/site.ts, web/__tests__/uiShell.test.tsx, CHANGELOG.md, sources.schema.json, data-build/src/freshness.ts, docs/data-updates.md; pnpm-lock.yaml excluded), plus the AGENTS.md rule update and a guard test.
+- Eindhoven noise-data requests: deferred; see docs/human-checkpoints.md.
+- GoatCounter retention: indefinite for now (decided 2026-10-30).

@@ -93,6 +93,7 @@ Live noise sensors
 Schiphol flight API (free with registration)
 Self-hosted privacy-first analytics (GoatCounter, EUPL-1.2, single binary, SQLite on the VPS): shipped in session 25c — see §5, docs/sessions/25c-analytics.md and the 25c row in BUILD.md §4.
 Accounts, playback, schedules
+Hide live aircraft view: a user option to hide the live aircraft layer, for when more pollution/context layers make live planes a distraction; design it with the first additional layer, not before.
 
 Explicitly excluded (reviewed, not integrated):
 
