@@ -10,9 +10,8 @@ One session = one PR = one merge. Start each new session from updated `main`. If
 
 | # | Session | Done when |
 |---|---|---|
-| 27 | **Docs and release prep.** Update README, `architecture.md`, `privacy.md`, `deploy.md` to match reality; refresh screenshots from the real app; add CHANGELOG and a release checklist. | Docs contain no statement the code does not do; HSTS ramp-up reviewed: current max-age recorded in `docs/deploy.md`; raise step by step (1 day, 1 week, 1 month, 1 year) only after a week without TLS problems at each step |
 
-Finished sessions (rows 1–22, 22b, 22c, 23, 23b, 24, 25, 25b, 25c, 25d, 26) moved to [docs/history/session-plan.md](history/session-plan.md):
+Finished sessions (rows 1–22, 22b, 22c, 23, 23b, 24, 25, 25b, 25c, 25d, 26, 27) moved to [docs/history/session-plan.md](history/session-plan.md):
 
 - [1 — Scaffold](history/session-plan.md)
 - [2 — Core: providers + interpolation](history/session-plan.md)
@@ -46,6 +45,7 @@ Finished sessions (rows 1–22, 22b, 22c, 23, 23b, 24, 25, 25b, 25c, 25d, 26) mo
 - [25b — SEO foundations](history/session-plan.md)
 - [25c — Privacy-first analytics (GoatCounter, self-hosted)](history/session-plan.md)
 - [26 — Styling and a11y pass](history/session-plan.md)
+- [27 — Docs and release prep.](history/session-plan.md)
 
 
 Free plan is 2 sessions/day, so expect this to take ~a week; paid allows far more.
