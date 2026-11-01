@@ -46,6 +46,8 @@ Finished sessions (rows 1–22, 22b, 22c, 23, 23b, 24, 25, 25b, 25c, 25d, 26, 27
 - [25c — Privacy-first analytics (GoatCounter, self-hosted)](history/session-plan.md)
 - [26 — Styling and a11y pass](history/session-plan.md)
 - [27 — Docs and release prep.](history/session-plan.md)
+- [28 — Compass only when rotated](history/session-plan.md)
+- [29 — Simplify useMap.ts](history/session-plan.md)
 
 
 Free plan is 2 sessions/day, so expect this to take ~a week; paid allows far more.

@@ -7,7 +7,7 @@
 // tests fire them and assert DOM state (the hidden attribute and focus),
 // never CSS text.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, cleanup } from '@testing-library/react';
+import { render, cleanup, act } from '@testing-library/react';
 import React from 'react';
 import { useMap } from '../src/hooks/useMap';
 import { DEFAULT_MAP_CONFIG } from '../src/types';
@@ -201,11 +201,13 @@ describe('compass visibility (session 28)', () => {
     expect(active).not.toBe(document.body);
   });
 
-  it('reduced motion: visibility stays attribute-based, no animation dependency', async (): Promise<void> => {
+  it('reduced motion: hiding after rotateend(0) is synchronous, no animation dependency', async (): Promise<void> => {
     // Under prefers-reduced-motion the reset ease has duration 0, so
     // 'rotate'/'rotateend' fire in immediate succession; the hidden/show
     // toggling is purely the hidden attribute (the CSS pop-in is
-    // no-preference-only and must not be required for visibility).
+    // no-preference-only and must not be required for visibility). The
+    // hide must therefore be applied synchronously in the same act() as
+    // the rotateend event — no waitFor, no timers.
     const mql = (query: string): MediaQueryList => ({
       matches: query === '(prefers-reduced-motion: reduce)',
       media: query,
@@ -230,10 +232,12 @@ describe('compass visibility (session 28)', () => {
         expect(compassEl()?.hasAttribute('hidden')).toBe(false);
       });
       fake.bearing = 0;
-      fire(fake, 'rotateend');
-      await vi.waitFor((): void => {
-        expect(compassEl()?.hasAttribute('hidden')).toBe(true);
+      act((): void => {
+        fire(fake, 'rotateend');
       });
+      // Synchronous: the hidden attribute is set in the same act() batch,
+      // not after a timer or animation frame.
+      expect(compassEl()?.hasAttribute('hidden')).toBe(true);
       // No inline animation style was introduced; visibility is the
       // attribute alone.
       expect(compassEl()?.getAttribute('style')).toBeNull();
