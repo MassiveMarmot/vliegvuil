@@ -47,16 +47,16 @@
       "notes": "Verified 2026-09-29: 'All data is released to the Public Domain.' Download from https://raw.githubusercontent.com/davidmegginson/ourairports-data/main/airports.csv",
       "cadence": "monthly",
       "refresh": "auto",
-      "retrievedAt": "2026-10-30",
-      "upstreamVersion": "ec3175579bd8f0160a8a0136b78aa3810ce79ab2",
-      "checkedAt": "2026-10-30T20:34:19.627Z",
+      "retrievedAt": "2026-11-01",
+      "upstreamVersion": "a53a511473382df1da2ba56a229b4b4a3c3904ee",
+      "checkedAt": "2026-11-01T15:12:45.232Z",
       "upstream": {
         "method": "github",
         "url": "https://api.github.com/repos/davidmegginson/ourairports-data/commits/main"
       },
       "downloadUrl": "https://raw.githubusercontent.com/davidmegginson/ourairports-data/main/airports.csv",
-      "contentSha256": "423a70f3a3a6b849db1063a5558e47bbd4e715decb6071f1f80f413ab92a88ac",
-      "downloadEtag": "W/\"4824a87ea26de06146e243b87b54142fcbb2526dbebdbbaa6c96a72c48c46d06\""
+      "contentSha256": "1aab80ccfa203a0d02476c16ac282d9e787cf3d08700d7365c5c5502a0db8ba7",
+      "downloadEtag": "W/\"d2744ae35b4d09bd452a8faf18758dc8a1bd363497fd35130e10f862966889a1\""
     },
     {
       "id": "tar1090-db",
@@ -70,9 +70,9 @@
       "notes": "Download: https://github.com/wiedehopf/tar1090-db/raw/refs/heads/csv/aircraft.csv.gz — derived from Mictronics/aircraft-database, whose exports are made available under the Open Data Commons Attribution License (ODC-By-1.0).",
       "cadence": "monthly",
       "refresh": "auto",
-      "retrievedAt": "2026-10-30",
+      "retrievedAt": "2026-11-01",
       "upstreamVersion": "df22c2ef05e8bb42247d0043aebb02a10c5ab3e9",
-      "checkedAt": "2026-10-30T20:34:22.232Z",
+      "checkedAt": "2026-11-01T15:12:47.191Z",
       "upstream": {
         "method": "github",
         "url": "https://api.github.com/repos/wiedehopf/tar1090-db/commits/csv"
