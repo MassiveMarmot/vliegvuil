@@ -23,7 +23,8 @@ export const NL_BBOX = {
 /**
  * Hand-maintained status overlay (spec §1: "plus a hand-maintained status
  * overlay (commercial / military-shared / planned)"). ICAO → status.
- * Defaults to 'commercial' for known NL airports not listed here.
+ * Airports not listed here get status null (session 23b): no guessed
+ * label — the overlay is the only source of status.
  */
 export const AIRPORT_STATUS_OVERLAY: Record<string, AirportStatus> = {
   EHAM: 'commercial', // Schiphol
@@ -72,7 +73,7 @@ export function filterAirports(
       longitude: lon,
       elevation: elevationRaw !== null && elevationRaw !== '' ? Number(elevationRaw) : null,
       type: type ?? 'unknown',
-      status: AIRPORT_STATUS_OVERLAY[icao] ?? 'commercial',
+      status: AIRPORT_STATUS_OVERLAY[icao] ?? null,
       source: 'OurAirports',
       license: 'Public Domain',
       // Replaced by the build script at run time; fixture default:

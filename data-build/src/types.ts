@@ -14,7 +14,7 @@ export interface AirportSnapshot {
   longitude: number;
   elevation: number | null;
   type: string;
-  status: AirportStatus;
+  status: AirportStatus | null;
   source: string;
   license: string;
   date: string;

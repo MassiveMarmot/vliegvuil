@@ -7,6 +7,8 @@ import {
   NL_BBOX,
 } from '../src/airports';
 import { parseCsv } from '../src/csv';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 // Fixture: real rows from OurAirports airports.csv (fetched 2026-09-30,
 // trimmed; columns as in the real file), plus three synthetic rows for the
@@ -22,6 +24,8 @@ const FIXTURE_CSV = `id,ident,type,name,latitude_deg,longitude_deg,elevation_ft,
 2524,EHRD,large_airport,"Rotterdam The Hague Airport",51.956902,4.43722,-15,NL,EHRD,RTM,0
 2528,EHVK,medium_airport,"Volkel Air Base",51.657222,5.707778,72,NL,EHVK,UDE,0
 2529,EHWO,medium_airport,"Woensdrecht Air Base",51.4491,4.34203,63,NL,EHWO,WOE,0
+2533,EHHA,heliport,"Amsterdam Heliport",52.3392,4.8794,-9,NL,EHHA,,0
+2534,EHHO,small_airport,"Hoogeveen Airfield",52.7375,6.4439,15,NL,EHHO,,0
 2530,EHAMX,heliport,"Test Heliport outside bbox",48.0,4.0,10,NL,EHAMX,,0
 2531,EHKLO,closed,"Kloetie Closed Airfield",52.0,4.5,10,NL,EHKLO,,0
 2532,LFPG,large_airport,"Paris Charles de Gaulle",49.009722,2.547778,392,FR,LFPG,CDG,0`;
@@ -130,5 +134,42 @@ describe('AIRPORT_STATUS_OVERLAY', (): void => {
     const overlayIcaos = Object.keys(AIRPORT_STATUS_OVERLAY);
     expect(overlayIcaos).toContain('EHLE');
     expect(overlayIcaos.length).toBe(12);
+  });
+
+  // Pre-change snapshot (session 23b): recorded from the overlay BEFORE the
+  // '?? null' fix, so the 12 hand-maintained statuses are provably unchanged.
+  const PRE_23B_OVERLAY = JSON.parse(
+    readFileSync(
+      resolve(__dirname, 'fixtures', 'airport-status-overlay-pre-23b.json'),
+      'utf8',
+    ),
+  ) as { icao: string; status: string }[];
+
+  it('the 12 existing overlay statuses are unchanged (pre-23b snapshot)', (): void => {
+    expect(PRE_23B_OVERLAY.length).toBe(12);
+    for (const { icao, status } of PRE_23B_OVERLAY) {
+      expect(AIRPORT_STATUS_OVERLAY[icao]).toBe(status);
+    }
+  });
+
+  it('airports without an overlay entry get status null, not a guessed status', (): void => {
+    const rows = parseFixture();
+    const airports = filterAirports(rows, NL_BBOX);
+    // EHHA (heliport) and EHHO (small airfield) have no overlay entry
+    const heliport = airports.find((a): boolean => a.icao === 'EHHA');
+    const small = airports.find((a): boolean => a.icao === 'EHHO');
+    expect(heliport?.status).toBeNull();
+    expect(small?.status).toBeNull();
+  });
+
+  it('no airport without an overlay entry has status "commercial"', (): void => {
+    const rows = parseFixture();
+    const airports = filterAirports(rows, NL_BBOX);
+    for (const airport of airports) {
+      if (!(airport.icao in AIRPORT_STATUS_OVERLAY)) {
+        expect(airport.status).not.toBe('commercial');
+        expect(airport.status).toBeNull();
+      }
+    }
   });
 });

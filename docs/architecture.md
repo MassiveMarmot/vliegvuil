@@ -47,7 +47,7 @@ serves. `deploy/` systemd timers were removed with it.
 
 `/data-build` scripts produce snapshots committed to the repo (or as release artifacts when large):
 
-- **Airports**: OurAirports trimmed to NL + a status overlay (commercial / military-shared / planned)
+- **Airports**: OurAirports trimmed to NL + a status overlay (commercial / military-shared / planned); airports without an overlay entry have status null (session 23b) — the popup shows status only when the overlay provides one
 - **Aircraft DB**: tar1090-db CSV snapshot (ODC-By-1.0, derived from Mictronics aircraft-database)
 - **Noise contours**: RIVM/Atlas Leefomgeving (Schiphol) and CLO/NLR (regional, 2018 & 2024) contours simplified to GeoJSON; large PMTiles are built on the VPS with tippecanoe and gitignored
 

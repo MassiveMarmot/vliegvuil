@@ -15,7 +15,7 @@ export interface AirportData {
   longitude: number;
   elevation: number;
   type: string;
-  status: string;
+  status: AirportStatus | null;
   source: string;
   license: string;
   date: string;
@@ -32,11 +32,11 @@ export const SHOWN_AIRPORT_TYPES: readonly string[] = ['large_airport', 'medium_
 export type AirportStatus = 'commercial' | 'military-shared' | 'planned';
 
 /**
- * The status overlay reads "commercial" for heliports and small
- * airfields too, which is misleading (known data caveat). Status is
- * therefore only surfaced for the airports we actually show, and any
- * value outside the three known statuses maps to null (not shown)
- * rather than a guessed label.
+ * Status comes only from the hand-maintained overlay (session 23b):
+ * airports without an overlay entry have status null in the snapshot
+ * and never a guessed label. It is only surfaced for the airports we
+ * actually show, and any value outside the three known statuses maps
+ * to null (not shown).
  */
 export function statusForAirport(airport: AirportData): AirportStatus | null {
   if (!SHOWN_AIRPORT_TYPES.includes(airport.type)) {

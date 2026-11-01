@@ -97,8 +97,13 @@ describe('status mapping', () => {
   });
 
   it('maps unknown statuses to null instead of guessing', () => {
-    expect(statusForAirport(makeAirport({ status: 'unknown-value' }))).toBeNull();
-    expect(statusForAirport(makeAirport({ status: '' }))).toBeNull();
+    // Unknown values can still arrive from an older snapshot; the guard is
+    // runtime behaviour, so assert it through the raw shape.
+    const unknown = makeAirport({}) as unknown as AirportData;
+    (unknown as { status: string }).status = 'unknown-value';
+    expect(statusForAirport(unknown)).toBeNull();
+    (unknown as { status: string }).status = '';
+    expect(statusForAirport(unknown)).toBeNull();
   });
 
   it('status codes match the icon specs order', () => {
@@ -254,6 +259,26 @@ describe('airport lazy loading', () => {
     const second = await loadAirports('/data/airports.json');
     expect(second).toBe(first); // cached: same promise result
     vi.unstubAllGlobals();
+  });
+
+  // Session 23b wiring: in the regenerated airports.json only the 12
+  // hand-maintained overlay entries carry a status; every other airport
+  // (heliports, small airfields) has null and never "commercial".
+  it('the real airports.json carries status only for overlay entries (23b)', () => {
+    const raw = readFileSync(resolve(__dirname, '../public/data/airports.json'), 'utf8');
+    const all = JSON.parse(raw) as AirportData[];
+    const withStatus = all.filter((a): boolean => a.status !== null);
+    expect(withStatus.length).toBe(12);
+    for (const airport of all) {
+      if (airport.status === null) continue;
+      expect(['commercial', 'military-shared', 'planned']).toContain(airport.status);
+    }
+    // The 12 shown airports all still have a known status, so the popup
+    // keeps rendering plain-language status for every marker on the map.
+    const shown = filterAirports(all);
+    for (const airport of shown) {
+      expect(statusForAirport(airport)).not.toBeNull();
+    }
   });
 });
 

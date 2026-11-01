@@ -1,0 +1,14 @@
+[
+  { "icao": "EHAM", "status": "commercial" },
+  { "icao": "EHRD", "status": "commercial" },
+  { "icao": "EHEH", "status": "military-shared" },
+  { "icao": "EHVK", "status": "military-shared" },
+  { "icao": "EHLW", "status": "military-shared" },
+  { "icao": "EHGR", "status": "military-shared" },
+  { "icao": "EHKD", "status": "military-shared" },
+  { "icao": "EHTW", "status": "military-shared" },
+  { "icao": "EHWO", "status": "military-shared" },
+  { "icao": "EHLE", "status": "planned" },
+  { "icao": "EHGG", "status": "commercial" },
+  { "icao": "EHBK", "status": "commercial" }
+]
