@@ -650,6 +650,54 @@ nor vary the cache key. Verified by `scripts/verify-caddy-headers.sh`
 (query request → 404; upstream URL asserted query-free and
 `/api/v2`-prefixed).
 
+### Rate-limit smoke tests (manual; NOT run by CI)
+
+These verify the rate-limit configuration on the live server after a
+Caddyfile change. CI only validates the config parses (`caddy validate`);
+the scripts in this repo do not exercise `rate_limit`. Run each from ONE
+client machine so the per-key bucket is deterministic.
+
+**(a) /api 429 beyond 240/min from one IPv4 address:**
+
+```bash
+# 241st request inside a minute must 429 with Retry-After.
+# Note: a micro-cache HIT still counts against the rate limit (the zone
+# is checked before the cache serves), so the loop fires the limit
+# regardless of cache state.
+ok=0; for i in $(seq 1 250); do
+  code=$(curl -s -o /dev/null -w '%{http_code}' \
+    'https://vliegvuil.nl/api/lat/52.1234/lon/5.4321/dist/194')
+  [ "$code" = 429 ] && { echo "429 at request $i"; break; }
+  ok=$((ok+1))
+done
+echo "200s before the 429: $ok (expect ~240)"
+# The 429 response must carry Retry-After:
+curl -sI 'https://vliegvuil.nl/api/lat/52.1234/lon/5.4321/dist/194' | grep -i retry-after || true
+```
+
+**(b) IPv6 /64 bucket sharing (only if the tester has IPv6):**
+
+```bash
+# Two addresses inside the same /64 must share ONE bucket: hammering
+# from the second address right after the first exhausted the budget
+# must 429 immediately.
+curl -6 -s -o /dev/null -w '%{http_code}\n' --interface 'your-first-v6' \
+  'https://vliegvuil.nl/api/lat/52.1234/lon/5.4321/dist/194'  # repeat ~240x
+curl -6 -s -o /dev/null -w '%{http_code}\n' --interface 'your-second-v6-same-/64' \
+  'https://vliegvuil.nl/api/lat/52.1234/lon/5.4321/dist/194'   # expect 429
+```
+
+**(c) /count 429 beyond 120/min:**
+
+```bash
+ok=0; for i in $(seq 1 140); do
+  code=$(curl -s -o /dev/null -w '%{http_code}' 'https://vliegvuil.nl/count?p=/test')
+  [ "$code" = 429 ] && { echo "429 at request $i"; break; }
+  ok=$((ok+1))
+done
+echo "200s before the 429: $ok (expect ~120)"
+```
+
 Expected `/api` response headers (what the proxy lets through):
 
 - Kept: `Content-Type`, `Content-Length`, `Date` and Caddy's own headers

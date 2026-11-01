@@ -48,15 +48,30 @@ jobs:
         # Upstream strings never enter a run: script; the body is built
         # in tested TypeScript and passed via a file.
         run: pnpm --filter @vliegvuil/data-build exec tsx src/issue-body.ts ../data-build/status/data-status.json ../data-build/status/issue-body.md
+      - name: Stage the artifact files into one dedicated directory
+        # LAYOUT FIX (review finding): actions/upload-artifact v4 uses
+        # the LEAST COMMON ANCESTOR of multiple paths as the artifact
+        # root. Uploading data-build/status/{data-status.json,issue-body.md}
+        # directly flattens them to the artifact ROOT (data-status.json,
+        # issue-body.md) — the maintain-issue job then found no
+        # data-build/status/... file, and the old script treated grep's
+        # exit 2 on the MISSING file as "no match", silently closing the
+        # "Data updates available" issue. Copying into ONE directory and
+        # uploading that single path pins the layout explicitly — no LCA
+        # rule applies with a single path. Do NOT "simplify" this back to
+        # the two-file multi-line list.
+        run: |
+          set -eu
+          mkdir -p check-output
+          cp data-build/status/data-status.json check-output/
+          cp data-build/status/issue-body.md check-output/
       - name: Upload the status and issue body as an artifact
         # The second job (issues: write) runs NO project code; it only
         # needs these two files, produced here by tested TypeScript.
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: check-output
-          path: |
-            data-build/status/data-status.json
-            data-build/status/issue-body.md
+          path: check-output
           retention-days: 7
           if-no-files-found: error
 
@@ -72,17 +87,44 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: check-output
+          # The check job uploads the single check-output/ directory, so
+          # the download lands at check-output/ — the layout is explicit
+          # and does not depend on the LCA rule (see the check job).
+          path: check-output
       - name: Create or update the single issue (or close when up to date)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          STATUS_FILE: data-build/status/data-status.json
-          BODY_FILE: data-build/status/issue-body.md
+          STATUS_FILE: check-output/data-status.json
+          BODY_FILE: check-output/issue-body.md
         run: |
+          set -eu
           # Pure bash + gh; no upstream data interpolated into this script.
           label="data-updates"
           title="Data updates available"
-          # Fail closed: if every source failed, the check step already failed.
+          # FAIL CLOSED (review fix): a missing/empty status or body file
+          # must ABORT, not silently take the "up to date" branch — that
+          # once closed the open issue on a bad artifact layout.
+          if ! test -s "$STATUS_FILE"; then
+            echo "status file missing or empty: $STATUS_FILE" >&2
+            exit 1
+          fi
+          if ! test -s "$BODY_FILE"; then
+            echo "body file missing or empty: $BODY_FILE" >&2
+            exit 1
+          fi
+          # grep exit codes are distinguished: 0 = match, 1 = no match,
+          # 2+ = error (e.g. unreadable file) — only 1 may fall through
+          # to the "up to date" branch.
           if grep -q '"status": "update-available"\|"status": "review-due"' "$STATUS_FILE"; then
+            grep_rc=0
+          else
+            grep_rc=$?
+            if [ "$grep_rc" -ne 1 ]; then
+              echo "grep on $STATUS_FILE failed with exit $grep_rc" >&2
+              exit 1
+            fi
+          fi
+          if [ "$grep_rc" -eq 0 ]; then
             issue_url="$(gh issue list --label "$label" --state open --json url --jq '.[0].url')"
             if [ -n "$issue_url" ]; then
               gh issue edit "$issue_url" --body-file "$BODY_FILE"
