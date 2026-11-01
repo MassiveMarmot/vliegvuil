@@ -28,3 +28,5 @@ WebGL2 failure path, aircraft layers, noise overlay, units, useMap's public sign
 ## Manual checks
 
 Firefox (nightly + radeonsi), Mullvad Browser, touch two-finger rotate, keyboard Shift+arrow: compass appears when rotated, hides after reset.
+
+Results (maintainer, post-merge): Firefox nightly + radeonsi works; touch two-finger rotate works; keyboard Shift+arrow works. Mullvad Browser could not be tested — it cannot run the map (WebGL2 unavailable there), so no compass behaviour was checkable in it.
