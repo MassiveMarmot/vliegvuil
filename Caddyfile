@@ -111,19 +111,43 @@ vliegvuil.nl {
 	# any other /api path answers 404 (an unmatched handle_path falls
 	# through to the static site), and any other method answers 405 via
 	# the explicit method matcher. POST/PUT/DELETE never reach adsb.fi.
+	# Hardening (review finding): the cache key includes the query string,
+	# so ?x=1, ?x=2, ... would bypass the 5 s micro-cache and reach
+	# adsb.fi individually (their public limit is 1 req/s — an attacker
+	# could get the server blocked). The app NEVER sends a query, so any
+	# query on this shape is not from our app: reject it with the same
+	# 404 the catch-all below gives unknown /api paths (404 over 400: it
+	# stays indistinguishable from a nonexistent resource, teaching a
+	# prober nothing about the shape). Only the query-FREE path is ever
+	# proxied or cached.
 	@api_shaped {
 		path_regexp ^/api/lat/-?[0-9]+(\.[0-9]+)?/lon/-?[0-9]+(\.[0-9]+)?/dist/[0-9]+/?$
 		method GET HEAD
+		# Bare `query` matches ONLY an empty query string (verified in the
+		# Caddy 2.11.7 source, matchers.go MatchQuery.MatchWithError: an
+		# empty matcher matches len(r.URL.Query()) == 0), so any request
+		# with ANY query parameter fails this matcher and falls through to
+		# the /api/* catch-all below (404).
+		query
 	}
 	# handle blocks are mutually exclusive and evaluated in order, so the
 	# specific @api_shaped block must come first; the /api/* catch-all
 	# then answers everything the app would never request.
 	handle @api_shaped {
-		# Stricter per-IP rate limit for the proxied API
+		# Rate limit (review finding: 60/min admitted only ~5 app instances
+		# behind one shared IPv4 (CGNAT, school, office) and an IPv6 client
+		# could rotate /128s freely). Key: remote.host/32,64 — all 32 bits
+		# for IPv4 (unchanged identity), the top 64 bits for IPv6 (the
+		# standard customer prefix: rotating inside it now hits the SAME
+		# bucket). Budget: the app polls 12/min; 240/min leaves headroom
+		# for ~15+ app instances per household/office and manual reloads,
+		# while still capping one key far below anything that threatens
+		# adsb.fi (the micro-cache means distinct upstream requests are
+		# much rarer than requests here).
 		rate_limit {
 			zone api_per_ip {
-				key {remote_host}
-				events 60
+				key {http.request.remote.host/32,64}
+				events 240
 				window 1m
 			}
 		}
@@ -147,9 +171,12 @@ vliegvuil.nl {
 		# route preserves the order below: strip /api first, then add the
 		# upstream /api/v2 prefix, then proxy. Without route, Caddy sorts
 		# rewrite before uri, which would produce the wrong prefix order.
+		# {path} (query-free, /api already stripped) builds the upstream
+		# URL: the client's query string can never reach adsb.fi nor vary
+		# the cache key, even if a future matcher change lets one through.
 		route {
 			uri strip_prefix /api
-			rewrite * /api/v2{uri}
+			rewrite * /api/v2{path}
 
 			reverse_proxy https://opendata.adsb.fi {
 				# The upstream nginx routes by virtual host; without this,
@@ -170,7 +197,7 @@ vliegvuil.nl {
 				# Privacy/opsec: the upstream (opendata.adsb.fi) sits behind
 				# Cloudflare; strip its reporting/CF headers so nothing about the
 				# upstream stack or a Cloudflare reporting endpoint reaches
-				# visitors. The suffix match catches every Cf-* passthrough.
+				# visitors. The PREFIX match catches every Cf-* passthrough.
 				header_down -Nel
 				header_down -Report-To
 				header_down -Reporting-Endpoints
@@ -190,7 +217,17 @@ vliegvuil.nl {
 	# POST/PUT/DELETE and probing paths never reach adsb.fi. Caddy has no
 	# 405 responder; respond with the status and set Allow on the 405s.
 	@api_shape_any_method path_regexp ^/api/lat/-?[0-9]+(\.[0-9]+)?/lon/-?[0-9]+(\.[0-9]+)?/dist/[0-9]+/?$
+	# A query on the otherwise-right shape must 404, not 405: 405 would
+	# confirm to a prober that the shape exists (and its Allow header
+	# leaks the method set). The bare-query matcher in @api_shaped already
+	# excludes these from the proxy; this order makes the response
+	# indistinguishable from an unknown path.
+	@api_with_query {
+		path_regexp ^/api/lat/-?[0-9]+(\.[0-9]+)?/lon/-?[0-9]+(\.[0-9]+)?/dist/[0-9]+/?$
+		not query
+	}
 	handle /api/* {
+		respond @api_with_query 404
 		header @api_shape_any_method Allow "GET, HEAD"
 		respond @api_shape_any_method 405
 		respond 404
@@ -219,13 +256,33 @@ vliegvuil.nl {
 	# trusted-proxies default (none trusted), so a visitor cannot spoof it.
 	# Exactly /count (with any query string) and /count.js — nothing deeper
 	# (the dashboard and everything else stay unreachable from this origin).
+	# Rate limit (review finding): the count routes had none. The SPA
+	# sends at most one /count per route change per visitor; 120/min per
+	# /32,/64 key is ~4x the cadence of a visitor navigating non-stop and
+	# comfortably absorbs multi-tab use, while capping a flood before it
+	# can hammer GoatCounter (which has its own 4/s /count limit; ours
+	# 429s first, at the edge).
 	@goatcounter_count path /count
 	handle @goatcounter_count {
+		rate_limit {
+			zone count_per_ip {
+				key {http.request.remote.host/32,64}
+				events 120
+				window 1m
+			}
+		}
 		reverse_proxy 127.0.0.1:8091 {
 			header_up Host {host}
 		}
 	}
 	handle /count.js {
+		rate_limit {
+			zone countjs_per_ip {
+				key {http.request.remote.host/32,64}
+				events 120
+				window 1m
+			}
+		}
 		reverse_proxy 127.0.0.1:8091 {
 			header_up Host {host}
 		}
@@ -245,7 +302,7 @@ vliegvuil.nl {
 		# a legitimate panning visitor fires dozens of tile requests.
 		rate_limit {
 			zone tiles_per_ip {
-				key {remote_host}
+				key {http.request.remote.host/32,64}
 				events 600
 				window 1m
 			}
@@ -258,6 +315,16 @@ vliegvuil.nl {
 	# the SPA index.html (a 200 with HTML makes MapLibre's PBF parser fail);
 	# a missing range has to be a real 404.
 	handle /fonts/* {
+		# Rate limit (review finding): static handles outside the SPA
+		# catch-all had none. Files are cheap (from disk), so this is a
+		# generous ceiling against a flood, keyed like static_per_ip.
+		rate_limit {
+			zone fonts_per_ip {
+				key {http.request.remote.host/32,64}
+				events 600
+				window 1m
+			}
+		}
 		file_server
 	}
 	# Hashed build output plus the unhashed MapLibre worker. Files only,
@@ -268,6 +335,14 @@ vliegvuil.nl {
 	# into a MIME puzzle — a 404 here would have named the problem.
 	# .mjs is served as text/javascript by Caddy's mime table (Go).
 	handle /assets/* {
+		# Rate limit (review finding): see /fonts above.
+		rate_limit {
+			zone assets_per_ip {
+				key {http.request.remote.host/32,64}
+				events 600
+				window 1m
+			}
+		}
 		file_server
 	}
 	# SPA routing: serve the file if it exists, otherwise index.html.
@@ -276,12 +351,13 @@ vliegvuil.nl {
 	# proxy entirely.
 	handle {
 		# Per-IP rate limit for the SPA and its assets only. This zone is
-		# scoped to the catch-all so it never counts /api (own 60/min zone)
-		# or /tiles (own generous zone) requests — otherwise tile traffic
-		# could starve the aircraft poll of its budget (429s for /api).
+		# scoped to the catch-all so it never counts /api (own 240/min
+		# zone), /tiles, /fonts or /assets (own generous zones) requests —
+		# otherwise tile traffic could starve the aircraft poll of its
+		# budget (429s for /api).
 		rate_limit {
 			zone static_per_ip {
-				key {remote_host}
+				key {http.request.remote.host/32,64}
 				events 120
 				window 1m
 			}
