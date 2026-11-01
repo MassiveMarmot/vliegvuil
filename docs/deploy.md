@@ -604,11 +604,21 @@ violations in the console.
 
 ## 6. Rate limiting and micro-cache
 
+All zones key on `{http.request.remote.host/32,64}`: the full address for
+IPv4, the top 64 bits for IPv6 (a /64 is the standard customer prefix, so
+an IPv6 client rotating addresses inside its prefix hits the SAME bucket;
+without this, every /128 was a fresh bucket). The placeholder is
+EXPERIMENTAL in Caddy 2.11 (replacer.go, http.request.remote.host/N[,M]).
+
 | Zone | Key | Limit | Purpose |
 |------|-----|-------|---------|
-| `static_per_ip` | `{remote_host}` | 120 events / 1 min | SPA and its assets (catch-all only) |
-| `api_per_ip` | `{remote_host}` | 60 events / 1 min | `/api/*` proxy |
-| `tiles_per_ip` | `{remote_host}` | 600 events / 1 min | `/tiles/*` self-hosted basemap (generous ceiling; cheap cached PNGs) |
+| `static_per_ip` | remote host (/32,/64) | 120 events / 1 min | SPA shell and prerendered pages (catch-all only) |
+| `api_per_ip` | remote host (/32,/64) | 240 events / 1 min | `/api/*` proxy (the app polls 12/min; ~15+ app instances per shared connection plus reload headroom) |
+| `tiles_per_ip` | remote host (/32,/64) | 600 events / 1 min | `/tiles/*` self-hosted basemap (generous ceiling; cheap cached PNGs) |
+| `fonts_per_ip` | remote host (/32,/64) | 600 events / 1 min | `/fonts/*` glyph ranges (generous ceiling; files from disk) |
+| `assets_per_ip` | remote host (/32,/64) | 600 events / 1 min | `/assets/*` hashed build files (generous ceiling) |
+| `count_per_ip` | remote host (/32,/64) | 120 events / 1 min | `/count` analytics endpoint (~4x a visitor navigating non-stop) |
+| `countjs_per_ip` | remote host (/32,/64) | 120 events / 1 min | `/count.js` analytics script |
 
 The zones are scoped per route: the static zone lives inside the catch-all
 handle, so tile requests (dozens per map view) and API polls never eat the
@@ -624,8 +634,21 @@ response a cache miss (`Cache-Status: ...; detail=NO-STORE-DIRECTIVE`); the
 cache block therefore sets `mode bypass_response` so Souin ignores the
 upstream response's cache directives and stores each response for the
 5 s TTL (request-side RFC 7234 rules still apply). Note the app polls
-roughly every few seconds per visitor; the 60/min zone leaves generous
-headroom while capping abuse.
+roughly every few seconds per visitor; the 240/min zone leaves headroom
+for shared connections (CGNAT, school or office NAT) while capping abuse.
+
+Query-string hardening (review fix): the app never sends a query on
+`/api/*`, and the cache key includes the query — so a varied query string
+(`?x=1`, `?x=2`, ...) would bypass the micro-cache and reach adsb.fi
+individually (their public limit is 1 req/s). Two layers fix this: the
+`@api_shaped` matcher includes a bare `query` matcher, which admits ONLY
+an empty query string (anything with a query falls through to the
+catch-all and gets a 404, ordered BEFORE the shape-any-method 405 so the
+response confirms nothing); and the upstream URL is rewritten from
+`{path}` only, so even a slipped-through query could never reach adsb.fi
+nor vary the cache key. Verified by `scripts/verify-caddy-headers.sh`
+(query request → 404; upstream URL asserted query-free and
+`/api/v2`-prefixed).
 
 Expected `/api` response headers (what the proxy lets through):
 

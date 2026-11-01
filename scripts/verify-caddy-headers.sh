@@ -49,7 +49,9 @@ PORT = int(sys.argv[2])
 class Echo(BaseHTTPRequestHandler):
     def do_GET(self):
         with open(LOG, 'w') as f:
-            json.dump(dict(self.headers), f)
+            # 'path' records the full upstream request URI (path + query),
+            # so tests can assert exactly what the proxy forwarded.
+            json.dump({'path': self.path, 'headers': dict(self.headers)}, f)
         body = b'{"ac":[],"now":0}'
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
@@ -132,13 +134,22 @@ sed -e "s/__ECHO_PORT__/$ECHO_PORT/" > "$WORK/Caddyfile.test" <<'EOF'
 	# GET/HEAD /api/lat/{n}/lon/{n}/dist/{n} is proxied to the echo
 	# upstream; anything else under /api is 405 (right shape, wrong
 	# method) or 404 (wrong shape), and NEVER reaches the upstream.
+	# Same query hardening as the real Caddyfile (review fix): the bare
+	# `query` matcher admits only an EMPTY query string, so ?x=1 etc.
+	# falls through to the /api/* catch-all (404) and can never vary the
+	# cache key or reach the upstream.
 	@api_shaped {
 		path_regexp ^/api/lat/-?[0-9]+(\.[0-9]+)?/lon/-?[0-9]+(\.[0-9]+)?/dist/[0-9]+/?$
 		method GET HEAD
+		query
 	}
 	handle @api_shaped {
-		uri strip_prefix /api
-		reverse_proxy http://127.0.0.1:__ECHO_PORT__ {
+		# Same {path}-based rewrite as the real Caddyfile (query-free
+		# upstream URL), wrapped in route like there.
+		route {
+			uri strip_prefix /api
+			rewrite * /api/v2{path}
+			reverse_proxy http://127.0.0.1:__ECHO_PORT__ {
 			header_up -X-Forwarded-For
 			header_up -X-Real-IP
 			header_up -X-Forwarded-Proto
@@ -156,9 +167,18 @@ sed -e "s/__ECHO_PORT__/$ECHO_PORT/" > "$WORK/Caddyfile.test" <<'EOF'
 			header_down -Via
 			header_down -X-Powered-By
 		}
+		}
 	}
 	@api_shape_any_method path_regexp ^/api/lat/-?[0-9]+(\.[0-9]+)?/lon/-?[0-9]+(\.[0-9]+)?/dist/[0-9]+/?$
+	# Same query-on-shaped-path 404 ordering as the real Caddyfile (a
+	# query request must 404 BEFORE the shape-any-method 405 fires, so
+	# the response teaches a prober nothing about the shape).
+	@api_with_query {
+		path_regexp ^/api/lat/-?[0-9]+(\.[0-9]+)?/lon/-?[0-9]+(\.[0-9]+)?/dist/[0-9]+/?$
+		not query
+	}
 	handle /api/* {
+		respond @api_with_query 404
 		header @api_shape_any_method Allow "GET, HEAD"
 		respond @api_shape_any_method 405
 		respond 404
@@ -216,7 +236,10 @@ with urllib.request.urlopen(req, timeout=10) as r:
     assert r.status == 200, r.status
 
 with open(sys.argv[1]) as f:
-    headers = json.load(f)
+    recorded = json.load(f)
+
+# The echo server records {'path': ..., 'headers': {...}}
+headers = recorded['headers']
 
 leaked = [k for k in headers if k.lower() in (
     'x-forwarded-for', 'x-real-ip', 'x-forwarded-proto', 'x-forwarded-host',
@@ -340,6 +363,31 @@ def _status(path, method='GET'):
 code, _ = _status('/api/lat/52.2500/lon/5.0000/dist/194')
 assert code == 200, f'shaped GET expected 200, got {code}'
 print('OK: GET /api/lat/../lon/../dist/.. is proxied')
+
+# --- query-string hardening (review finding) ---
+# The app never sends a query; any query on the shaped path must NOT be
+# proxied (the bare `query` matcher in the real Caddyfile admits only an
+# empty query string). Same 404 as the unknown-path catch-all.
+import json as _json
+code, _ = _status('/api/lat/52.2500/lon/5.0000/dist/194?x=1')
+assert code == 404, f'query-carrying shaped GET expected 404, got {code}'
+print('OK: a query string on the shaped path is NOT proxied (404)')
+
+code, _ = _status('/api/lat/52.2500/lon/5.0000/dist/194?lat=52.5&lon=5.0')
+assert code == 404, f'query-carrying shaped GET expected 404, got {code}'
+print('OK: plausible-looking query parameters are also rejected (404)')
+
+# The upstream request must be query-FREE and /api/v2-prefixed: read the
+# echo server's recorded path after a clean shaped GET.
+code, _ = _status('/api/lat/52.2501/lon/5.0001/dist/195')
+assert code == 200, f'shaped GET expected 200, got {code}'
+with open(sys.argv[1]) as f:
+    recorded = _json.load(f)
+upstream_path = recorded['path']
+assert upstream_path.startswith('/api/v2/lat/'), f'upstream path missing /api/v2 prefix: {upstream_path}'
+assert '?' not in upstream_path, f'upstream path must be query-free, got: {upstream_path}'
+assert upstream_path == '/api/v2/lat/52.2501/lon/5.0001/dist/195', f'unexpected upstream path: {upstream_path}'
+print('OK: the upstream URL is /api/v2-prefixed and query-free')
 
 # POST with the right shape: 405 + Allow, and never proxied
 code, hdrs = _status('/api/lat/52.2500/lon/5.0000/dist/194', method='POST')
