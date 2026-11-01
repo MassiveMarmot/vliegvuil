@@ -13,8 +13,9 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { readIndexCss } from './helpers/readIndexCss';
 
-const css = readFileSync(resolve(__dirname, '..', 'src', 'styles', 'index.css'), 'utf8');
+const css = readIndexCss();
 const mapSource = readFileSync(resolve(__dirname, '..', 'src', 'components', 'Map.tsx'), 'utf8');
 const useMapSource = readFileSync(resolve(__dirname, '..', 'src', 'hooks', 'useMap.ts'), 'utf8');
 

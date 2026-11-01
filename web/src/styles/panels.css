@@ -1,0 +1,395 @@
+/* Banner styles */
+.banner {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 0.875rem;
+}
+
+.banner-info {
+  background-color: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #3b82f6;
+}
+
+.banner-warning {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #f59e0b;
+}
+
+.banner-error {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #ef4444;
+}
+
+.banner-button {
+  margin-left: 1rem;
+  font-size: 1.25rem;
+  font-weight: bold;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* Info panel */
+.info-panel {
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 0.75rem 1rem;
+  border-radius: 0.25rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-size: 0.875rem;
+  z-index: 10;
+}
+
+.info-panel strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.info-panel div {
+  margin-bottom: 0.125rem;
+}
+
+/* Aircraft details panel */
+.aircraft-panel {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background-color: rgba(255, 255, 255, 0.95);
+  padding: 1rem;
+  border-radius: 0.25rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  font-size: 0.875rem;
+  max-width: 300px;
+  z-index: 10;
+}
+
+.aircraft-panel h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+}
+
+.aircraft-panel p {
+  margin: 0.25rem 0;
+}
+
+/* Telemetry panel — friendly info card (spec §3) */
+.telemetry-panel {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  width: 300px;
+  max-width: calc(100vw - 2rem);
+  background-color: var(--vv-surface);
+  border: 1px solid var(--vv-border);
+  border-radius: var(--vv-radius-lg);
+  box-shadow: var(--vv-shadow-soft);
+  animation: vv-slide-in 0.28s var(--vv-ease);
+  padding: 1rem;
+  font-size: 0.875rem;
+  z-index: 20;
+}
+
+.telemetry-panel:focus {
+  outline: 2px solid #6b8cae;
+  outline-offset: 2px;
+}
+
+.telemetry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #d4d0c8;
+}
+
+.telemetry-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #2c2c2c;
+}
+
+.telemetry-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  color: #8b8680;
+  font-size: 1.25rem;
+  line-height: 1;
+  border-radius: 4px;
+}
+
+.telemetry-close:hover {
+  color: #2c2c2c;
+}
+
+.telemetry-close:focus-visible {
+  outline: 2px solid #6b8cae;
+  outline-offset: 2px;
+}
+
+.telemetry-fields {
+  display: block;
+  margin: 0;
+}
+
+.telemetry-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.4rem;
+}
+
+.telemetry-label {
+  color: #8b8680;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.telemetry-value {
+  margin: 0;
+  color: #2c2c2c;
+  font-weight: 500;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.telemetry-badge {
+  display: inline-block;
+  background-color: #ff8c42;
+  color: #fff;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+/* Visually hidden but available to screen readers */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Aircraft list view — sortable table. Session 26: pop-out anchored
+   bottom-left, directly above the counter that toggles it. */
+.aircraft-list {
+  position: absolute;
+  /* Above the map-status counter that toggles it: bottom equals
+     var(--vv-list-clearance) (see :root for the derivation: counter
+     height + toggle hit-area overshoot + gap). */
+  bottom: var(--vv-list-clearance);
+  left: 1rem;
+  width: 420px;
+  max-width: calc(100vw - 2rem);
+  max-height: min(70vh, 32rem);
+  background-color: rgba(255, 255, 255, 0.96);
+  border: 1px solid #d4d0c8;
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.16);
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Session 26: pop-out slide/fade motion, fully disabled under
+   prefers-reduced-motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .aircraft-list {
+    animation: vv-panel-pop 160ms ease-out;
+  }
+}
+@keyframes vv-panel-pop {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.aircraft-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #d4d0c8;
+}
+
+.aircraft-list-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2c2c2c;
+}
+
+.aircraft-list-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  color: #8b8680;
+  font-size: 1.25rem;
+  line-height: 1;
+  border-radius: 4px;
+}
+
+.aircraft-list-close:hover {
+  color: #2c2c2c;
+}
+
+.aircraft-list-close:focus-visible {
+  outline: 2px solid #6b8cae;
+  outline-offset: 2px;
+}
+
+.aircraft-list-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 4px;
+}
+
+.aircraft-list-scroll:focus-visible {
+  outline: 2px solid #6b8cae;
+  outline-offset: -2px;
+}
+
+.aircraft-list-table {
+  overflow-y: auto;
+  /* keep the panel header visible; the table area takes the rest */
+  min-height: 0;
+  flex: 1;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.aircraft-list-table thead th {
+  position: sticky;
+  top: 0;
+  background-color: rgba(255, 255, 255, 0.98);
+  z-index: 1;
+}
+
+.aircraft-list-table th {
+  text-align: left;
+  padding: 0.25rem 0.5rem;
+  border-bottom: 2px solid #d4d0c8;
+  font-weight: 600;
+}
+
+.aircraft-list-sort {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0.125rem;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #2c2c2c;
+  border-radius: 4px;
+}
+
+.aircraft-list-sort:hover {
+  color: #6b8cae;
+}
+
+.aircraft-list-sort:focus-visible {
+  outline: 2px solid #6b8cae;
+  outline-offset: 2px;
+}
+
+.aircraft-list-table td {
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid #ece8e0;
+}
+
+.aircraft-list-row {
+  cursor: pointer;
+}
+
+.aircraft-list-row:hover {
+  background-color: rgba(107, 140, 174, 0.06);
+}
+
+.aircraft-list-row:focus-visible {
+  outline: 2px solid #6b8cae;
+  outline-offset: -2px;
+  background-color: rgba(107, 140, 174, 0.06);
+}
+
+.aircraft-list-row.selected {
+  background-color: rgba(107, 140, 174, 0.14);
+}
+
+.aircraft-list-cell.primary {
+  font-weight: 600;
+  color: #2c2c2c;
+}
+
+.aircraft-list-cell.secondary {
+  color: #8b8680;
+}
+
+.aircraft-list-cell.numeric,
+.numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.aircraft-list-empty {
+  text-align: center;
+  color: #8b8680;
+  padding: 1rem 0.5rem;
+}
+
+.aircraft-list-toggle {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #d4d0c8;
+  border-radius: 8px;
+  padding: 0.4rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  color: #2c2c2c;
+}
+
+.aircraft-list-toggle:hover {
+  border-color: #6b8cae;
+}
+
+.aircraft-list-toggle:focus-visible {
+  outline: 2px solid #6b8cae;
+  outline-offset: 2px;
+}
+

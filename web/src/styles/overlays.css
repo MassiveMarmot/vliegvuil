@@ -1,0 +1,364 @@
+/* Noise overlay (session 10) */
+.noise-overlay {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.noise-toggle {
+  padding: 0.5rem 1rem;
+  border: 1px solid #b2182b;
+  border-radius: 0.25rem;
+  background-color: #fff;
+  color: #b2182b;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.noise-toggle[aria-pressed='true'] {
+  background-color: #b2182b;
+  color: #fff;
+}
+
+.noise-legend {
+  background-color: rgba(255, 255, 255, 0.92);
+  padding: 0.75rem 1rem;
+  border-radius: 0.25rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 0.8125rem;
+  max-width: 22rem;
+}
+
+.noise-legend-title {
+  margin: 0 0 0.25rem;
+  font-size: 0.875rem;
+}
+
+.noise-legend-metric {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+}
+
+.noise-legend-list {
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.noise-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.noise-swatch {
+  width: 1.25rem;
+  height: 0.875rem;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  border-radius: 2px;
+  flex-shrink: 0;
+  /* Session 26: band colours/patterns are data-derived (colour-blind-safe
+     gradient), so they arrive as custom properties set inline by the
+     component; the static layout lives here. */
+  background-color: var(--noise-swatch-color);
+  background-image: var(--noise-swatch-pattern);
+}
+
+.noise-legend-caveat,
+.noise-legend-source {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  color: #555;
+}
+
+.noise-badge {
+  margin: 0.5rem 0 0;
+  padding: 0.375rem 0.625rem;
+  background-color: #fdf0ee;
+  border-left: 3px solid #b2182b;
+  font-size: 0.8125rem;
+}
+
+.noise-badge-caveat {
+  color: #555;
+}
+
+/* Compact legend (mobile follow-up): chip + bottom sheet under 40rem */
+.noise-legend-chip {
+  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--vv-border);
+  border-radius: 999px;
+  background-color: var(--vv-surface);
+  color: var(--vv-ink);
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.noise-legend-sheet {
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: 4.75rem;
+  max-height: 40vh;
+  overflow-y: auto;
+  background-color: var(--vv-surface);
+  border: 1px solid var(--vv-border);
+  border-radius: var(--vv-radius-md);
+  box-shadow: var(--vv-shadow-soft);
+  padding: 0.75rem 1rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 0.8125rem;
+}
+
+.noise-legend-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.noise-legend-close {
+  border: none;
+  background: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--vv-ink);
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+}
+
+.noise-legend-essential {
+  margin: 0 0 0.25rem;
+  font-weight: 600;
+}
+
+.noise-legend-year {
+  margin: 0 0 0.5rem;
+  color: var(--vv-muted);
+}
+
+.noise-legend-sources {
+  margin-top: 0.5rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--vv-ink);
+  font-family: inherit;
+  font-size: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.attribution-layer {
+  margin: 0 0 1.25rem;
+}
+
+.attribution-layer-heading {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.attribution-years,
+.attribution-kindnote {
+  margin: 0.25rem 0;
+  color: var(--vv-muted);
+  font-size: 0.8125rem;
+}
+
+.attribution-caveat {
+  margin: 0.25rem 0 0.5rem;
+  color: var(--vv-muted);
+  font-size: 0.8125rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .noise-overlay,
+  .noise-toggle,
+  .noise-legend,
+  .noise-legend-chip,
+  .noise-legend-sheet {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* Settings and attribution (session 11) */
+.settings-panel {
+  position: absolute;
+  top: 3.5rem;
+  right: 1rem;
+  z-index: 30;
+  width: 16rem;
+  max-height: 70vh;
+  overflow-y: auto;
+  background-color: rgba(255, 255, 255, 0.95);
+  border-radius: 0.25rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 0.75rem 1rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 0.875rem;
+}
+
+.settings-header,
+.attribution-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.settings-title,
+.attribution-title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.settings-close,
+.attribution-close {
+  border: none;
+  background: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.settings-group {
+  margin-bottom: 0.75rem;
+}
+
+.settings-label,
+.settings-sublabel {
+  margin: 0.5rem 0 0.25rem;
+  font-size: 0.8125rem;
+}
+
+.settings-sublabel {
+  font-weight: 600;
+}
+
+.settings-option {
+  display: block;
+  margin: 0.25rem 0;
+}
+
+.settings-toggle,
+.attribution-toggle {
+  padding: 0.375rem 0.625rem;
+  border: 1px solid #999;
+  border-radius: 0.25rem;
+  background-color: #fff;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+/* Attribution page (session 25 fix): a routed page like About, not a
+   floating panel. .about-page provides the container (max-width, padding,
+   scrolling); only inner-list spacing lives here. */
+.attribution-page {
+  font-size: 0.95rem;
+}
+
+.attribution-page h3 {
+  margin-top: 1.5rem;
+}
+
+.attribution-page .attribution-list {
+  margin-top: 0.5rem;
+}
+
+.attribution-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.attribution-item {
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #eee;
+}
+
+.attribution-item:last-child {
+  border-bottom: none;
+}
+
+.attribution-name {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.attribution-dataType,
+.attribution-license,
+.attribution-url {
+  margin: 0.15rem 0 0;
+  color: #444;
+}
+
+.attribution-url a {
+  word-break: break-all;
+}
+
+/* Panel slide-in (spec §3: panel slides in with soft easing) */
+@keyframes vv-slide-in {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.settings-panel,
+.noise-legend {
+  background-color: var(--vv-surface);
+  border: 1px solid var(--vv-border);
+  border-radius: var(--vv-radius-md);
+  box-shadow: var(--vv-shadow-soft);
+  animation: vv-slide-in 0.28s var(--vv-ease);
+}
+
+.settings-toggle,
+.attribution-toggle,
+.noise-toggle,
+.aircraft-list-toggle {
+  border-radius: var(--vv-radius-sm);
+  border: 1px solid var(--vv-border);
+  background-color: var(--vv-surface);
+  color: var(--vv-ink);
+  transition: background-color 0.15s var(--vv-ease);
+}
+
+.settings-toggle:hover,
+.attribution-toggle:hover,
+.noise-toggle:hover,
+.aircraft-list-toggle:hover {
+  background-color: var(--vv-sand);
+}
+
+.noise-legend-title,
+.settings-title,
+.attribution-title {
+  color: var(--vv-ink);
+}
+
+.noise-legend-caveat,
+.noise-legend-source,
+.noise-badge-caveat,
+.attribution-dataType,
+.attribution-license {
+  color: var(--vv-muted);
+}
+

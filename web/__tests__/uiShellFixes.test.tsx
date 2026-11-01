@@ -4,8 +4,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, cleanup, act, waitFor } from '@testing-library/react';
 import React from 'react';
-import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { readIndexCss } from './helpers/readIndexCss';
 import type { PositionProvider } from '@vliegvuil/core';
 
 const fetchPositions = vi.fn();
@@ -193,7 +193,7 @@ describe('search modes (finding 1)', () => {
 
 describe('shell layout classes (finding 4)', () => {
   it('the stylesheet uses 100dvh with a vh fallback and the flex column shell', (): void => {
-    const css = readFileSync(join(__dirname, '..', 'src', 'styles', 'index.css'), 'utf8');
+    const css = readIndexCss();
     expect(css).toMatch(/height: 100vh;/);
     expect(css).toMatch(/height: 100dvh;/);
     expect(css).toMatch(/\.app-shell\s*{\s*display: flex;\s*flex-direction: column;/s);
@@ -201,7 +201,7 @@ describe('shell layout classes (finding 4)', () => {
   });
 
   it('the aircraft list derives its height from the shell inset, not 100vh, and scrolls internally', (): void => {
-    const css = readFileSync(join(__dirname, '..', 'src', 'styles', 'index.css'), 'utf8');
+    const css = readIndexCss();
     const listBlock = (/\.aircraft-list\s*\{[\s\S]*?\n\}/.exec(css)?.[0] ?? '')
       .replace(/\/\*[\s\S]*?\*\//g, '');
     // Session 26: the list is a pop-out anchored above the counter
