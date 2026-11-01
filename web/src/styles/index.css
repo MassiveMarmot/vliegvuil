@@ -1511,20 +1511,28 @@ body {
   }
 }
 
-/* MapLibre attribution control (bottom-right by default). maplibre-gl.css
-   now ships, so this control is visible and styled — but the noise legend
-   and telemetry panel also live in the bottom-right corner. Keep the
-   required PDOK/Kadaster attribution visible (CC-BY 4.0) and move it to
-   the bottom-center, clear of both panels at every tested width; style
-   it to match the app chrome instead of MapLibre's default white bar. */
-.maplibregl-ctrl-bottom-right,
-.maplibregl-ctrl-bottom-left {
-  /* MapLibre only ever places the attribution in one of these corners;
-   neutralize the corner defaults and re-anchor via the inner control. */
-  right: auto;
+/* Attribution control, PORTALED out of .map-container (Firefox stacking
+   fix, like the compass): Map.tsx renders the control's element inside
+   .map-attribution-overlay, a SIBLING of the container — so the old
+   rules that re-anchored MapLibre's corner containers are gone and this
+   overlay owns the positioning. Bottom-center: clear of the noise legend
+   and telemetry panel (both bottom-right), the counter (bottom-left)
+   and the airport popup (bottom-center but at bottom: 4.5rem, well above
+   this bar) at every tested width incl. 320/360/375 px. Attribution is a
+   CC-BY requirement (PDOK BRT-A, Natural Earth) — it must be visible;
+   the maintainer verified the in-container default was COVERED BY the
+   canvas on the affected Firefox. */
+.map-attribution-overlay {
+  position: absolute;
   left: 50%;
   bottom: 0.25rem;
   transform: translateX(-50%);
+  z-index: 15;
+  pointer-events: none;
+  max-width: calc(100vw - 2rem);
+}
+.map-attribution-overlay .maplibregl-ctrl-attrib {
+  pointer-events: auto;
 }
 .maplibregl-ctrl-attrib {
   background: var(--vv-surface);

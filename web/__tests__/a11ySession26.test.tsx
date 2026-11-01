@@ -34,7 +34,7 @@ vi.mock('@vliegvuil/core', async (importOriginal) => {
 // label and keyboard path can be asserted.
 interface FakeMapInstance {
   listeners: Map<string, Array<(ev?: unknown) => void>>;
-  controls: Array<{ options: Record<string, boolean>; position: string }>;
+  controls: Array<{ options: Record<string, unknown>; position: string }>;
   removed: boolean;
   ctorOptions?: Record<string, unknown>;
   container: HTMLDivElement;
@@ -121,6 +121,25 @@ vi.mock('maplibre-gl', () => {
       }
       onAdd(): HTMLButtonElement {
         return makeCompassButton();
+      }
+      onRemove(): void {}
+    },
+    AttributionControl: class {
+      options: Record<string, unknown>;
+      constructor(options: Record<string, unknown>) {
+        this.options = options;
+        // Register like the compass fake: the portal wiring assertions
+        // below find the control via the DOM, but keep parity here.
+        fake.controls.push({ options, position: 'attribution-portal' });
+      }
+      onAdd(): HTMLElement {
+        const div = document.createElement('div');
+        div.className = 'maplibregl-ctrl maplibregl-ctrl-attrib';
+        const link = document.createElement('a');
+        link.href = 'https://example.com/';
+        link.textContent = 'Kaartgegevens \u00a9 PDOK / Kadaster';
+        div.appendChild(link);
+        return div;
       }
       onRemove(): void {}
     },
@@ -356,5 +375,70 @@ describe('compass (session 26)', () => {
     const btn = makeCompassButton();
     expect(btn.getAttribute('aria-label')).toBe('Kaart naar het noorden draaien');
     fireEvent.click(btn);
+  });
+});
+
+// --- Attribution portal (Firefox fix, PR #126 follow-up) ---
+describe('attribution control portal (Firefox stacking-order fix)', () => {
+  beforeEach((): void => {
+    fetchPositions.mockReset();
+    if (holder.current) {
+      holder.current.controls.length = 0;
+      holder.current.listeners.clear();
+      holder.current.ctorCount = 0;
+      holder.current.removed = false;
+      holder.current.container = makeContainer(makeCompassButton());
+    }
+  });
+  afterEach((): void => {
+    cleanup();
+    setPathSafe('/nl/');
+  });
+
+  it('the attribution element is a descendant of the overlay, NOT of .map-container', async (): Promise<void> => {
+    setPathSafe('/nl/');
+    render(<App />);
+    await vi.waitFor((): void => {
+      expect(holder.current).not.toBeNull();
+    });
+    const overlay = document.querySelector('.map-attribution-overlay');
+    expect(overlay).not.toBeNull();
+    const portaled = overlay?.querySelector('.maplibregl-ctrl-attrib');
+    expect(portaled).not.toBeNull();
+    // NOT inside the map container (the Firefox misordering zone)
+    expect(document.querySelector('.map-container .maplibregl-ctrl-attrib')).toBeNull();
+  });
+
+  it('cleanup removes the attribution element (unmount)', async (): Promise<void> => {
+    setPathSafe('/nl/');
+    const { unmount } = render(<App />);
+    await vi.waitFor((): void => {
+      expect(holder.current).not.toBeNull();
+    });
+    expect(document.querySelector('.map-attribution-overlay .maplibregl-ctrl-attrib')).not.toBeNull();
+    unmount();
+    expect(document.querySelector('.map-attribution-overlay .maplibregl-ctrl-attrib')).toBeNull();
+  });
+
+  it('the attribution text comes from the style sources attribution fields', async (): Promise<void> => {
+    setPathSafe('/nl/');
+    render(<App />);
+    await vi.waitFor((): void => {
+      expect(holder.current).not.toBeNull();
+    });
+    // The style passed to the Map constructor carries the two source
+    // attributions; the real AttributionControl renders them into the
+    // control element. The FAKE here mirrors the text it was given, so
+    // assert the style object (the single source of the control's text)
+    // and the fake's rendered link in one wiring chain.
+    const fake = holder.current as FakeMapInstance;
+    const style = fake.ctorOptions?.['style'] as {
+      sources?: Record<string, { attribution?: string }>;
+    } | undefined;
+    expect(style?.sources?.['neighbours']?.attribution).toBe('Made with Natural Earth');
+    expect(style?.sources?.['pdok-brt']?.attribution).toBe('Kaartgegevens \u00a9 PDOK / Kadaster');
+    // And the fake's portaled element shows the attribution text
+    const overlay = document.querySelector('.map-attribution-overlay');
+    expect(overlay?.textContent).toContain('Kaartgegevens');
   });
 });

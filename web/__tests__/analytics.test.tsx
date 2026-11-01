@@ -32,6 +32,14 @@ vi.mock('maplibre-gl', () => ({
   Map: class {},
   LngLatBounds: class {},
   NavigationControl: class {},
+  AttributionControl: class {
+    onAdd(): HTMLElement {
+      const div = document.createElement('div');
+      div.className = 'maplibregl-ctrl maplibregl-ctrl-attrib';
+      return div;
+    }
+    onRemove(): void {}
+  },
 }));
 
 // import.meta.env is replaced at build time; in tests it is undefined, so

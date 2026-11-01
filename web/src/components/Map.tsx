@@ -91,7 +91,7 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
   // (map.compass, identical keys in every locale). An inline literal is
   // safe: useMap reads it from a ref at construction (never a dependency)
   // and tracks the label STRING for in-place updates on language change.
-  const { mapContainer, map, compassElement, styleReady, tileError, mapInitError } = useMap(
+  const { mapContainer, map, compassElement, attributionElement, styleReady, tileError, mapInitError } = useMap(
     DEFAULT_MAP_CONFIG,
     { 'NavigationControl.ResetBearing': t('map.compass', 'Kaart naar het noorden draaien') },
   );
@@ -378,6 +378,21 @@ export function Map({ aircraft, selectedAircraftId, onAircraftClick, noiseContou
         ref={(overlay): void => {
           if (overlay && compassElement && compassElement.parentElement !== overlay) {
             overlay.appendChild(compassElement);
+          }
+        }}
+      />
+    )}
+    {/* Firefox regression fix (same as the compass): the attribution
+        control is portaled OUT of .map-container into this SIBING
+        overlay, outside the canvas's stacking context. Attribution is a
+        CC-BY requirement (PDOK BRT-A, Natural Earth) and was
+        maintainer-verified invisible inside the container. */}
+    {attributionElement && (
+      <div
+        className="map-attribution-overlay"
+        ref={(overlay): void => {
+          if (overlay && attributionElement && attributionElement.parentElement !== overlay) {
+            overlay.appendChild(attributionElement);
           }
         }}
       />
