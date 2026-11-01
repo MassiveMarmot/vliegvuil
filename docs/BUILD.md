@@ -10,6 +10,7 @@ One session = one PR = one merge. Start each new session from updated `main`. If
 
 | # | Session | Done when |
 |---|---|---|
+| 28 | Compass only when rotated — [plan](sessions/28-compass-when-rotated.md) | Compass hidden at bearing 0, appears on rotation, hides after reset; five DOM/state tests pass; manual Firefox/Mullvad/touch/keyboard checks done. |
 
 Finished sessions (rows 1–22, 22b, 22c, 23, 23b, 24, 25, 25b, 25c, 25d, 26, 27) moved to [docs/history/session-plan.md](history/session-plan.md):
 
