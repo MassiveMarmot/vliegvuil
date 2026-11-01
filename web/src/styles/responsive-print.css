@@ -1,0 +1,68 @@
+/* Responsive */
+@media (max-width: 768px) {
+  .info-panel {
+    left: 0.5rem;
+    right: 0.5rem;
+    max-width: none;
+  }
+
+  .aircraft-panel {
+    left: 0.5rem;
+    right: 0.5rem;
+    max-width: none;
+  }
+
+  .telemetry-panel {
+    left: 0.5rem;
+    right: 0.5rem;
+    width: auto;
+    max-width: none;
+  }
+
+  .search-box {
+    left: 0.5rem;
+    width: auto;
+  }
+  .search-box.expanded {
+    width: min(300px, calc(100vw - 1rem));
+  }
+
+  .aircraft-list {
+    left: 0.5rem;
+    right: 0.5rem;
+    width: auto;
+    max-width: none;
+    /* Same shared clearance as the desktop rule (see :root) — the list
+       must clear the counter at every width. */
+    bottom: var(--vv-list-clearance);
+    max-height: 60vh;
+  }
+
+  .banner {
+    left: 0.5rem;
+    right: 0.5rem;
+    transform: none;
+    max-width: calc(100% - 1rem);
+  }
+}
+
+/* Print styles */
+@media print {
+  .map-container,
+  .banner,
+  .aircraft-panel {
+    display: none;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+

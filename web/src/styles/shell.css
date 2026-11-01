@@ -1,0 +1,320 @@
+/* ===== Session 25: app shell (header, menu, routed pages) ===== */
+/* Tokens are defined above on :root; a later dark theme is a token swap. */
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  color-scheme: light;
+}
+
+.app-body {
+  position: relative;
+  flex: 1;
+  /* min-height: 0 lets the flex child shrink; the map and the list panel
+     derive their heights from the shell, not from 100vh (session 25 fix). */
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Skip link: first focusable element, visible on focus */
+.skip-link {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 100;
+  padding: 0.5rem 1rem;
+  background: var(--vv-ink);
+  color: #fff;
+  border-radius: var(--vv-radius-sm);
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+
+.skip-link:focus-visible {
+  transform: none;
+  outline: 2px solid var(--vv-accent);
+  outline-offset: 2px;
+}
+
+/* Header */
+.app-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  background: var(--vv-cream);
+  border-bottom: 1px solid var(--vv-border);
+  z-index: 40;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--vv-ink);
+  font-weight: 700;
+  font-size: 1rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.brand:focus-visible,
+.header-button:focus-visible {
+  outline: 2px solid var(--vv-accent);
+  outline-offset: 2px;
+}
+
+.header-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  /* One right-aligned cluster: search, List, Menu. The logo sits left. */
+  margin-left: auto;
+}
+
+.header-button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 0.75rem;
+  border: 1px solid var(--vv-border);
+  border-radius: var(--vv-radius-sm);
+  background: var(--vv-surface);
+  color: var(--vv-ink);
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.header-button:hover {
+  border-color: var(--vv-accent);
+}
+
+/* Menu panel */
+.site-menu {
+  position: absolute;
+  top: 100%;
+  right: 0.5rem;
+  min-width: 220px;
+  padding: 0.75rem;
+  background: var(--vv-surface);
+  border: 1px solid var(--vv-border);
+  border-radius: var(--vv-radius-md);
+  box-shadow: var(--vv-shadow-soft);
+  z-index: 50;
+}
+
+.site-menu ul {
+  list-style: none;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.site-menu a,
+.site-menu button {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-radius: var(--vv-radius-sm);
+  background: none;
+  color: var(--vv-ink);
+  font-family: inherit;
+  font-size: 0.95rem;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.site-menu a:hover,
+.site-menu button:hover {
+  background: var(--vv-sand);
+}
+
+.site-menu a:focus-visible,
+.site-menu button:focus-visible {
+  outline: 2px solid var(--vv-accent);
+  outline-offset: 2px;
+}
+
+.site-menu .language-switch {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--vv-border);
+}
+
+.site-menu .language-switch a[aria-current='true'] {
+  font-weight: 700;
+}
+
+/* Routed pages (about, attribution, not-found) */
+.about-page,
+.not-found-page,
+[attribution] .about-page {
+  position: relative;
+  z-index: 30;
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+  background: var(--vv-cream);
+  overflow-y: auto;
+  height: 100%;
+}
+
+.about-page:focus-visible,
+.not-found-page:focus-visible {
+  outline: none;
+}
+
+.about-page h1,
+.not-found-page h1 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.about-page h2 {
+  font-size: 1.05rem;
+  margin: 1.25rem 0 0.4rem;
+}
+
+.about-page p {
+  line-height: 1.55;
+  color: var(--vv-ink);
+}
+
+.about-page a,
+.not-found-page a,
+.back-to-map {
+  color: var(--vv-accent);
+}
+
+/* All links on non-map pages share the app link style (session 25 fix:
+   attribution links used to render in the browser default blue/purple). */
+.about-page a {
+  color: var(--vv-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.about-page a:hover {
+  color: var(--vv-ink);
+}
+
+.about-page a:focus-visible {
+  outline: 2px solid var(--vv-accent);
+  outline-offset: 2px;
+}
+
+/* The attribution page component renders its own region; align it with
+   the routed layout. */
+.app-body [role='region'][aria-label] {
+  z-index: 30;
+}
+
+/* Map view stays mounted across routes; hidden (covered) on other pages */
+.map-view {
+  position: absolute;
+  inset: 0;
+}
+
+.map-view.map-view-hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Session 26: the count line is the list toggle — a real button, visually
+   consistent with the status card it replaced (playful-minimal chrome).
+   The affordance (list icon + chevron) makes it visibly clickable; the
+   whole button keeps a 44x44 px minimum touch target. */
+.map-status-toggle {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  margin: -0.5rem;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 44px;
+  min-height: 44px;
+  box-sizing: content-box;
+}
+.map-status-toggle:focus-visible {
+  outline: 2px solid var(--vv-accent, #e8735a);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.map-status-toggle:hover {
+  text-decoration: underline;
+}
+.map-status-icon,
+.map-status-chevron {
+  flex: none;
+  color: currentColor;
+}
+/* The chevron points up while the panel is closed (the pop-out opens
+   ABOVE the counter) and down while open, mirroring aria-expanded. */
+.map-status-chevron {
+  transform: rotate(0deg);
+}
+.map-status-toggle[aria-expanded='true'] .map-status-chevron {
+  transform: rotate(180deg);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .map-status-chevron {
+    transition: transform 0.15s ease-out;
+  }
+}
+
+/* Map status line (aircraft count + last update), replaces the old card */
+.map-status {
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  z-index: 10;
+  padding: 0.5rem 0.75rem;
+  background: var(--vv-surface);
+  border-radius: var(--vv-radius-sm);
+  font-size: 0.8rem;
+  color: var(--vv-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 320 px: header wraps; the search button keeps its size */
+@media (max-width: 400px) {
+  .app-header {
+    flex-wrap: wrap;
+  }
+
+  .header-tools {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .site-menu {
+    animation: menu-in 120ms var(--vv-ease);
+  }
+
+  @keyframes menu-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
