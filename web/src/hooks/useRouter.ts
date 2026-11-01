@@ -33,16 +33,45 @@ export function rootLanguage(languages: readonly string[]): LanguageCode {
   return /^en(-|$)/.test(first) ? 'en' : DEFAULT_LANGUAGE;
 }
 
-/** Map a pathname to {language, route}. Unknown paths: not-found. */
+/**
+ * Map a pathname to {language, route}. STRICT (review fix): only
+ * '/{lang}', '/{lang}/', '/{lang}/about', '/{lang}/about/' and the
+ * attribution equivalents are known routes — with AT MOST one optional
+ * trailing slash. Anything else — extra segments ('/nl/about/x'),
+ * doubled slashes ('/nl//about', '/nl///'), unknown pages — is
+ * not-found. The old version filtered empty segments, which silently
+ * accepted all of those.
+ */
 export function parsePath(pathname: string): ParsedPath {
-  const segments = pathname.replace(/\/+$/, '').split('/').filter(Boolean);
+  // Normalize exactly one optional trailing slash: 'about/' is fine,
+  // 'about//' is not (a second trailing slash would leave an empty
+  // segment after the strip).
+  let path = pathname;
+  if (path.endsWith('/') && path !== '/') {
+    path = path.slice(0, -1);
+  }
+  // After stripping one trailing slash, no empty segments may remain:
+  // '/nl//about' -> segments ['nl', '', 'about'] -> not-found.
+  if (path.includes('//')) {
+    return { language: DEFAULT_LANGUAGE, route: 'not-found' };
+  }
+  const segments = path.split('/').filter(Boolean);
   const first = segments[0] ?? '';
   if (!first || !isLanguageCode(first)) {
     return { language: DEFAULT_LANGUAGE, route: 'not-found' };
   }
   const language = first;
   const page = segments[1] ?? '';
-  if (page === '' || page === undefined) return { language, route: 'map' };
+  if (page === '' || page === undefined) {
+    // '/{lang}' with an optional trailing slash is the map; a path that
+    // was ONLY slashes past the language ('/nl///') already failed the
+    // empty-segment check above.
+    return { language, route: 'map' };
+  }
+  // Extra segments ('/nl/about/x') are not-found.
+  if (segments.length > 2) {
+    return { language, route: 'not-found' };
+  }
   if (page === 'about') return { language, route: 'about' };
   if (page === 'attribution') return { language, route: 'attribution' };
   return { language, route: 'not-found' };
