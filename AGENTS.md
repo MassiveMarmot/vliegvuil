@@ -1,6 +1,6 @@
 # AGENTS.md: VliegVuil.nl
 
-Read docs/SPEC.md and docs/BUILD.md before every task, then the session file named in the task (docs/sessions/). If code and spec disagree, or the task is ambiguous, ask instead of guessing.
+Read docs/SPEC.md and docs/BUILD.md before every task, then the session file named in the task (docs/sessions/). Deploy docs (docs/deploy/), docs/history/ and docs/human-checkpoints.md are read only when the task names them. If code and spec disagree, or the task is ambiguous, ask instead of guessing.
 
 ## Rules
 - TypeScript strict (`strict`, `noUncheckedIndexedAccess`). No `any`, no `@ts-ignore`.
@@ -27,4 +27,4 @@ Read docs/SPEC.md and docs/BUILD.md before every task, then the session file nam
 - Never hard-code a filesystem path from your sandbox (`/workspace/...`) or a personal GitHub username in any file.
 
 ## Layout
-/core  /web  /data-build  /locales  /docs (SPEC.md, BUILD.md, sessions/)  AGENTS.md
+/core  /web  /data-build  /locales  /docs (SPEC.md, BUILD.md, sessions/, deploy/, history/, human-checkpoints.md)  AGENTS.md

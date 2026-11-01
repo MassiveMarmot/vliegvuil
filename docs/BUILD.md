@@ -2,30 +2,7 @@
 
 Replaces the CLI-based version. Spec source of truth: `docs/SPEC.md`. Longer session details live in `docs/sessions/`.
 
-## 1. How Vibe Code Web works (what shapes this plan)
-
-Per Mistral's docs (docs.mistral.ai/vibe/code/vibe-code-web):
-
-- You create a **project** from GitHub repos (same owner), start a **session** with a prompt, and the agent works in a cloud sandbox and produces a **branch or pull request**. You review in GitHub.
-- The sandbox is deleted when the session ends; only what is committed survives. Inactive sessions can't be resumed, so start a new session per task.
-- Sessions use Mistral Medium 3.5. Limits: 24 h max, 3 h inactivity while waiting for your reply; free users get 2 sessions/day, paid 100/day.
-- The sandbox has outbound internet (no allowlist controls yet), no project secrets, and a Mistral-maintained image; the agent installs missing tools at session time.
-- The agent can ask clarifying questions. Cancel/interrupt/steer controls and approval gates were listed as "not yet available" at launch, so **keep every session small and tightly scoped**. The docs may have changed since; check the Sessions page.
-- Unlike the CLI, there is no `~/.vibe/config.toml`, no `--agent plan` mode. Control comes from `AGENTS.md`, the prompt, and PR review. I could not confirm that the web agent auto-loads `AGENTS.md`, so every prompt tells it to read the file.
-
-## 2. One-time setup (you)
-
-1. Create a GitHub repo `vliegvuil` (private until you're ready to publish).
-2. Commit to `main`: `docs/SPEC.md` (your spec), `AGENTS.md` (repo root, authoritative), this file as `docs/BUILD.md`, and the per-session detail files in `docs/sessions/`.
-3. In Vibe (Code tab): install the **Mistral GitHub App**, grant it only this repo, create a project.
-4. In GitHub: enable branch protection on `main` (PRs required). You merge; the agent never does.
-5. Never put real credentials in the repo. The sandbox is like a CI job.
-
-Naming: **VliegVuil.nl**; slug `vliegvuil`; packages `@vliegvuil/{core,web,data-build}`. The name is cheeky, so the spec's tone rule stands: whimsy in UI chrome only, data layers factual.
-
-## 3. AGENTS.md
-
-`AGENTS.md` in the repo root is authoritative. It is no longer duplicated here, so it cannot go stale.
+Human setup notes (§1 How Vibe Code Web works, §2 One-time setup, §3 AGENTS.md) and §6 Human checkpoints moved to `docs/human-checkpoints.md`.
 
 ## 4. Session plan
 
@@ -33,39 +10,43 @@ One session = one PR = one merge. Start each new session from updated `main`. If
 
 | # | Session | Done when |
 |---|---|---|
-| 1 | **Scaffold**: pnpm workspace (`core`, `web`, `data-build`), Vite+React+TS, Vitest, ESLint, Prettier, GitHub Actions (lint/typecheck/test only), `sources.json` schema + validator, licence placeholder | CI green on empty app |
-| 2 | **Core: providers + interpolation**: `PositionProvider`, adsb.lol implementation, NL bbox, dead reckoning, fixtures | Tests cover missing velocity, stale data, provider failure |
-| 3 | **Core: geometry**: ICAO24 country table, point-in-polygon noise lookup with small fixture polygons | Known points inside/outside return expected band |
-| 4 | **Proxy config**: Caddyfile (static app, reverse proxy, ~5 s micro-cache, no access logs, no client IP/headers upstream, per-IP rate limit, CORS) + `docs/deploy.md` | Config validates (`caddy validate`); test/doc shows headers stripped |
-| 5 | **Map + aircraft**: MapLibre, PDOK BRT basemap via config URL, symbol layer rotated by heading, 5 s polling, smooth movement, stale/down banner | 500 mocked aircraft render; banner on stale mock |
-| 6 | **Telemetry panel + search**: all §2 fields, managed focus, Esc, search by callsign/registration/ICAO24 | Keyboard-only flow works; component tests |
-| 7 | **List view + a11y**: sortable table alternative, ARIA live announcements, axe checks | No serious axe violations |
-| 8 | **Data build A**: airports (OurAirports trimmed to NL + status overlay) and aircraft DB snapshot; writes `sources.json` | Reproducible script; outputs small enough to commit |
-| 9 | **Data build B**: noise contours → GeoJSON + PMTiles script (see human step below) | Script runs; large tiles gitignored, release artifact documented |
-| 10 | **Noise overlay UI**: toggle, 48/56/70 dB Lden bands, colour-blind-safe gradient + pattern fallback, legend with year/metric, badge text with annual-average caveat | Snapshot/unit tests for badge and legend |
-| 11 | **Settings, i18n, attribution, PWA, CSP**: NL/EN, units in localStorage, attribution page from `sources.json`, app-shell-only PWA | Only own-origin + PDOK requests in a browser trace |
-| 12 | **Polish + docs**: playful-minimal styling per spec §3, reduced motion, README, architecture/privacy docs | You review visually |
-| 13 | **Licence + sources.** Replace `LICENSE` with MPL-2.0 (holder name/year from me, ask if missing). Add `"license": "MPL-2.0"` to every `package.json`, SPDX header comment in source files, update README. Fix the adsb.lol row in `sources.json`: licence `ODbL-1.0`, licenceUrl `https://opendatacommons.org/licenses/odbl/1.0/`, move "API code is BSD-3-Clause" to notes. Split the JSON Schema out of `sources.json` into `sources.schema.json`; add the missing validator script and run it in CI. Add the ODbL attribution line to the attribution page. | Validator fails on a bad entry (test), CI green |
-| 14 | **Core: fix the adsb.lol provider.** Fetch one real response from `https://api.adsb.lol/v2/point/{lat}/{lon}/{radius}` (radius in nautical miles, max 250), save a trimmed copy as fixture. Rewrite types and parsing to the real shape (`ac[]`, `hex`, `flight`, `r`, `t`, `alt_baro` incl. the string `"ground"`, `gs`, `track`, `baro_rate`, `squawk`, `lat`, `lon`, `seen_pos`). Compute the radius from the NL bbox instead of hard-coding 200. Stop turning 0 into `null` for heading, and fix dead reckoning so heading 0 (north) works. Base URL configurable. | Tests use the real fixture; heading 0 and ground-state tests exist |
-| 15 | **Web: real data.** Remove the mock generator from `useAircraftData`; use the core provider through a configurable API base URL (`VITE_API_BASE`, default `/api`). Drop aircraft not seen for more than 60 s. Fix the polling/retry timers (the stale-check interval is stored in the retry ref and never cleaned up). Show the real last-update time. Keep a dev-only mock behind `VITE_MOCK=1`. | Component test with a mocked provider; no `Math.random` in `src/` outside the mock module |
-| 16 | **Smooth movement.** Use `deadReckoning` between 5 s polls, updating the map source at a capped frame rate (≤ 10 fps). Respect `prefers-reduced-motion` (positions jump on each update instead). Cap extrapolation at ~15 s. | Unit test of the animation loop with fake timers; reduced-motion test |
-| 17 | **Map: basemap, icons, labels.** Basemap URL from config, default to the current PDOK BRT Achtergrondkaart WMTS on `service.pdok.nl` in EPSG:3857 (fetch the capabilities page and pick the URL from it; do not use the legacy `geodata.nationaalgeoregister.nl/tiles/...` host). Fix altitude colours: pre-render one icon image per altitude band (or use an SDF icon) instead of `icon-color` on a non-SDF image. Callsign labels need a `glyphs` URL: either self-host glyph PBFs generated from an OFL font (no third-party request), or drop map labels for v0 and rely on the panel. Ask me which before starting. Add attribution text for PDOK. | Screenshot in the PR; no request to a host other than own origin + PDOK in the network list |
-| 18 | **i18n cleanup.** Move every hard-coded string in `App.tsx`, banners, list, telemetry formatting and the info overlay into `locales/{nl,en}.json`. Add a test that fails if `.tsx` files contain user-visible string literals. Switching language updates everything and `<html lang>`. | Switching to EN leaves no Dutch text on screen (test) |
-| 19 | **Proxy, Caddyfile, CSP, deploy docs.** Rewrite the Caddyfile for the real deployment: Hetzner VPS directly, no Cloudflare. Serve the app and proxy `/api/*` on the **same origin** (removes CORS entirely). Drop invalid directives (`access_log off`, `import cloudflare`). Caddy has no access log unless configured; verify in the docs. Rate limiting and micro-caching need Caddy modules (e.g. `caddy-ratelimit`, `cache-handler`); document an `xcaddy build` line, verify the module names, and validate the config with that binary. Strip client IP headers upstream and prove it with a test that runs a local echo upstream and asserts no client IP header arrives. CSP: `connect-src 'self'`, add `worker-src blob:` and `img-src` for PDOK and `data: blob:`, remove `X-XSS-Protection`. Fix the root path (`/srv/vliegvuil/web/dist`) and the leaked `/workspace/...` path in `deploy.md`. | `caddy validate` output in PR; header-stripping test passes |
-| 20 | **Tooling cleanup.** Delete `web/Dockerfile` (deployment is git pull + build, per spec). CI: pin pnpm via `packageManager` (pnpm/action-setup or corepack), add `pnpm build`, sources validator and Caddyfile validation. Fix the core `build` script to use the tsconfig (`tsc -p`). Align ESLint to one major version across the repo, enable `eslint-plugin-react-hooks`. Set `engines.node` to what the toolchain needs. | CI green, lint has no version warnings |
-| 21 | **Data build: runner + airports + aircraft DB.** Add a CLI entry (`pnpm --filter @vliegvuil/data-build run build`) that downloads (from URLs in `sources.json`), transforms and writes `web/public/data/airports.json` and an aircraft snapshot, updates `lastUpdated` in `sources.json`, swaps output atomically. Cache downloads in `data-build/cache/`. Add the hand-maintained airport status overlay (commercial / military-shared / planned; Lelystad = planned). | Runs end-to-end from a clean checkout; outputs < 2 MB |
-| 22 | **Data build: noise contours.** *Only after my human checkpoint below.* Build `web/public/noise-contours.geojson` from the verified sources with Eindhoven as civil Lden labelled "civil traffic only". PMTiles generation stays a documented VPS step. | Known coordinates inside/outside contours return the expected band in a test against the built file |
-| 22b | **Data freshness**: upstream check, safe refresh, data-age display. Details: `docs/sessions/22b-data-freshness.md` (scheduling and notification superseded by 22c) | `check` reports correct status from recorded real responses; a bad refresh leaves old data untouched (test); attribution page shows dataset age in NL and EN |
-| 22c | **Data workflows (GitHub Actions)**: scheduled check opens or updates one issue; scheduled and manual refresh opens a PR; VPS data timers retired; CI hardened. Details: `docs/sessions/22c-data-workflows.md` | `actionlint` clean; a `dry_run` dispatch produces a correct report; PR/issue body builders tested; `deploy/` timers removed; docs updated |
-| 23 | **Airports layer + snapshot enrichment.** Airport markers with name and status flag popup (needs the glyph decision from session 17 for labels). Use the aircraft snapshot as fallback for registration/type/operator when the live feed lacks them. | Popup and fallback covered by tests |
 | 23b | **Airport status data fix.** In data-build, status comes only from the hand-maintained overlay; airports not listed in the overlay get no status (null or an explicit "unspecified" — proposal to be made in that session; not "commercial"). Today `AIRPORT_STATUS_OVERLAY[icao] ?? 'commercial'` (`data-build/src/airports.ts`) defaults every unlisted EH* airport to "commercial", which is misleading for the 93 heliports and 11 small airfields. Update `AirportStatus` and the snapshot types, the tests, and any schema; regenerate `airports.json` via the normal data workflow (reviewed PR, output under the 2 MB limit, `sources.json` `lastUpdated` updated by the build). | No airport without an overlay entry has status "commercial" (test); the 12 existing overlay statuses are unchanged (test against a snapshot of those entries); the web app still renders the session 23 popups (status stays plain-language and unknown statuses show nothing); docs mention the behaviour. Depends on 23 |
-| 24 | **PWA, fonts, bundle.** Self-host Space Grotesk (woff2, OFL). Manifest with 192/512 px PNG and maskable icons. Service worker: app shell only; exclude `/api` and tile requests from caching and from the navigation fallback. Lazy-load MapLibre to cut the 1 MB main chunk. | Lighthouse-style check of the manifest; no `/api` in SW precache |
-| 25 | **UI shell**: header, menu, About page, path routes with language prefix. Details: `docs/sessions/25-ui-shell-and-seo.md` | Keyboard-only and screen-reader checklist passes; axe clean; all locale files have identical key sets |
-| 25d | **Unit defaults by language** (done): with no saved choice, default units derive from the browser language (nl → m/km/h; otherwise ft/kt); a saved choice always wins and the derived default is never persisted | nl/nl-NL/nl-BE give metric, en/de/empty give ft/kt, saved choice wins both ways (tests in `web/__tests__/Settings.test.tsx`) |
-| 25b | **SEO foundations** (done): static per-language pages, hreflang, canonical, sitemap, robots, social previews, root redirect, `VITE_SITE_ORIGIN` config; details: `docs/sessions/25-ui-shell-and-seo.md` | Built `dist/` has correct head tags per page (test in `web/__tests__/seoStaticPages.test.ts`); `caddy validate` output in the 25b PR |
-| 25c | **Privacy-first analytics (GoatCounter, self-hosted)** (done; verified against GoatCounter **v2.7.0** — SIGKILL does prevent the shutdown flush): same-origin /count via Caddy (no third-party request), systemd service on 127.0.0.1 with `KillSignal=SIGKILL`, country + session key derived in memory on the localhost route only, screen-size/region collection off; referrer setting ON (hourly aggregate) but the app never sends one (test-pinned), dashboard SSH-tunnel only, no -debug, native data-retention setting (value pending maintainer). Details: `docs/sessions/25c-analytics.md`, install in `docs/deploy.md` §6b | GoatCounter runs as a systemd service bound to 127.0.0.1; the count script and endpoint are served from our own origin via Caddy so the CSP stays `'self'` and no third-party request is added; SPA route changes are counted; Caddy access logs are still off; a test visit shows up in the dashboard with a country and no IP appears in the GoatCounter database or in any log (verified by inspecting the schema and grepping logs and database for the test visit's address); `privacy.md`, SPEC, README, AGENTS.md and `deploy.md` are updated in the SAME PR as the implementation, and the `verify-caddy-headers` script and the session 11 network-trace test still pass with the new route |
-| 26 | **Styling and a11y pass** (done): remaining inline styles moved to CSS (dynamic noise-band colours stay as CSS custom properties), map region is a labelled `<main>` landmark, jest-axe added (devDependency) with checks for map/about/attribution/settings/list/404. **List toggle:** the header Lijst button is gone; the flight counter (bottom-left) is the list toggle (`aria-expanded`/`aria-controls`, focus in on open, back to the counter on close, Escape closes); the list is a pop-out above the counter. **Compass:** MapLibre `NavigationControl` compass-only (`showZoom: false`), anchored top-right below the header (no 6.x option to show it only when rotated — verified in the 6.14 source), translated label via the Map constructor `locale` patch (`map.compass` key), click = `resetNorth()` (MapLibre itself drops the animation under `prefers-reduced-motion`), `maxPitch: 0` so tilt never applies; aircraft icons keep their true heading when rotated (`icon-rotation-alignment: 'map'` rotate-with-map semantics, verified in the 6.14 source). | No serious axe violations (tests in `web/__tests__/a11ySession26.test.tsx`); compass labelled, keyboard reachable, resets bearing, reduced-motion-safe (tests); icons verified to keep their heading while rotated (guard test + source evidence in the PR); no overlap with header, menu, noise legend, airport popup, telemetry panel or counter (geometry test `web/__tests__/layoutSession26.test.ts`, compass owns the top-right corner) |
 | 27 | **Docs and release prep.** Update README, `architecture.md`, `privacy.md`, `deploy.md` to match reality; refresh screenshots from the real app; add CHANGELOG and a release checklist. | Docs contain no statement the code does not do; HSTS ramp-up reviewed: current max-age recorded in `docs/deploy.md`; raise step by step (1 day, 1 week, 1 month, 1 year) only after a week without TLS problems at each step |
+
+Finished sessions (rows 1–22, 22b, 22c, 23, 24, 25, 25b, 25c, 25d, 26) moved to [docs/history/session-plan.md](history/session-plan.md):
+
+- [1 — Scaffold](history/session-plan.md)
+- [2 — Core: providers + interpolation](history/session-plan.md)
+- [3 — Core: geometry](history/session-plan.md)
+- [4 — Proxy config](history/session-plan.md)
+- [5 — Map + aircraft](history/session-plan.md)
+- [6 — Telemetry panel + search](history/session-plan.md)
+- [7 — List view + a11y](history/session-plan.md)
+- [8 — Data build A](history/session-plan.md)
+- [9 — Data build B](history/session-plan.md)
+- [10 — Noise overlay UI](history/session-plan.md)
+- [11 — Settings, i18n, attribution, PWA, CSP](history/session-plan.md)
+- [12 — Polish + docs](history/session-plan.md)
+- [13 — Licence + sources.](history/session-plan.md)
+- [14 — Core: fix the adsb.lol provider.](history/session-plan.md)
+- [15 — Web: real data.](history/session-plan.md)
+- [16 — Smooth movement.](history/session-plan.md)
+- [17 — Map: basemap, icons, labels.](history/session-plan.md)
+- [18 — i18n cleanup.](history/session-plan.md)
+- [19 — Proxy, Caddyfile, CSP, deploy docs.](history/session-plan.md)
+- [20 — Tooling cleanup.](history/session-plan.md)
+- [21 — Data build: runner + airports + aircraft DB.](history/session-plan.md)
+- [22 — Data build: noise contours.](history/session-plan.md)
+- [22b — Data freshness](history/session-plan.md)
+- [22c — Data workflows (GitHub Actions)](history/session-plan.md)
+- [23 — Airports layer + snapshot enrichment.](history/session-plan.md)
+- [24 — PWA, fonts, bundle.](history/session-plan.md)
+- [25 — UI shell](history/session-plan.md)
+- [25d — Unit defaults by language](history/session-plan.md)
+- [25b — SEO foundations](history/session-plan.md)
+- [25c — Privacy-first analytics (GoatCounter, self-hosted)](history/session-plan.md)
+- [26 — Styling and a11y pass](history/session-plan.md)
+
 
 Free plan is 2 sessions/day, so expect this to take ~a week; paid allows far more.
 
@@ -97,25 +78,7 @@ For data sessions add: "Fetch and read each official source page and licence tex
 
 ## 6. Human checkpoints
 
-**Every session**
-- Review each PR: new dependencies, CSP, anything that adds a network request.
-- Large data outputs (PMTiles) and all deployment happen on your OVHcloud VPS, not in the sandbox.
-- Re-read noise badge and legend wording for factual tone.
-
-**Before specific sessions**
-- **Before 13:** give the agent the copyright holder handle (pseudonym) and year for the MPL-2.0 header. Set a pseudonymous git author name and no-reply email before branches are merged.
-- **Before 17:** decide self-hosted glyphs vs. no map labels.
-- **Before 19:** accept that the proxy needs a custom Caddy build (two modules), or say if you'd rather use a different approach.
-- **Before 21/22:** verify on the official pages each source's current URL and licence: tar1090-db (`sources.json` says ODC-By-1.0 via Mictronics; re-check), OurAirports, the Schiphol dataset and year, and the regional airport noise data. Ask RIVM/CLO/PBL/NLR for vector data behind CLO indicator 0588 (2018 and 2024), which is the only source found for Eindhoven civil Lden (PBL made the maps; see the Eindhoven data requests checkpoint below).
-- **Before 22b:** confirm `auto` vs `manual` per source; review the `User-Agent` string (project repo URL, no personal contact).
-- **Before 22c:** set up GitHub: a ruleset or branch protection on `main` (PRs required, required CI checks, applies to admins); default workflow permissions read-only; enable "Allow GitHub Actions to create and approve pull requests" (check the exact setting name in GitHub's docs); restrict allowed actions; require approval for workflows from outside contributors. Expect to click "Approve and run workflows" on bot PRs. After you merge a data PR, deploy by hand (`docs/deploy.md` §7). If GitHub disables the scheduled workflows after 60 days without repository activity, re-enable them in the Actions tab.
-- **Before 25b: decide whether to enable HSTS.** 25b already edits the Caddyfile (root redirect, try_files). Plan: start with `Strict-Transport-Security: max-age=86400` (one day), no includeSubDomains, no preload. Rationale: HSTS is sticky; a broken certificate or reload locks browsers out until max-age ends. If yes, it is a separate small PR (one `header` directive in the main site block) with a verification curl in the PR; it is NOT bundled into 25b.
-- **Data requests for Eindhoven (DEFERRED — replies not expected soon):** (a) email the CLO/PBL data team (and NLR) for the vector or grid data behind CLO indicator 0588 for Eindhoven, 2018 and 2024 (PBL made those maps; older indicator versions were delivered as contours and 100x100 m grids), asking also for licence/reuse terms; (b) and/or email the Ministry of Defence and/or the Ministry of Infrastructure and Water Management (I&W) for the official Ke contours of the Luchthavenbesluit Eindhoven (35 Ke zone) as vector data, with licence terms. The result decides the session 22b/22 follow-up (see the open Eindhoven question in SPEC §11); do not start a build session before the answers.
-- **Around 25:** confirm the GitHub repo and issues URLs the agent derives from the git remote; review the Dutch About text and privacy statements; set `blueskyUrl` in `site.ts` once the account exists; test with keyboard only and a screen reader (VoiceOver or NVDA).
-- **After 25c: re-decide includeSubDomains.** Only consider it once every subdomain in use (www, the GoatCounter dashboard host) is HTTPS-only. Preload stays out of scope until the maintainer explicitly decides.
-- **After 27:** deploy on the VPS yourself, open the site with browser dev tools, and confirm the only requests are your own origin (basemap tiles included; since PR #67 nothing contacts PDOK); compare against `privacy.md`; check the live feed with real aircraft.
-
-**Decided**: licence MPL-2.0; Eindhoven civil Lden; light/dark theme deferred to a later version; data pipeline = option C (GitHub Actions checks and refreshes and opens PRs, the VPS only pulls, builds and serves, nothing deploys from GitHub); VPS = OVHcloud, 2 vCPU, 4 GB RAM, 40 GB.
+Moved to [docs/human-checkpoints.md](human-checkpoints.md) (together with the human setup notes from §1 and §2).
 
 ## 7. Sources checked
 
