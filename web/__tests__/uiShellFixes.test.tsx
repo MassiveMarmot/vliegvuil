@@ -205,8 +205,9 @@ describe('shell layout classes (finding 4)', () => {
     const listBlock = (/\.aircraft-list\s*\{[\s\S]*?\n\}/.exec(css)?.[0] ?? '')
       .replace(/\/\*[\s\S]*?\*\//g, '');
     // Session 26: the list is a pop-out anchored above the counter
-    // (bottom: 4rem), capped by max-height, still scrolling internally.
-    expect(listBlock).toMatch(/bottom: 4rem;/);
+    // (bottom: var(--vv-list-clearance), the shared clearance variable),
+    // capped by max-height, still scrolling internally.
+    expect(listBlock).toMatch(/bottom: var\(--vv-list-clearance\);/);
     expect(listBlock).toMatch(/max-height: min\(70vh, 32rem\)/);
     expect(listBlock).not.toMatch(/(^|;)\s*top:/);
     const tableBlock = /\.aircraft-list-table\s*\{[\s\S]*?\n\}/.exec(css)?.[0] ?? '';
