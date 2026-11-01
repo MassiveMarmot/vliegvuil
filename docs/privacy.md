@@ -12,7 +12,7 @@ VliegVuil.nl is privacy-first by design. This page documents what the site does 
   - Bot filtering is best-effort: self-identified bots are marked as such in the aggregate numbers; disguised bots may be counted, crawlers without JavaScript are never seen.
   - The aggregated statistics (per-hour counts of pages, referrers, countries and browsers — no individual visitors) are kept without a set expiry for now. If a retention period is ever introduced, this page will say so.
 - **No third-party scripts, fonts, or pixels** — everything, including the analytics count, is served from our own origin
-- **No cookies** — settings (language, units) are stored in your browser's localStorage and never sent to us; the analytics uses no cookies or localStorage
+- **No cookies** — your unit preference is stored in your browser's localStorage and never sent to us; the interface language is part of the URL, not storage. The analytics uses no cookies or localStorage
 - **No access logs, and no visitor IP in any server log** — the Caddy web server has access logging disabled, and its error log is scrubbed: failed-request entries record only the status and timing, never your address, headers or the page you were on
 - **No client IP forwarded upstream** — requests proxied to the ADS-B data provider (adsb.fi) are stripped of your IP address and identifying headers; the only place your address is used at all is the internal analytics route described above
 - **No accounts or profiling** — there is nothing to log into and no behavioural tracking of any kind
@@ -20,7 +20,7 @@ VliegVuil.nl is privacy-first by design. This page documents what the site does 
 ## Third-party requests
 
 **None.** The basemap tiles (PDOK BRT Achtergrondkaart) are self-hosted on
-our own server: the browser loads them from vliegvul.nl itself and never
+our own server: the browser loads them from vliegvuil.nl itself and never
 contacts service.pdok.nl. The analytics count is same-origin as well (see
 above), so the site does not depend on, or contact, any third-party server
 at request time.
@@ -32,10 +32,9 @@ The Content-Security-Policy only allows resources from our own origin — `servi
 
 | Key | Purpose |
 |---|---|
-| `vliegvuil.language` | UI language (nl/en) |
 | `vliegvuil.units` | Altitude/speed units (ft/m, kt/km/h) |
 
-Both stay on your device, are never transmitted, and can be cleared at any time through your browser.
+It stays on your device, is never transmitted, and can be cleared at any time through your browser. The UI language is not stored at all — it lives in the URL path (`/{lang}/...`).
 
 ## Contact
 

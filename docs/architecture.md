@@ -29,7 +29,7 @@ VliegVuil.nl is a monorepo with three workspaces and a strict layering rule: `/c
    served from our own origin; the browser never contacts service.pdok.nl
    (CC-BY 4.0, Kadaster attribution kept).
 1. The web app polls its own origin every 5 s for aircraft positions (`useAircraftData`).
-2. In production, Caddy reverse-proxies those requests to the adsb.fi open-data API with a ~5 s micro-cache, strips client IP/headers upstream, and rate-limits per IP. In dev, the Vite proxy stands in.
+2. In production, Caddy reverse-proxies those requests to the adsb.fi open-data API with a ~5 s micro-cache, strips client IP/headers upstream, and rate-limits per IP. In dev there is no proxy at all — `VITE_MOCK=1` serves mock positions instead (see docs/deploy.md, "Local preview").
 3. Positions go through core's `PositionProvider` interface; `toDisplayAircraft` converts them for the UI, with dead-reckoning interpolation for smooth movement between updates.
 4. Noise lookup runs entirely client-side: the app fetches a small GeoJSON contour snapshot (built by `/data-build`) and uses core's point-in-polygon `lookupNoiseBand`.
 5. Airport markers and name labels (session 23) come from a lazily-fetched `airports.json` (large/medium airports only, status shown in plain language in the popup). Labels use self-hosted map glyphs: Space Grotesk (OFL 1.1) PBFs for Unicode ranges 0–511, generated with fontnik from the official upstream TTFs, served from our own origin (`/fonts/`), licence file next to the glyphs. No third-party font host; the CSP is unchanged.
@@ -49,7 +49,7 @@ serves. `deploy/` systemd timers were removed with it.
 
 - **Airports**: OurAirports trimmed to NL + a status overlay (commercial / military-shared / planned); airports without an overlay entry have status null (session 23b) — the popup shows status only when the overlay provides one
 - **Aircraft DB**: tar1090-db CSV snapshot (ODC-By-1.0, derived from Mictronics aircraft-database)
-- **Noise contours**: RIVM/Atlas Leefomgeving (Schiphol) and CLO/NLR (regional, 2018 & 2024) contours simplified to GeoJSON; large PMTiles are built on the VPS with tippecanoe and gitignored
+- **Noise contours**: RIVM/CVGG EU END 2021 Schiphol contours (55–75 dB Lden in 5 dB bands) simplified to GeoJSON; regional sets (CLO/NLR) are map images only and await vector data; large PMTiles are built on the VPS with tippecanoe and gitignored
 
 Every snapshot records its source, licence, and date in `sources.json`, which also feeds the in-app attribution page.
 
@@ -64,4 +64,4 @@ Every snapshot records its source, licence, and date in `sources.json`, which al
 
 ## Testing
 
-Each module ships with Vitest tests: core (providers, interpolation, geometry, noise), web (components, hooks), data-build (snapshot builders). CI runs lint, typecheck (building core first), and tests on every PR.
+Each module ships with Vitest tests: core (providers, interpolation, geometry, noise), web (components, hooks), data-build (snapshot builders). CI runs lint, typecheck (building core first), tests, the web build, and the validators (sources.json schema, actionlint, Caddyfile format) on every PR.

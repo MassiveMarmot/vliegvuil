@@ -111,7 +111,7 @@ HSTS: enabled at the first ramp-up step, `max-age=86400` (one day), via a
 block of the `vliegvuil.nl` Caddy site.
 
 - **Current value and why**: one day is the deliberate first step of the
-  ramp-up (docs/BUILD.md section 6, "Before 25b"). HSTS is sticky: a broken
+  ramp-up (docs/human-checkpoints.md, "Before 25b"). HSTS is sticky: a broken
   certificate or a bad reload locks browsers out until the max-age ends,
   so the first step is short enough to survive a day of mistakes.
 - **includeSubDomains and preload are intentionally off.** Future
@@ -121,8 +121,11 @@ block of the `vliegvuil.nl` Caddy site.
   HTTPS becomes unreachable for HSTS-pinned visitors. Preload is out of
   scope until the maintainer explicitly decides.
 - **Ramp-up** (a later explicit decision each time, recorded here when it
-  changes): 1 week, then 1 month, then longer - raise one step only
-  after a clean period without TLS problems at the previous step.
+  changes): 1 day → 1 week → 1 month → 1 year. Raise one step only after a
+  week without TLS problems at the previous step. Current value (session 27
+  review, verified in the Caddyfile: the site block sends
+  `Strict-Transport-Security "max-age=86400"`): **max-age=86400 (one day)**.
+  Next step when decided: max-age=604800 (one week).
 - The site-level header applies to every response of the site block,
   `/api` included (Caddy `header` directives at site level run for all
   requests; the `/api` handler's `header_down -Strict-Transport-Security`
