@@ -18,12 +18,20 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Job split (review hardening, mirroring data-refresh.yml): this job
+    # runs project code against untrusted upstream data, so it holds NO
+    # write permission at all; the issue-maintaining job below gets
+    # issues: write but runs NO project code.
     permissions:
       contents: read
-      issues: write
     steps:
       # SHAs from `git ls-remote https://github.com/<repo> refs/tags/<tag>`
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # Project code runs here with upstream data; never leave the
+          # token in git config (it could be exfiltrated by a malicious
+          # postinstall script or compromised dependency).
+          persist-credentials: false
       - uses: pnpm/action-setup@a15d269cd4658e1107c09f1fabf4cbd7bd1f308a # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
@@ -40,6 +48,30 @@ jobs:
         # Upstream strings never enter a run: script; the body is built
         # in tested TypeScript and passed via a file.
         run: pnpm --filter @vliegvuil/data-build exec tsx src/issue-body.ts ../data-build/status/data-status.json ../data-build/status/issue-body.md
+      - name: Upload the status and issue body as an artifact
+        # The second job (issues: write) runs NO project code; it only
+        # needs these two files, produced here by tested TypeScript.
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: check-output
+          path: |
+            data-build/status/data-status.json
+            data-build/status/issue-body.md
+          retention-days: 7
+          if-no-files-found: error
+
+  maintain-issue:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Only this job can write; it runs NO project code: git, gh, bash only.
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: check-output
       - name: Create or update the single issue (or close when up to date)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
