@@ -5,10 +5,10 @@
 VliegVuil.nl is a monorepo with three workspaces and a strict layering rule: `/core` is pure TypeScript with no DOM or React, so it can be reused in a future Capacitor native build.
 
 ```
-┌───────────────────────────────┐
-│  /web (React + Vite + MapLibre) │
-│    hooks ─ components ─ i18n     │
-└──────────────┬────────────────┘
+┌───────────────────────────────────┐
+│  /web (React + Vite + MapLibre)   │
+│    hooks ─ map ─ components ─ i18n│
+└───────────────┬───────────────────┘
                │ imports types + logic
 ┌──────────────▼────────────────┐
 │  /core (pure TS, no DOM)       │
