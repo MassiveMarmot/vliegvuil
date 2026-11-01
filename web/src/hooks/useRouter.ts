@@ -43,17 +43,17 @@ export function rootLanguage(languages: readonly string[]): LanguageCode {
  * accepted all of those.
  */
 export function parsePath(pathname: string): ParsedPath {
-  // Normalize exactly one optional trailing slash: 'about/' is fine,
-  // 'about//' is not (a second trailing slash would leave an empty
-  // segment after the strip).
+  // Reject doubled slashes BEFORE stripping the single optional trailing
+  // slash (review fix: checking after the strip let '/nl/about//' pass
+  // as About). '/nl/about//' contains '//' before the strip and is
+  // rejected; '/nl/about/' has none and survives to lose its one
+  // trailing slash.
+  if (pathname.includes('//')) {
+    return { language: DEFAULT_LANGUAGE, route: 'not-found' };
+  }
   let path = pathname;
   if (path.endsWith('/') && path !== '/') {
     path = path.slice(0, -1);
-  }
-  // After stripping one trailing slash, no empty segments may remain:
-  // '/nl//about' -> segments ['nl', '', 'about'] -> not-found.
-  if (path.includes('//')) {
-    return { language: DEFAULT_LANGUAGE, route: 'not-found' };
   }
   const segments = path.split('/').filter(Boolean);
   const first = segments[0] ?? '';
