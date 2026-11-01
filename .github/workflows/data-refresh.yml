@@ -137,10 +137,19 @@ jobs:
         with:
           name: refresh-output
       - name: Re-validate the artifact manifest against the path allowlist
-        # The write-token job must not trust the artifact: every manifest
-        # entry must be a path this workflow is allowed to commit, and
-        # every downloaded file must match its recorded size. Only then
-        # is anything staged for git add.
+        # The write-token job must not trust the artifact. The ACTUAL
+        # boundary is the explicit `git add` list in the commit step
+        # below: only those paths can ever be committed, no matter what
+        # the artifact contains. This validation is a fail-closed sanity
+        # gate in front of it: every manifest entry must be EXACTLY one
+        # of the allowlisted paths (grep -Fxq: whole-line match — a
+        # substring match would let a manifest entry like "json" pass
+        # against ".../airports.json"), must not be empty, contain
+        # "..", or be an absolute path. The recorded sizes are a
+        # transport-integrity check (did the artifact arrive intact?),
+        # NOT tamper protection — the artifact is produced by the same
+        # untrusted job that wrote the sizes, so sizes cannot detect a
+        # compromised artifact; the explicit git add list does.
         if: ${{ env.DRY_RUN != '1' }}
         run: |
           set -eu
@@ -155,10 +164,23 @@ jobs:
           data-build/status/artifact-manifest.txt
           data-build/status/pr-body.md"
           while read -r path size; do
-            case "$allowlist" in
-              *"$path"*) ;;
-              *) echo "manifest path not in allowlist: $path"; exit 1 ;;
+            # Shape gates: both fields non-empty, no traversal, no
+            # absolute path. All fail closed.
+            if [ -z "$path" ] || [ -z "$size" ]; then
+              echo "malformed manifest line (empty path or size)"
+              exit 1
+            fi
+            case "$path" in
+              *..*|/*)
+                echo "manifest path is absolute or contains ..: $path"
+                exit 1 ;;
             esac
+            # EXACT (whole-line) allowlist match, not a substring match.
+            printf '%s\n' "$allowlist" | grep -Fxq -- "$path" \
+              || { echo "manifest path not in allowlist: $path"; exit 1; }
+            # Transport integrity: the downloaded file matches the size
+            # the producing job recorded (not a tamper check — see the
+            # step comment; the git add list is the boundary).
             actual="$(wc -c < "$path")"
             if [ "$actual" != "$size" ]; then
               echo "size mismatch for $path: manifest $size, actual $actual"

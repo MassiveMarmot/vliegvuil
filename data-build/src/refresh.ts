@@ -30,6 +30,20 @@ const NOISE_PATH = join(REPO_ROOT, 'web', 'public', 'noise-contours.geojson');
 const PREVIOUS_DIR = join(REPO_ROOT, 'data-build', 'previous');
 const TMP_DIR = join(REPO_ROOT, 'data-build', 'tmp');
 
+/**
+ * Download size caps (review hardening). Chosen from the REAL sizes at
+ * pin time (measured, not guessed):
+ *   - ourairports airports.csv: 12,755,603 bytes
+ *   - tar1090 aircraft.csv.gz: 8,169,002 bytes compressed,
+ *     31,947,325 bytes decompressed
+ * MAX_DOWNLOAD_BYTES is ~5x the largest download; MAX_GZIP_OUTPUT_BYTES
+ * is ~4x the largest decompressed output - both leave years of growth
+ * headroom while capping a hostile or looping upstream before it can
+ * fill the runner's disk or exhaust memory.
+ */
+export const MAX_DOWNLOAD_BYTES = 64 * 1024 * 1024;
+export const MAX_GZIP_OUTPUT_BYTES = 128 * 1024 * 1024;
+
 const SIZE_CAP_BYTES = 2 * 1024 * 1024;
 
 /** Netherlands bounding box (spec §2; same as airports.ts NL_BBOX) */
@@ -67,8 +81,12 @@ export interface RefreshResult {
   readonly upstreamVersion?: string;
 }
 
-/** Download a full snapshot (used only by refresh, not by check); binary-safe */
-async function download(url: string, format: DownloadFormat): Promise<Download> {
+/**
+ * Download a full snapshot (used only by refresh, not by check);
+ * binary-safe. Exported for the size-cap unit tests: the tests drive the
+ * REAL download path (fetch mock), not a reimplementation.
+ */
+export async function download(url: string, format: DownloadFormat): Promise<Download> {
   const response = await fetch(url, {
     headers: { 'User-Agent': USER_AGENT },
     signal: AbortSignal.timeout(60_000),
@@ -77,9 +95,45 @@ async function download(url: string, format: DownloadFormat): Promise<Download> 
   if (!response.ok) {
     throw new Error(`HTTP ${response.status} for ${url}`);
   }
-  const buffer = Buffer.from(await response.arrayBuffer());
+  // Cap 1: when the server declares a size, refuse early (a hostile or
+  // misbehaving upstream cannot even start streaming past the cap).
+  const declared = response.headers.get('content-length');
+  if (declared !== null) {
+    const declaredBytes = Number(declared);
+    if (!Number.isFinite(declaredBytes) || declaredBytes < 0) {
+      throw new Error(`${url}: invalid Content-Length ${JSON.stringify(declared)}`);
+    }
+    if (declaredBytes > MAX_DOWNLOAD_BYTES) {
+      throw new Error(`${url}: Content-Length ${declaredBytes} exceeds the cap ${MAX_DOWNLOAD_BYTES}`);
+    }
+  }
+  // Cap 2: count streamed bytes - Content-Length is advisory (absent on
+  // chunked responses, and a lying upstream could under-declare).
+  const chunks: Buffer[] = [];
+  let received = 0;
+  const body = response.body;
+  if (body === null) {
+    throw new Error(`${url}: response has no body`);
+  }
+  const reader = body.getReader();
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    received += value.byteLength;
+    if (received > MAX_DOWNLOAD_BYTES) {
+      await reader.cancel();
+      throw new Error(`${url}: download exceeded the cap ${MAX_DOWNLOAD_BYTES} (streamed ${received} bytes)`);
+    }
+    chunks.push(Buffer.from(value));
+  }
+  const buffer = Buffer.concat(chunks);
   validateMagic(url, buffer, format);
-  const content = format === 'gzip' ? gunzipSync(buffer).toString('utf8') : buffer.toString('utf8');
+  // Cap 3: a gzip bomb expands far beyond its compressed size; bound the
+  // decompressed output too.
+  const content =
+    format === 'gzip'
+      ? gunzipSync(buffer, { maxOutputLength: MAX_GZIP_OUTPUT_BYTES }).toString('utf8')
+      : buffer.toString('utf8');
   return { content, version: response.headers.get('etag') ?? '' };
 }
 
