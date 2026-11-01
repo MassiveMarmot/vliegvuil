@@ -5,7 +5,7 @@ Read docs/SPEC.md and docs/BUILD.md before every task, then the session file nam
 ## Rules
 - TypeScript strict (`strict`, `noUncheckedIndexedAccess`). No `any`, no `@ts-ignore`.
 - /core is pure TS: no DOM, no React. Providers sit behind interfaces.
-- Every module ships with Vitest tests. Before finishing run `pnpm lint && pnpm typecheck && pnpm test`, and report the results in the PR description.
+- Every module ships with Vitest tests. Before finishing run `pnpm lint && pnpm typecheck && pnpm --filter @vliegvuil/web build && pnpm test`, and report the results in the PR description. (The web build step is required first: some web tests read built output — `web/dist/sw.js`, `dist/index.html`, the CSS assets — and fail on a fresh checkout without it. CI builds before testing; match that order locally.)
 - All UI strings via i18next (`/locales/nl.json`, `/locales/en.json`). No hard-coded text.
 - Privacy: no third-party scripts/fonts, no IP logging, strict CSP. The site makes no third-party requests; PDOK BRT-A (CC-BY 4.0) is attribution only. Self-hosted analytics (session 25c) counts page views same-origin; the visitor IP is processed in memory on the localhost Caddy-to-GoatCounter route only, never stored or logged. Never state 'no analytics' — that stopped being true in 25c; every privacy claim must match docs/privacy.md.
 - Every data layer links to its entry on the Attribution page, which shows source, date, licence and caveats; the legend or badge shows a one-line essential (what, year, annual average). No medical claims; no causal claims about airports unless an official study is cited.
