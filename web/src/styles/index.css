@@ -18,6 +18,13 @@
   --vv-radius-sm: 8px;
   --vv-shadow-soft: 0 8px 20px rgba(80, 65, 45, 0.14), 0 2px 6px rgba(80, 65, 45, 0.08);
   --vv-ease: cubic-bezier(0.25, 0.8, 0.3, 1);
+  /* Aircraft-list clearance above the .map-status counter: the counter
+     (bottom: 1rem) is ~4.95rem tall (44px toggle + last-update line +
+     padding) and the toggle's -0.5rem hit-area margin overshoots its top,
+     so its top edge lands ~5.45rem up; 6rem clears it with a ~0.55rem
+     gap. Used by .aircraft-list bottom in BOTH the desktop rule and the
+     narrow-viewport media rule so the two can never drift apart. */
+  --vv-list-clearance: 6rem;
 }
 
 /* Reset and base styles */
@@ -278,8 +285,10 @@ body {
    bottom-left, directly above the counter that toggles it. */
 .aircraft-list {
   position: absolute;
-  /* Above the map-status counter (bottom: 1rem, ~2.6rem tall incl. padding) */
-  bottom: 4rem;
+  /* Above the map-status counter that toggles it: bottom equals
+     var(--vv-list-clearance) (see :root for the derivation: counter
+     height + toggle hit-area overshoot + gap). */
+  bottom: var(--vv-list-clearance);
   left: 1rem;
   width: 420px;
   max-width: calc(100vw - 2rem);
@@ -645,7 +654,9 @@ body {
     right: 0.5rem;
     width: auto;
     max-width: none;
-    bottom: 3.5rem;
+    /* Same shared clearance as the desktop rule (see :root) — the list
+       must clear the counter at every width. */
+    bottom: var(--vv-list-clearance);
     max-height: 60vh;
   }
 

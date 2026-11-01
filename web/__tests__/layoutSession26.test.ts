@@ -65,7 +65,7 @@ describe('session 26 layout: compass never overlaps the other chrome', (): void 
     expect(rule('.airport-popup')).toMatch(/left:\s*50%/);
     expect(rule('.airport-popup')).toMatch(/bottom:\s*4\.5rem/);
     // Aircraft list pop-out: bottom-left, above the counter
-    expect(rule('.aircraft-list')).toMatch(/bottom:\s*4rem/);
+    expect(rule('.aircraft-list')).toMatch(/bottom:\s*var\(--vv-list-clearance\)/);
     expect(rule('.aircraft-list')).toMatch(/left:\s*1rem/);
   });
 
@@ -74,7 +74,7 @@ describe('session 26 layout: compass never overlaps the other chrome', (): void 
     // The list pop-out goes near-full-bleed but stays above the counter;
     // the counter and list stay left-anchored; nothing claims the
     // compass's top-right corner.
-    expect(mobile).toMatch(/\.aircraft-list\s*\{[^}]*bottom:\s*3\.5rem/);
+    expect(mobile).toMatch(/\.aircraft-list\s*\{[^}]*bottom:\s*var\(--vv-list-clearance\)/);
     expect(mobile).toMatch(/\.aircraft-list\s*\{[^}]*left:\s*0\.5rem/);
     expect(mobile).not.toMatch(/\.map-status\s*\{[^}]*right/);
     expect(mobile).not.toMatch(/top-right/);
@@ -209,5 +209,51 @@ describe('compass compositing hint (Firefox canvas-hoist follow-up, PR #124)', (
     // mechanism that fixed the counter and noise toggle in #124.
     expect(useMapSource).toContain('compassControl.onAdd(mapInstance)');
     expect(css).toMatch(/\.map-compass-overlay\s*\{[^}]*z-index:\s*15/);
+  });
+});
+
+describe('aircraft list clearance above the counter (overlap fix)', (): void => {
+  it('the shared --vv-list-clearance variable exists in :root and is used by BOTH bottom rules', (): void => {
+    // One custom property so the desktop rule and the narrow-viewport
+    // media rule can never drift apart again (review fix: they were
+    // 4rem vs 3.5rem, both BELOW the counter's top edge — the open list
+    // overlapped its own toggle).
+    const root = rule(':root');
+    expect(root).toMatch(/--vv-list-clearance:\s*6rem/);
+    // Desktop rule uses the variable
+    expect(css).toMatch(
+      /\.aircraft-list\s*\{[^}]*bottom:\s*var\(--vv-list-clearance\)/
+    );
+    // The narrow-viewport media block uses the SAME variable
+    const mobile = /@media \(max-width: 768px\)\s*\{([\s\S]*?)\n\}\n/.exec(css)?.[1] ?? '';
+    expect(mobile).toMatch(
+      /\.aircraft-list\s*\{[^}]*bottom:\s*var\(--vv-list-clearance\)/
+    );
+    // No hardcoded list bottoms remain
+    expect(rule('.aircraft-list')).not.toMatch(/bottom:\s*[0-9]/);
+  });
+
+  it('the clearance clears the counter\'s top edge with the toggle hit-area overshoot', (): void => {
+    // jsdom cannot lay out; this asserts the CSS VALUES arithmetically.
+    // Counter: bottom 1rem, content ~44px (2.75rem) toggle + ~1.3rem
+    // last-update line + 2 * 0.5rem padding, plus the toggle's -0.5rem
+    // hit-area margin overshooting the top: top edge ≈ 1 + 2.75 + 1.3 +
+    // 1.0 + 0.5 ≈ 6.55rem... compute conservatively from what we can
+    // read: the counter's own box is bottom:1rem + min-height 44px
+    // (2.75rem) for the toggle alone (the toggle visually contains the
+    // count line), so its top edge is at least 3.75rem up; the clearance
+    // must exceed counter-bottom + toggle-min-height (1rem + 2.75rem).
+    const root = rule(':root');
+    const m = /--vv-list-clearance:\s*([0-9.]+)rem/.exec(root);
+    expect(m).not.toBeNull();
+    const clearance = Number(m?.[1] ?? '0');
+    const counterBottom = 1; // .map-status bottom: 1rem (asserted below)
+    const statusRule = rule('.map-status');
+    expect(statusRule).toMatch(/bottom:\s*1rem/);
+    const toggleRule = rule('.map-status-toggle');
+    const minH = /min-height:\s*44px/.exec(toggleRule);
+    expect(minH).not.toBeNull();
+    const toggleMinHeightRem = 44 / 16; // 2.75rem
+    expect(clearance).toBeGreaterThan(counterBottom + toggleMinHeightRem);
   });
 });
