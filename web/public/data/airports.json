@@ -7,7 +7,7 @@
     "longitude": 5.682351,
     "elevation": 11,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -59,7 +59,7 @@
     "longitude": 4.49611,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -72,7 +72,7 @@
     "longitude": 4.35111,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -85,7 +85,7 @@
     "longitude": 4.51278,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -124,7 +124,7 @@
     "longitude": 4.804802,
     "elevation": 1,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -137,7 +137,7 @@
     "longitude": 6.814329,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -150,7 +150,7 @@
     "longitude": 6.51611,
     "elevation": 40,
     "type": "small_airport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -163,7 +163,7 @@
     "longitude": 5.14694,
     "elevation": 3,
     "type": "small_airport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -176,7 +176,7 @@
     "longitude": 2.94389,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -189,7 +189,7 @@
     "longitude": 3.07806,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -202,7 +202,7 @@
     "longitude": 3.66222,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -215,7 +215,7 @@
     "longitude": 3.19528,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -228,7 +228,7 @@
     "longitude": 3.30944,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -241,7 +241,7 @@
     "longitude": 3.33889,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -254,7 +254,7 @@
     "longitude": 3.42722,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -267,7 +267,7 @@
     "longitude": 3.51111,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -280,7 +280,7 @@
     "longitude": 3.48722,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -293,7 +293,7 @@
     "longitude": 3.44944,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -306,7 +306,7 @@
     "longitude": 3.36889,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -319,7 +319,7 @@
     "longitude": 3.42222,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -332,7 +332,7 @@
     "longitude": 3.4175,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -345,7 +345,7 @@
     "longitude": 3.218889,
     "elevation": 125,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -358,7 +358,7 @@
     "longitude": 4.04972,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -371,7 +371,7 @@
     "longitude": 3.91472,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -384,7 +384,7 @@
     "longitude": 3.80444,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -410,7 +410,7 @@
     "longitude": 3.86889,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -423,7 +423,7 @@
     "longitude": 3.74778,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -436,7 +436,7 @@
     "longitude": 3.82833,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -449,7 +449,7 @@
     "longitude": 3.87278,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -462,7 +462,7 @@
     "longitude": 4.0975,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -475,7 +475,7 @@
     "longitude": 3.77944,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -488,7 +488,7 @@
     "longitude": 3.9925,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -501,7 +501,7 @@
     "longitude": 3.78722,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -514,7 +514,7 @@
     "longitude": 3.90444,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -527,7 +527,7 @@
     "longitude": 3.885,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -540,7 +540,7 @@
     "longitude": 3.89361,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -553,7 +553,7 @@
     "longitude": 3.98222,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -566,7 +566,7 @@
     "longitude": 3.87167,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -579,7 +579,7 @@
     "longitude": 3.98611,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -592,7 +592,7 @@
     "longitude": 3.62639,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -605,7 +605,7 @@
     "longitude": 3.62639,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -618,7 +618,7 @@
     "longitude": 3.96028,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -644,7 +644,7 @@
     "longitude": 4.23167,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -657,7 +657,7 @@
     "longitude": 4.23556,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -670,7 +670,7 @@
     "longitude": 4.18361,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -683,7 +683,7 @@
     "longitude": 4.20056,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -696,7 +696,7 @@
     "longitude": 4.0225,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -709,7 +709,7 @@
     "longitude": 4.20083,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -722,7 +722,7 @@
     "longitude": 4.25944,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -735,7 +735,7 @@
     "longitude": 4.24667,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -748,7 +748,7 @@
     "longitude": 4.20833,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -761,7 +761,7 @@
     "longitude": 4.60222,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -774,7 +774,7 @@
     "longitude": 4.53944,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -787,7 +787,7 @@
     "longitude": 4.5625,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -813,7 +813,7 @@
     "longitude": 4.48944,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -826,7 +826,7 @@
     "longitude": 5.9413,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -839,7 +839,7 @@
     "longitude": 4.64528,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -852,7 +852,7 @@
     "longitude": 4.96028,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -865,7 +865,7 @@
     "longitude": 4.83083,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -878,7 +878,7 @@
     "longitude": 3.73111,
     "elevation": 6,
     "type": "small_airport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -891,7 +891,7 @@
     "longitude": 7.033053,
     "elevation": 1,
     "type": "small_airport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -904,7 +904,7 @@
     "longitude": 3.75611,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -917,7 +917,7 @@
     "longitude": 3.72556,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -930,7 +930,7 @@
     "longitude": 3.80361,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -943,7 +943,7 @@
     "longitude": 3.58917,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -956,7 +956,7 @@
     "longitude": 3.74083,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -969,7 +969,7 @@
     "longitude": 3.34192,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -982,7 +982,7 @@
     "longitude": 3.75861,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -995,7 +995,7 @@
     "longitude": 3.685,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1008,7 +1008,7 @@
     "longitude": 3.81611,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1021,7 +1021,7 @@
     "longitude": 3.73944,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1034,7 +1034,7 @@
     "longitude": 3.86778,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1047,7 +1047,7 @@
     "longitude": 3.93778,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1060,7 +1060,7 @@
     "longitude": 4.09806,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1073,7 +1073,7 @@
     "longitude": 4.15,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1086,7 +1086,7 @@
     "longitude": 4.14167,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1099,7 +1099,7 @@
     "longitude": 4.28333,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1112,7 +1112,7 @@
     "longitude": 4.26667,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1125,7 +1125,7 @@
     "longitude": 4.29972,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1138,7 +1138,7 @@
     "longitude": 4.17139,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1151,7 +1151,7 @@
     "longitude": 4.26194,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1164,7 +1164,7 @@
     "longitude": 4.04305,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1177,7 +1177,7 @@
     "longitude": 4.13638,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1190,7 +1190,7 @@
     "longitude": 3.80472,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1216,7 +1216,7 @@
     "longitude": 2.86861,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1229,7 +1229,7 @@
     "longitude": 3.27481,
     "elevation": 62,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1242,7 +1242,7 @@
     "longitude": 3.67,
     "elevation": 98,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1255,7 +1255,7 @@
     "longitude": 4.553003,
     "elevation": 30,
     "type": "small_airport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1268,7 +1268,7 @@
     "longitude": 2.96611,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1281,7 +1281,7 @@
     "longitude": 7.02278,
     "elevation": 14,
     "type": "small_airport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1294,7 +1294,7 @@
     "longitude": 6.050004,
     "elevation": 17,
     "type": "small_airport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1307,7 +1307,7 @@
     "longitude": 5.92444,
     "elevation": 276,
     "type": "small_airport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1320,7 +1320,7 @@
     "longitude": 4.090000152587891,
     "elevation": 3,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1333,7 +1333,7 @@
     "longitude": 5.278094,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1359,7 +1359,7 @@
     "longitude": 4.830552,
     "elevation": 2,
     "type": "small_airport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1385,7 +1385,7 @@
     "longitude": 5.085601,
     "elevation": 37,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1411,7 +1411,7 @@
     "longitude": 4.593444,
     "elevation": 1,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1424,7 +1424,7 @@
     "longitude": 5.021245,
     "elevation": -14,
     "type": "small_airport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1437,7 +1437,7 @@
     "longitude": 4.511962,
     "elevation": 10,
     "type": "small_airport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1450,7 +1450,7 @@
     "longitude": 6.194632,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1463,7 +1463,7 @@
     "longitude": 4.94444,
     "elevation": 5,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1476,7 +1476,7 @@
     "longitude": 3.05667,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1489,7 +1489,7 @@
     "longitude": 4.10611,
     "elevation": null,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"
@@ -1502,7 +1502,7 @@
     "longitude": 5.749192,
     "elevation": 171,
     "type": "heliport",
-    "status": "commercial",
+    "status": null,
     "source": "OurAirports",
     "license": "Public Domain",
     "date": "2026-11-01"

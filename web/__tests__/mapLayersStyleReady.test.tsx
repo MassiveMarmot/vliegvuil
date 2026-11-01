@@ -149,6 +149,7 @@ vi.mock('maplibre-gl', () => {
 
 import { Map as MapComponent } from '../src/components/Map';
 import type { DisplayAircraft } from '../src/types';
+import type { AirportData } from '../src/airports/airports';
 
 function featureCount(fake: FakeMapInstance, sourceId: string): number {
   const source = fake.sources.get(sourceId) as FakeSource;
@@ -378,7 +379,7 @@ describe('latest-callback refs: map clicks reach the CURRENT callback', () => {
   it('a click after a prop change calls the NEW onAirportClick, not the first-render one', async () => {
     const first = vi.fn();
     const latest = vi.fn();
-    const airports = [
+    const airports: AirportData[] = [
       { icao: 'EHAM', iata: 'AMS', name: 'Schiphol', latitude: 52.3, longitude: 4.76, elevation: -3, type: 'large_airport', status: 'commercial', source: 'OurAirports', license: 'ODbL-1.0', date: '2026-10-30' },
     ];
     const { rerender } = render(
@@ -412,7 +413,7 @@ describe('latest-callback refs: map clicks reach the CURRENT callback', () => {
   });
 
   it('an onAirportClick change alone never re-registers the click handlers', async () => {
-    const airports = [
+    const airports: AirportData[] = [
       { icao: 'EHAM', iata: 'AMS', name: 'Schiphol', latitude: 52.3, longitude: 4.76, elevation: -3, type: 'large_airport', status: 'commercial', source: 'OurAirports', license: 'ODbL-1.0', date: '2026-10-30' },
     ];
     const { rerender } = render(
