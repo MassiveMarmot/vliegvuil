@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { useMap } from '../src/hooks/useMap';
+import { readMapSources } from './helpers/readMapSources';
 
 describe('neighbours context layer', () => {
   const geojsonPath = resolve(__dirname, '../public/data/neighbours.geojson');
@@ -37,7 +38,7 @@ describe('neighbours context layer', () => {
   });
 
   it('is wired into the map hook module', () => {
-    const source = readFileSync(resolve(__dirname, '../src/hooks/useMap.ts'), 'utf-8');
+    const source = readMapSources();
     expect(source).toContain("data: NEIGHBOURS_GEOJSON_URL");
     expect(source).toContain('neighbours-fill');
     expect(source).toContain('neighbours-border');

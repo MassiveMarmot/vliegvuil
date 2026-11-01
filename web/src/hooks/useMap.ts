@@ -4,8 +4,7 @@
 // Hook for MapLibre GL map management
 
 import { useEffect, useRef, useState } from 'react';
-import { Map as MapLibreMap, LngLatBounds, NavigationControl, AttributionControl } from 'maplibre-gl';
-import type { StyleSpecification } from 'maplibre-gl';
+import { Map as MapLibreMap } from 'maplibre-gl';
 // MapLibre's own stylesheet: the compass icon (data-URI background on
 // .maplibregl-ctrl-icon), the 29x29 ctrl button size and the control-corner
 // positioning all live here. Without it the NavigationControl renders an
@@ -14,21 +13,7 @@ import type { StyleSpecification } from 'maplibre-gl';
 // the data: SVG backgrounds fall under img-src, which already allows data:.
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { MapConfig } from '../types';
-import { NETHERLANDS_BBOX, getBasemapUrl, PDOK_BRT_ATTRIBUTION, TILE_MIN_ZOOM, TILE_MAX_ZOOM } from '../types';
-import { AIRPORT_GLYPHS_URL } from '../airports/airportLayer';
-
-// Country context for bordering states: the PDOK BRT basemap renders only the
-// Netherlands (abroad is transparent by design), so neighbouring countries
-// come from a bundled public-domain Natural Earth clip (same origin, ~38 KB).
-const NEIGHBOURS_SOURCE_ID = 'neighbours';
-const NEIGHBOURS_GEOJSON_URL = '/data/neighbours.geojson';
-const NEIGHBOURS_ATTRIBUTION = 'Made with Natural Earth';
-
-// Flat, muted colours that sit under the BRT map without competing with it
-// (palette per SPEC \u00a73: cream/sand land, soft blue-grey water).
-const NEIGHBOURS_FILL_COLOR = '#efe7d9';
-const NEIGHBOURS_BORDER_COLOR = '#8c7f6b';
-const MAP_BACKGROUND_COLOR = '#b8c6cc';
+import { fitNetherlands, createMapInstance, mountPortaledControls } from '../map/mapSetup';
 
 // Session 28: bearing threshold (degrees) at which the compass shows.
 // Below it the map counts as pointing north and the compass stays hidden.
@@ -66,175 +51,6 @@ export interface UseMapReturn {
   tileError: boolean;
 }
 
-/** The base style: PDOK BRT raster tiles over the bundled Natural Earth neighbours. */
-function buildMapStyle(): StyleSpecification {
-  return {
-    version: 8,
-    // Airport labels (session 23) use self-hosted glyphs from our
-    // own origin; no third-party font host (spec §5).
-    glyphs: AIRPORT_GLYPHS_URL,
-    sources: {
-      neighbours: {
-        type: 'geojson',
-        data: NEIGHBOURS_GEOJSON_URL,
-        attribution: NEIGHBOURS_ATTRIBUTION,
-      },
-      'pdok-brt': {
-        type: 'raster',
-        tiles: [getBasemapUrl()],
-        tileSize: 256,
-        attribution: PDOK_BRT_ATTRIBUTION,
-        // The self-hosted tile tree only exists for TILE zooms
-        // 6-14 (TILE_MIN_ZOOM/TILE_MAX_ZOOM — the same range
-        // scripts/vps-tiles-update.js downloads). Declaring the
-        // real range here stops MapLibre from requesting tile
-        // zooms that always 404 (each 404 trips the non-blocking
-        // tile-error notice). These are TILE zooms, deliberately
-        // decoupled from the MAP zooms in DEFAULT_MAP_CONFIG
-        // (review fix): with 256px raster tiles the covering zoom
-        // is round(mapZoom+1), so feeding the map's min/max here
-        // (or these to the Map) mixes the two bases and stretches
-        // or blanks tiles.
-        minzoom: TILE_MIN_ZOOM,
-        maxzoom: TILE_MAX_ZOOM,
-      },
-    },
-    layers: [
-      { id: 'background', type: 'background', paint: { 'background-color': MAP_BACKGROUND_COLOR } },
-      {
-        id: 'neighbours-fill',
-        type: 'fill',
-        source: NEIGHBOURS_SOURCE_ID,
-        paint: { 'fill-color': NEIGHBOURS_FILL_COLOR },
-      },
-      {
-        id: 'neighbours-border',
-        type: 'line',
-        source: NEIGHBOURS_SOURCE_ID,
-        paint: { 'line-color': NEIGHBOURS_BORDER_COLOR, 'line-width': 1.5 },
-      },
-      { id: 'pdok-brt-layer', type: 'raster', source: 'pdok-brt', minzoom: 0, maxzoom: 22 },
-    ],
-  };
-}
-
-/** Fit the Netherlands into the viewport, then snap the zoom to an integer. */
-function fitNetherlands(mapInstance: MapLibreMap): void {
-  const bounds = new LngLatBounds(
-    [NETHERLANDS_BBOX[0], NETHERLANDS_BBOX[1]],
-    [NETHERLANDS_BBOX[2], NETHERLANDS_BBOX[3]],
-  );
-  mapInstance.fitBounds(bounds, { padding: 20, duration: 0 });
-  // Sharp initial view (review fix): raster tiles are 1:1 only at
-  // integer map zooms (the covering zoom rounds to a tile level;
-  // fractional zooms scale tiles 0.71x-1.41x and blur the baked-in
-  // place names). fitBounds produces a fractional zoom on desktop
-  // viewports (~6.3-6.9 here); snap it to an integer so the FIRST
-  // view is 1:1. floor() shows the whole country with a little extra
-  // margin (ceil would crop the edges); at the smallest supported
-  // viewport (320px) minZoom 6 already clamps fitBounds to exactly
-  // 6.0, so the floor never cuts the Netherlands off. User zoom
-  // (wheel/pinch) is deliberately left alone.
-  const fitted = mapInstance.getZoom();
-  if (!Number.isInteger(fitted)) {
-    mapInstance.setZoom(Math.floor(fitted));
-  }
-}
-
-/** Create the map instance (maplibre-gl 6 is ESM-only: named import). */
-function createMapInstance(
-  container: HTMLDivElement,
-  config: MapConfig,
-  locale: MapLocalePatch | undefined,
-): MapLibreMap {
-  return new MapLibreMap({
-    container,
-    style: buildMapStyle(),
-    center: config.center as [number, number],
-    zoom: config.zoom,
-    minZoom: config.minZoom,
-    maxZoom: config.maxZoom,
-    pitch: config.pitch,
-    bearing: config.bearing,
-
-    // Session 26: pitch is disabled entirely (the map is a 2D NL view;
-    // no interaction can tilt it) so the compass never needs to reset
-    // tilt — it only ever resets the bearing to 0.
-    maxPitch: 0,
-    locale,
-    // Firefox regression fix (compass PR #126 follow-up): the default
-    // attribution control mounts via addControl INSIDE .map-container
-    // - invisible on the affected Firefox (Gecko misorders the canvas
-    // above controls in that stacking context; maintainer-verified via
-    // elementFromPoint returning the canvas at the control's
-    // position). We create the AttributionControl ourselves and portal
-    // it out (see mountPortaledControls); attribution is a CC-BY
-    // requirement (PDOK BRT-A, Natural Earth), so it must be VISIBLE.
-    attributionControl: false,
-  });
-}
-
-/** Mount the compass and attribution controls portaled OUT of .map-container (the Firefox fix). */
-function mountPortaledControls(
-  mapInstance: MapLibreMap,
-  onCompassElement: (el: HTMLElement) => void,
-  onAttributionElement: (el: HTMLElement) => void,
-): { compassControl: NavigationControl; attributionControl: AttributionControl } {
-  // Session 26 compass: MapLibre's built-in NavigationControl with the
-  // compass only (zoom buttons off, verified against the installed 6.14
-  // source: NavigationControlOptions showZoom/showCompass). The compass
-  // is always rendered (6.x has no "show only when rotated" option;
-  // visualizePitch only tilts the icon — moot here because pitch is
-  // disabled below). Clicking it calls map.resetNorth() (a 1 s animated
-  // rotateTo(0)); MapLibre's easeTo sets duration 0 automatically under
-  // prefers-reduced-motion (browser.prefersReducedMotion in the source),
-  // so the reset is animation-free for reduced-motion users.
-  const compassControl = new NavigationControl({
-    showZoom: false,
-    showCompass: true,
-  });
-  // Anchor: top-right, BELOW the header bar. Every other chrome element
-  // occupies another corner (noise overlay + telemetry: bottom-right;
-  // counter + list: bottom-left; header: top bar; airport popup:
-  // bottom-center), so the compass owns the top-right corner at every
-  // tested width (320/360/375 px included).
-  //
-  // Firefox regression follow-up: do NOT use map.addControl. addControl
-  // mounts the control INSIDE .map-container, in the same stacking
-  // context as the WebGL canvas — and on the affected Firefox nightly
-  // + radeonsi the canvas orders above it (elementFromPoint returns the
-  // canvas at the compass position; z-index/position/will-change on the
-  // corner do not help, because Gecko's stacking order itself misorders
-  // them). The proven fix (the counter and noise toggle were rescued
-  // exactly this way, PR #124) is to render the chrome OUTSIDE the
-  // canvas's stacking context: onAdd returns the control's element
-  // unattached (IControl contract, maplibre-gl.d.ts), Map.tsx portals it
-  // into a sibling overlay of .map-container, and the overlay owns the
-  // positioning. The control still registers its map listeners through
-  // onAdd; cleanup calls onRemove (Map.remove() only detaches controls
-  // IT mounted via addControl).
-  const compassElement = compassControl.onAdd(mapInstance);
-  if (compassElement) {
-    compassElement.classList.add('map-compass-portal');
-    onCompassElement(compassElement);
-  }
-
-  // Attribution control, portaled the same way (Firefox fix).
-  // compact: false - the panel must be EXPANDED (the attributions are
-  // the CC-BY requirement; a collapsed toggle could be missed). The
-  // text comes from the style sources' `attribution` fields
-  // (NEIGHBOURS_ATTRIBUTION, PDOK_BRT_ATTRIBUTION) - the same fields
-  // the default control read.
-  const attributionControl = new AttributionControl({ compact: false });
-  const attributionElement = attributionControl.onAdd(mapInstance);
-  if (attributionElement) {
-    attributionElement.classList.add('map-attribution-portal');
-    onAttributionElement(attributionElement);
-  }
-
-  return { compassControl, attributionControl };
-}
-
 /** Wire the 'rotate'/'rotateend' listeners that drive compass visibility (session 28). */
 function trackCompassBearing(
   mapInstance: MapLibreMap,
@@ -252,7 +68,6 @@ function trackCompassBearing(
   };
   mapInstance.on('rotate', updateCompassVisibility);
   mapInstance.on('rotateend', updateCompassVisibility);
-  // Initial state: hidden (config.bearing is 0).
   return (): void => {
     mapInstance.off('rotate', updateCompassVisibility);
     mapInstance.off('rotateend', updateCompassVisibility);
@@ -426,6 +241,7 @@ export function useMap(config: MapConfig, locale?: MapLocalePatch): UseMapReturn
       console.error('Failed to initialize map:', error);
     }
   }, [config.center, config.zoom, config.minZoom, config.maxZoom, config.pitch, config.bearing]);
+
   // Session 26 (review fix): update the compass button's label in place on a
   // language change — MapLibre 6.14 sets both `title` and `aria-label`
   // (NavigationControl#_setButtonTitle at onAdd), so a later update must

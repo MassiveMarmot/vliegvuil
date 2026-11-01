@@ -14,10 +14,11 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { readIndexCss } from './helpers/readIndexCss';
+import { readMapSources } from './helpers/readMapSources';
 
 const css = readIndexCss();
 const mapSource = readFileSync(resolve(__dirname, '..', 'src', 'components', 'Map.tsx'), 'utf8');
-const useMapSource = readFileSync(resolve(__dirname, '..', 'src', 'hooks', 'useMap.ts'), 'utf8');
+const useMapSource = readMapSources();
 
 function rule(selector: string): string {
   const re = new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`);
