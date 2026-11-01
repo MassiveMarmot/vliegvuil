@@ -92,10 +92,27 @@ export const DEFAULT_MAP_CONFIG: MapConfig = {
   center: [4.7639, 52.3086], // Schiphol area
   zoom: 8,
   minZoom: 6,
-  maxZoom: 14,
+  // Map maxZoom 13 = tile zoom 14 with 256px raster tiles (the source's
+  // roundZoom offset is +1: tile z = round(mapZoom + log2(512/256)) =
+  // round(mapZoom + 1)), so tiles are never stretched beyond 1:1.
+  maxZoom: 13,
   pitch: 0,
   bearing: 0,
 };
+
+/**
+ * TILE zoom range of the self-hosted BRT-A PNG tree — the SAME range
+ * scripts/vps-tiles-update.js downloads (its default --min-zoom/--max-zoom
+ * is 6/14). These are TILE zooms, NOT map zooms: with 256px raster tiles
+ * the map's covering zoom is offset by +1 (see DEFAULT_MAP_CONFIG above),
+ * so these must never be fed to the Map constructor's minZoom/maxZoom and
+ * the map values must not be fed to the source's minzoom/maxzoom. The
+ * source's minzoom/maxzoom use these; the map's bounds live in
+ * DEFAULT_MAP_CONFIG and are each one below the tile range (map 6..13 =
+ * tiles 7..14 across the round offset).
+ */
+export const TILE_MIN_ZOOM = 6;
+export const TILE_MAX_ZOOM = 14;
 
 // Self-hosted BRT-A tiles: the PNG tiles are downloaded once from the PDOK
 // WMTS (scripts/vps-tiles-update.js) and served from our own origin, so the

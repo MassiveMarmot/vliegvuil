@@ -42,6 +42,12 @@ interface FakeMapInstance {
 }
 const holder = vi.hoisted(() => ({
   current: null as FakeMapInstance | null,
+  // Zoom state for the initial-snap tests (tile-sharpness PR): the fake
+  // Map's getZoom/setZoom read/write this; useMap's snap floors a
+  // fractional value after fitBounds. ctorOptions is the Map constructor
+  // options the fake recorded (for setZoom's minZoom/maxZoom clamp).
+  zoom: null as number | null,
+  ctorOptions: null as Record<string, unknown> | null,
 }));
 
 function makeCompassButton(): HTMLButtonElement {
@@ -92,7 +98,18 @@ vi.mock('maplibre-gl', () => {
     addSource: (): void => undefined,
     addLayer: (): void => undefined,
     setLayoutProperty: (): void => undefined,
-    fitBounds: (): void => undefined,
+    fitBounds: (): void => {
+      // The real fitBounds computes a viewport-dependent zoom; the snap
+      // tests pre-load it into holder.zoom (simulating the transform at
+      // a given viewport width).
+    },
+    getZoom: (): number => holder.zoom ?? 8,
+    setZoom: (z: number): void => {
+      const opts = holder.ctorOptions as { minZoom?: number; maxZoom?: number } | null;
+      const min = opts?.minZoom ?? 0;
+      const max = opts?.maxZoom ?? 24;
+      holder.zoom = Math.min(Math.max(z, min), max);
+    },
     addImage: (): void => undefined,
   });
   const FakeMap = class {
@@ -101,6 +118,7 @@ vi.mock('maplibre-gl', () => {
       // patch must carry the compass label.
       fake.ctorOptions = opts;
       fake.ctorCount += 1;
+      holder.ctorOptions = opts;
       Object.assign(this, mapApi());
     }
   };
@@ -440,5 +458,68 @@ describe('attribution control portal (Firefox stacking-order fix)', () => {
     // And the fake's portaled element shows the attribution text
     const overlay = document.querySelector('.map-attribution-overlay');
     expect(overlay?.textContent).toContain('Kaartgegevens');
+  });
+});
+
+// --- Initial-zoom snap (tile-sharpness PR): the FIRST view is 1:1 ---
+// jsdom has no layout engine, so the REAL fitBounds zoom per viewport is
+// not computable here. What is verified: the snap LOGIC against the
+// real useMap, with the fake Map returning each viewport's fitted zoom
+// (derived offline from the Web Mercator scale for NETHERLANDS_BBOX +
+// 20px padding) and clamping setZoom like MapLibre. Invariant: fraction
+// in -> integer out, clamped by minZoom/maxZoom. A real-browser spot
+// check after deploy is the final confirmation.
+describe('initial zoom snap: first view is 1:1 at the supported widths', () => {
+  const cases: Array<{ width: number; fitted: number; expected: number }> = [
+    // 320px is clamped by minZoom 6 to exactly 6.0 (integer; the snap is
+    // a no-op); wider viewports get fractional fits that must floor.
+    { width: 320, fitted: 6.0, expected: 6.0 },
+    { width: 390, fitted: 6.18, expected: 6.0 },
+    { width: 1280, fitted: 6.75, expected: 6.0 },
+    { width: 1440, fitted: 6.89, expected: 6.0 },
+    { width: 1920, fitted: 6.99, expected: 6.0 },
+  ];
+
+  beforeEach((): void => {
+    fetchPositions.mockReset();
+    if (holder.current) {
+      holder.current.controls.length = 0;
+      holder.current.listeners.clear();
+      holder.current.ctorCount = 0;
+      holder.current.removed = false;
+      holder.current.container = makeContainer(makeCompassButton());
+    }
+    holder.zoom = null;
+  });
+  afterEach((): void => {
+    cleanup();
+    setPathSafe('/nl/');
+  });
+
+  it.each(cases)(
+    'width $width px: fitBounds zoom $fitted snaps to $expected (1:1 tiles)',
+    ({ fitted, expected }): void => {
+      // Pre-load the fake transform: fitBounds "computed" this zoom.
+      holder.zoom = fitted;
+      const Probe = (): React.ReactElement => {
+        const { mapContainer } = useMapProbe(undefined as unknown as Record<string, string>);
+        return <div ref={mapContainer} />;
+      };
+      render(<Probe />);
+      // The snap ran inside useMap's init effect: the final zoom is the
+      // floored integer.
+      expect(holder.zoom).toBe(expected);
+      expect(Number.isInteger(holder.zoom)).toBe(true);
+    },
+  );
+
+  it('an integer fitted zoom is left alone (no snap churn)', (): void => {
+    holder.zoom = 7;
+    const Probe = (): React.ReactElement => {
+      const { mapContainer } = useMapProbe(undefined as unknown as Record<string, string>);
+      return <div ref={mapContainer} />;
+    };
+    render(<Probe />);
+    expect(holder.zoom).toBe(7);
   });
 });

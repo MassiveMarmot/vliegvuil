@@ -13,7 +13,7 @@ import { Map as MapLibreMap, LngLatBounds, NavigationControl, AttributionControl
 // the data: SVG backgrounds fall under img-src, which already allows data:.
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { MapConfig } from '../types';
-import { NETHERLANDS_BBOX, getBasemapUrl, PDOK_BRT_ATTRIBUTION, DEFAULT_MAP_CONFIG } from '../types';
+import { NETHERLANDS_BBOX, getBasemapUrl, PDOK_BRT_ATTRIBUTION, TILE_MIN_ZOOM, TILE_MAX_ZOOM } from '../types';
 import { AIRPORT_GLYPHS_URL } from '../airports/airportLayer';
 
 // Country context for bordering states: the PDOK BRT basemap renders only the
@@ -122,14 +122,19 @@ export function useMap(config: MapConfig, locale?: MapLocalePatch): UseMapReturn
               tiles: [getBasemapUrl()],
               tileSize: 256,
               attribution: PDOK_BRT_ATTRIBUTION,
-              // The self-hosted tile tree only exists for zoom 6-14
-              // (DEFAULT_MAP_CONFIG minZoom/maxZoom). Declaring the real
-              // range here stops MapLibre from requesting zoom 0-5 tiles
-              // that always 404 at the NL-wide initial view (upstream
-              // parent tiles are outside the downloaded bbox anyway) —
-              // each 404 also trips the non-blocking tile-error notice.
-              minzoom: DEFAULT_MAP_CONFIG.minZoom,
-              maxzoom: DEFAULT_MAP_CONFIG.maxZoom,
+              // The self-hosted tile tree only exists for TILE zooms
+              // 6-14 (TILE_MIN_ZOOM/TILE_MAX_ZOOM — the same range
+              // scripts/vps-tiles-update.js downloads). Declaring the
+              // real range here stops MapLibre from requesting tile
+              // zooms that always 404 (each 404 trips the non-blocking
+              // tile-error notice). These are TILE zooms, deliberately
+              // decoupled from the MAP zooms in DEFAULT_MAP_CONFIG
+              // (review fix): with 256px raster tiles the covering zoom
+              // is round(mapZoom+1), so feeding the map's min/max here
+              // (or these to the Map) mixes the two bases and stretches
+              // or blanks tiles.
+              minzoom: TILE_MIN_ZOOM,
+              maxzoom: TILE_MAX_ZOOM,
             },
           },
           layers: [
@@ -194,6 +199,20 @@ export function useMap(config: MapConfig, locale?: MapLocalePatch): UseMapReturn
         [NETHERLANDS_BBOX[2], NETHERLANDS_BBOX[3]],
       );
       mapInstance.fitBounds(bounds, { padding: 20, duration: 0 });
+      // Sharp initial view (review fix): raster tiles are 1:1 only at
+      // integer map zooms (the covering zoom rounds to a tile level;
+      // fractional zooms scale tiles 0.71x-1.41x and blur the baked-in
+      // place names). fitBounds produces a fractional zoom on desktop
+      // viewports (~6.3-6.9 here); snap it to an integer so the FIRST
+      // view is 1:1. floor() shows the whole country with a little extra
+      // margin (ceil would crop the edges); at the smallest supported
+      // viewport (320px) minZoom 6 already clamps fitBounds to exactly
+      // 6.0, so the floor never cuts the Netherlands off. User zoom
+      // (wheel/pinch) is deliberately left alone.
+      const fitted = mapInstance.getZoom();
+      if (!Number.isInteger(fitted)) {
+        mapInstance.setZoom(Math.floor(fitted));
+      }
 
       // Session 26 compass: MapLibre's built-in NavigationControl with the
       // compass only (zoom buttons off, verified against the installed 6.14
