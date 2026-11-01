@@ -99,6 +99,11 @@ jobs:
         run: |
           set -eu
           # Pure bash + gh; no upstream data interpolated into this script.
+          # This job has NO checkout (it must not run project code), so gh
+          # cannot infer the repository from a git remote — every gh call
+          # passes --repo "$GITHUB_REPOSITORY" (an env GitHub sets on every
+          # job; not upstream data). Without it the dispatch run failed
+          # with "failed to run git: fatal: not a git repository".
           label="data-updates"
           title="Data updates available"
           # FAIL CLOSED (review fix): a missing/empty status or body file
@@ -125,18 +130,18 @@ jobs:
             fi
           fi
           if [ "$grep_rc" -eq 0 ]; then
-            issue_url="$(gh issue list --label "$label" --state open --json url --jq '.[0].url')"
+            issue_url="$(gh issue list --repo "$GITHUB_REPOSITORY" --label "$label" --state open --json url --jq '.[0].url')"
             if [ -n "$issue_url" ]; then
-              gh issue edit "$issue_url" --body-file "$BODY_FILE"
+              gh issue edit --repo "$GITHUB_REPOSITORY" "$issue_url" --body-file "$BODY_FILE"
               echo "Updated existing issue: $issue_url"
             else
-              gh issue create --title "$title" --label "$label" --body-file "$BODY_FILE"
+              gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --label "$label" --body-file "$BODY_FILE"
               echo "Created new issue"
             fi
           else
-            issue_url="$(gh issue list --label "$label" --state open --json url --jq '.[0].url')"
+            issue_url="$(gh issue list --repo "$GITHUB_REPOSITORY" --label "$label" --state open --json url --jq '.[0].url')"
             if [ -n "$issue_url" ]; then
-              gh issue close "$issue_url" --comment "All sources are up to date; closing. This issue reopens automatically when an update is detected."
+              gh issue close --repo "$GITHUB_REPOSITORY" "$issue_url" --comment "All sources are up to date; closing. This issue reopens automatically when an update is detected."
               echo "Closed issue: $issue_url"
             else
               echo "All sources up to date; no open issue to close."
