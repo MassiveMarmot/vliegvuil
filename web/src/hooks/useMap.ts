@@ -29,6 +29,10 @@ const NEIGHBOURS_FILL_COLOR = '#efe7d9';
 const NEIGHBOURS_BORDER_COLOR = '#8c7f6b';
 const MAP_BACKGROUND_COLOR = '#b8c6cc';
 
+// Session 28: bearing threshold (degrees) at which the compass shows.
+// Below it the map counts as pointing north and the compass stays hidden.
+const COMPASS_BEARING_EPSILON = 0.5;
+
 // Hook return type
 /** MapLibre UI-string locale patch (session 26): the control buttons'
  *  accessible names come from MapLibre's UI strings; we override the
@@ -68,6 +72,10 @@ export function useMap(config: MapConfig, locale?: MapLocalePatch): UseMapReturn
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<MapLibreMap | null>(null);
   const [compassElement, setCompassElement] = useState<HTMLElement | null>(null);
+  // Session 28: compass only when rotated. The bearing threshold in
+  // degrees: below it the compass is hidden (float noise at north must
+  // not flicker it), at or above it the compass shows.
+  const [compassVisible, setCompassVisible] = useState(false);
   // The attribution control's element (AttributionControl onAdd return
   // value), portaled out of the container like the compass (Firefox
   // stacking-order fix; the default control was maintainer-verified
@@ -253,6 +261,22 @@ export function useMap(config: MapConfig, locale?: MapLocalePatch): UseMapReturn
         setCompassElement(compassElement);
       }
 
+      // Session 28: hide the compass while the map points north. Both
+      // 'rotate' and 'rotateend' drive the same check: 'rotate' makes the
+      // compass appear as soon as any rotation starts (mouse drag, touch,
+      // keyboard Shift+arrow, programmatic setBearing — all go through
+      // setBearing/easeTo per the 6.14 source), and 'rotateend' with
+      // bearing 0 hides it again only AFTER the 1 s resetNorth ease has
+      // finished (duration 0 under prefers-reduced-motion, so the hide is
+      // instant there). EPSILON absorbs float noise at north.
+      const bearingMap = mapInstance;
+      const updateCompassVisibility = (): void => {
+        setCompassVisible(Math.abs(bearingMap.getBearing()) >= COMPASS_BEARING_EPSILON);
+      };
+      mapInstance.on('rotate', updateCompassVisibility);
+      mapInstance.on('rotateend', updateCompassVisibility);
+      // Initial state: hidden (config.bearing is 0).
+
       // Attribution control, portaled the same way (Firefox fix).
       // compact: false - the panel must be EXPANDED (the attributions are
       // the CC-BY requirement; a collapsed toggle could be missed). The
@@ -321,10 +345,13 @@ export function useMap(config: MapConfig, locale?: MapLocalePatch): UseMapReturn
       const constructedMap = mapInstance as MapLibreMap;
       return (): void => {
         constructedMap.off('style.load', onStyleLoad);
+        constructedMap.off('rotate', updateCompassVisibility);
+        constructedMap.off('rotateend', updateCompassVisibility);
         compassControl.onRemove();
         attributionControl.onRemove();
         setCompassElement(null);
         setAttributionElement(null);
+        setCompassVisible(false);
         constructedMap.remove();
         setStyleReady(false);
         setMapLoaded(false);
@@ -360,6 +387,30 @@ export function useMap(config: MapConfig, locale?: MapLocalePatch): UseMapReturn
     btn?.setAttribute('aria-label', compassLabel);
     btn?.setAttribute('title', compassLabel);
   }, [map, compassLabel, compassElement]);
+
+  // Session 28: apply compass visibility to the portaled element. The
+  // 'hidden' attribute means display:none — not focusable, not announced
+  // (never opacity). If the compass is focused while being hidden, move
+  // focus to the map region (the MapLibre canvas is tabindex=0 +
+  // role=region when interactive — set by the library itself in 6.14),
+  // never to <body>.
+  useEffect((): void => {
+    if (!compassElement) {
+      return;
+    }
+    if (compassVisible) {
+      compassElement.removeAttribute('hidden');
+      return;
+    }
+    if (
+      compassElement.contains(document.activeElement) &&
+      mapContainer.current
+    ) {
+      const canvas = mapContainer.current.querySelector('canvas');
+      (canvas ?? mapContainer.current).focus();
+    }
+    compassElement.setAttribute('hidden', '');
+  }, [compassVisible, compassElement]);
 
   return {
     mapContainer,

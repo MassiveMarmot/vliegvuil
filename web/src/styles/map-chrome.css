@@ -139,6 +139,12 @@
   background-color: var(--vv-surface);
   pointer-events: auto;
 }
+/* Session 28: the hidden compass (bearing ~north) must stay display:none.
+   The UA default for [hidden] can be overridden by the library's own
+   display rules on the ctrl group/button, so pin it here. */
+.map-compass-overlay .maplibregl-ctrl-group[hidden] {
+  display: none;
+}
 
 @media (prefers-reduced-motion: no-preference) {
   /* Pop the compass in gently; MapLibre's own reset animation is already
