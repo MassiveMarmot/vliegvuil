@@ -65,6 +65,11 @@ refer to the session plan in `docs/BUILD.md` §4 and
 - `index.css` split into ordered partials (tokens-base, map, panels, search,
   responsive-print, overlays, shell, map-chrome) with the cascade unchanged;
   deploy guide split into per-section files under `docs/deploy/`.
+- Compass (session 28) now shows only while the map is rotated: hidden at
+  bearing 0 (epsilon 0.5°) via the `hidden` attribute (not focusable, not
+  announced), appears on any rotation, hides again once the reset-to-north
+  animation finishes; if the focused compass hides, focus moves to the map
+  region (the MapLibre canvas), never `<body>`.
 
 ### Fixed
 - Dead reckoning for heading 0 (north) and ground-state aircraft.
