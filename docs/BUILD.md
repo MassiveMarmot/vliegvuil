@@ -10,10 +10,9 @@ One session = one PR = one merge. Start each new session from updated `main`. If
 
 | # | Session | Done when |
 |---|---|---|
-| 23b | **Airport status data fix** (done): airports without an overlay entry get status null (proposal accepted by the maintainer); the 12 overlay statuses unchanged. In data-build, status comes only from the hand-maintained overlay; airports not listed in the overlay get no status (null or an explicit "unspecified" — proposal to be made in that session; not "commercial"). Today `AIRPORT_STATUS_OVERLAY[icao] ?? 'commercial'` (`data-build/src/airports.ts`) defaults every unlisted EH* airport to "commercial", which is misleading for the 93 heliports and 11 small airfields. Update `AirportStatus` and the snapshot types, the tests, and any schema; regenerate `airports.json` via the normal data workflow (reviewed PR, output under the 2 MB limit, `sources.json` `lastUpdated` updated by the build). | No airport without an overlay entry has status "commercial" (test); the 12 existing overlay statuses are unchanged (test against a snapshot of those entries); the web app still renders the session 23 popups (status stays plain-language and unknown statuses show nothing); docs mention the behaviour. Depends on 23 |
 | 27 | **Docs and release prep.** Update README, `architecture.md`, `privacy.md`, `deploy.md` to match reality; refresh screenshots from the real app; add CHANGELOG and a release checklist. | Docs contain no statement the code does not do; HSTS ramp-up reviewed: current max-age recorded in `docs/deploy.md`; raise step by step (1 day, 1 week, 1 month, 1 year) only after a week without TLS problems at each step |
 
-Finished sessions (rows 1–22, 22b, 22c, 23, 24, 25, 25b, 25c, 25d, 26) moved to [docs/history/session-plan.md](history/session-plan.md):
+Finished sessions (rows 1–22, 22b, 22c, 23, 23b, 24, 25, 25b, 25c, 25d, 26) moved to [docs/history/session-plan.md](history/session-plan.md):
 
 - [1 — Scaffold](history/session-plan.md)
 - [2 — Core: providers + interpolation](history/session-plan.md)
@@ -40,6 +39,7 @@ Finished sessions (rows 1–22, 22b, 22c, 23, 24, 25, 25b, 25c, 25d, 26) moved t
 - [22b — Data freshness](history/session-plan.md)
 - [22c — Data workflows (GitHub Actions)](history/session-plan.md)
 - [23 — Airports layer + snapshot enrichment.](history/session-plan.md)
+- [23b — Airport status data fix](history/session-plan.md)
 - [24 — PWA, fonts, bundle.](history/session-plan.md)
 - [25 — UI shell](history/session-plan.md)
 - [25d — Unit defaults by language](history/session-plan.md)
