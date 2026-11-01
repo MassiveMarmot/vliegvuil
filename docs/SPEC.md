@@ -51,7 +51,7 @@ No access logs. No client IP or headers forwarded upstream (in-memory per-IP rat
 CORS configured for the web origin and future Capacitor origins.
 Data builds: scheduled GitHub Actions workflows run the /data-build check (weekly, opens or updates one issue) and refresh (monthly, plus manual dispatch; opens a pull request with the changed snapshots and sources.json). Validation gates and an atomic swap apply inside the workflow. Noise sources refresh only on manual dispatch after human review. The VPS runs no data jobs.
 Deploy: the server clones over HTTPS while the repo is public (read-only deploy key only if the repo is private), then build, run by hand on the VPS after merging. Nothing deploys from GitHub.
-GitHub Actions: CI (lint, typecheck, tests, build, validators) on pushes and pull requests, plus the scheduled data check and refresh workflows, which only open issues and pull requests. No deploy jobs, no secrets other than GITHUB_TOKEN, no third-party actions beyond pnpm/action-setup, actions pinned to commit SHAs, minimal per-job permissions.
+GitHub Actions: CI (lint, typecheck, tests, build, validators) on pushes and pull requests. No deploy jobs, no secrets other than GITHUB_TOKEN, no third-party actions beyond pnpm/action-setup, actions pinned to commit SHAs, minimal per-job permissions.
 Ubuntu 26.04 LTS, unattended-upgrades, SSH keys only.
 
 Future native apps: Capacitor wraps the same web build.
@@ -93,6 +93,7 @@ Live noise sensors
 Schiphol flight API (free with registration)
 Self-hosted privacy-first analytics (GoatCounter, EUPL-1.2, single binary, SQLite on the VPS): shipped in session 25c — see §5, docs/sessions/25c-analytics.md and the 25c row in BUILD.md §4.
 Accounts, playback, schedules
+Hide live aircraft view: a user option to hide the live aircraft layer, for when more pollution/context layers make live planes a distraction; design it with the first additional layer, not before.
 
 Explicitly excluded (reviewed, not integrated):
 
