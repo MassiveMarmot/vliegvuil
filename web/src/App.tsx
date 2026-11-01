@@ -157,12 +157,37 @@ function App(): React.ReactElement {
   const mainRef = useRef<HTMLElement>(null);
   // Route change: document.title, <html lang>, focus to the page h1,
   // announce via the live region (spec section 6).
+  // Count fix (review): count a page view only when the PATHNAME actually
+  // changed. The effect's deps include t, and a first '/' visit renders
+  // not-found first (SW shell) then the language root — both used to
+  // count. The ref tracks the last counted path so re-renders with a new
+  // t identity (language sync on mount) count nothing.
+  const lastCountedPathRef = useRef<string | null>(null);
   useEffect((): void => {
     document.documentElement.lang = language;
     // Session 25c: count the route change (same-origin /count, production
     // builds only; the module no-ops elsewhere). Counted for every route
-    // incl. not-found, per the session plan.
-    countRouteChange(window.location.pathname);
+    // incl. not-found, per the session plan — but only ONCE per pathname.
+    const pathname = window.location.pathname;
+    if (lastCountedPathRef.current !== pathname) {
+      lastCountedPathRef.current = pathname;
+      countRouteChange(pathname);
+    }
+    // Not-found is served by the SPA fallback with HTTP 200 (Caddy has no
+    // way to know the path is unknown), so the app itself must tell
+    // crawlers: noindex ONLY on not-found, removed again on any other
+    // route (a leftover noindex would deindex real pages).
+    let robots = document.querySelector('meta[name="robots"]');
+    if (route === 'not-found') {
+      if (robots === null) {
+        robots = document.createElement('meta');
+        robots.setAttribute('name', 'robots');
+        document.head.appendChild(robots);
+      }
+      robots.setAttribute('content', 'noindex');
+    } else {
+      robots?.remove();
+    }
     const titles: Record<string, string> = {
       map: t('title.map', 'VliegVuil.nl - live vliegverkeer en geluidscontouren'),
       about: t('title.about', 'Over - VliegVuil.nl'),
