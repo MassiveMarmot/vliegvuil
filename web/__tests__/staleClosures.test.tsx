@@ -76,6 +76,16 @@ vi.mock('maplibre-gl', () => {
       }
       onRemove(): void {}
     },
+    AttributionControl: class {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      constructor(_options: unknown) {}
+      onAdd(): HTMLElement {
+        const div = document.createElement('div');
+        div.className = 'maplibregl-ctrl maplibregl-ctrl-attrib';
+        return div;
+      }
+      onRemove(): void {}
+    },
   };
 });
 

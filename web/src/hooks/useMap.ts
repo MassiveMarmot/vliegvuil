@@ -4,7 +4,7 @@
 // Hook for MapLibre GL map management
 
 import { useEffect, useRef, useState } from 'react';
-import { Map as MapLibreMap, LngLatBounds, NavigationControl } from 'maplibre-gl';
+import { Map as MapLibreMap, LngLatBounds, NavigationControl, AttributionControl } from 'maplibre-gl';
 // MapLibre's own stylesheet: the compass icon (data-URI background on
 // .maplibregl-ctrl-icon), the 29x29 ctrl button size and the control-corner
 // positioning all live here. Without it the NavigationControl renders an
@@ -44,6 +44,10 @@ export interface UseMapReturn {
    *  Firefox stacking-order fix where it is created. Null before the map
    *  initializes and after cleanup. */
   compassElement: HTMLElement | null;
+  /** The attribution control's DOM element, portaled out of the map
+   *  container by Map.tsx (Firefox stacking-order fix, like the
+   *  compass). Null before the map initializes and after cleanup. */
+  attributionElement: HTMLElement | null;
   /** True once the 'load' event fired (first fully rendered frame). */
   mapLoaded: boolean;
   /** True once the style is loaded ('style.load') — independent of tiles. */
@@ -64,6 +68,11 @@ export function useMap(config: MapConfig, locale?: MapLocalePatch): UseMapReturn
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<MapLibreMap | null>(null);
   const [compassElement, setCompassElement] = useState<HTMLElement | null>(null);
+  // The attribution control's element (AttributionControl onAdd return
+  // value), portaled out of the container like the compass (Firefox
+  // stacking-order fix; the default control was maintainer-verified
+  // invisible: elementFromPoint returned the canvas at its position).
+  const [attributionElement, setAttributionElement] = useState<HTMLElement | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [styleReady, setStyleReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -87,6 +96,7 @@ export function useMap(config: MapConfig, locale?: MapLocalePatch): UseMapReturn
     // The compass control's element once onAdd has produced it (see the
     // Firefox fix at the control's creation site for the full rationale).
     let compassElement: HTMLElement | null = null;
+    let attributionElement: HTMLElement | null = null;
     // Hoisted so the catch path can remove a constructed map: if onAdd or
     // fitBounds throws after the constructor, the instance would otherwise
     // leak (event listeners, WebGL context) with no removal path.
@@ -167,6 +177,15 @@ export function useMap(config: MapConfig, locale?: MapLocalePatch): UseMapReturn
         // tilt — it only ever resets the bearing to 0.
         maxPitch: 0,
         locale: localeRef.current,
+        // Firefox regression fix (compass PR #126 follow-up): the default
+        // attribution control mounts via addControl INSIDE .map-container
+        // - invisible on the affected Firefox (Gecko misorders the canvas
+        // above controls in that stacking context; maintainer-verified via
+        // elementFromPoint returning the canvas at the control's
+        // position). We create the AttributionControl ourselves and portal
+        // it out (see below); attribution is a CC-BY requirement
+        // (PDOK BRT-A, Natural Earth), so it must be VISIBLE.
+        attributionControl: false,
       });
 
       // Set Netherlands bounds
@@ -213,6 +232,19 @@ export function useMap(config: MapConfig, locale?: MapLocalePatch): UseMapReturn
       if (compassElement) {
         compassElement.classList.add('map-compass-portal');
         setCompassElement(compassElement);
+      }
+
+      // Attribution control, portaled the same way (Firefox fix).
+      // compact: false - the panel must be EXPANDED (the attributions are
+      // the CC-BY requirement; a collapsed toggle could be missed). The
+      // text comes from the style sources' `attribution` fields
+      // (NEIGHBOURS_ATTRIBUTION, PDOK_BRT_ATTRIBUTION) - the same fields
+      // the default control read.
+      const attributionControl = new AttributionControl({ compact: false });
+      attributionElement = attributionControl.onAdd(mapInstance);
+      if (attributionElement) {
+        attributionElement.classList.add('map-attribution-portal');
+        setAttributionElement(attributionElement);
       }
 
       // Store map instance
@@ -271,7 +303,9 @@ export function useMap(config: MapConfig, locale?: MapLocalePatch): UseMapReturn
       return (): void => {
         constructedMap.off('style.load', onStyleLoad);
         compassControl.onRemove();
+        attributionControl.onRemove();
         setCompassElement(null);
+        setAttributionElement(null);
         constructedMap.remove();
         setStyleReady(false);
         setMapLoaded(false);
@@ -281,6 +315,7 @@ export function useMap(config: MapConfig, locale?: MapLocalePatch): UseMapReturn
       // the compass onAdd) throws — otherwise the instance leaks.
       mapInstance?.remove();
       setCompassElement(null);
+      setAttributionElement(null);
       setMapError(error instanceof Error ? error.message : 'Unknown map error');
       setMapInitError(error instanceof Error ? error.message : 'Unknown map error');
       console.error('Failed to initialize map:', error);
@@ -311,6 +346,7 @@ export function useMap(config: MapConfig, locale?: MapLocalePatch): UseMapReturn
     mapContainer,
     map,
     compassElement,
+    attributionElement,
     mapLoaded,
     styleReady,
     tileError,

@@ -142,20 +142,32 @@ describe('maplibre stylesheet import (invisible-compass fix): control geometry',
     expect(group).toMatch(/border-radius:\s*10px/);
   });
 
-  it('the attribution control moves to bottom-center, clear of the noise legend, telemetry panel and counter', (): void => {
-    // MapLibre anchors the attribution bottom-right by default — the same
-    // corner as .noise-overlay and .telemetry-panel. Our override moves
-    // it to the bottom-center; the airport popup sits higher
-    // (bottom: 4.5rem), so no overlap at 320/360/375 px either. The
-    // corner rule uses a two-selector list, so match it directly.
+  it('the attribution overlay anchors bottom-center, clear of the noise legend, telemetry panel and counter', (): void => {
+    // The control is PORTALED out of the container (Firefox fix, like
+    // the compass); the .map-attribution-overlay SIBLING owns the
+    // anchoring (MapLibre's corner containers are no longer involved).
+    // Bottom-center: the noise legend and telemetry panel sit
+    // bottom-right, the counter bottom-left, the airport popup
+    // bottom-center but at bottom: 4.5rem — no overlap at any tested
+    // width incl. 320/360/375 px.
     expect(css).toMatch(
-      /\.maplibregl-ctrl-bottom-right,\s*\.maplibregl-ctrl-bottom-left\s*\{[^}]*left:\s*50%[^}]*bottom:\s*0\.25rem[^}]*transform:\s*translateX\(-50%\)/
-    );
-    expect(css).toMatch(
-      /\.maplibregl-ctrl-bottom-right,\s*\.maplibregl-ctrl-bottom-left\s*\{[^}]*right:\s*auto/
+      /\.map-attribution-overlay\s*\{[^}]*left:\s*50%[^}]*bottom:\s*0\.25rem[^}]*transform:\s*translateX\(-50%\)/
     );
     // Still visible (required PDOK/Kadaster attribution): not display:none
     expect(rule('.maplibregl-ctrl-attrib')).not.toMatch(/display:\s*none/);
+  });
+
+  it('attribution portal wiring: the element renders in the overlay, NOT inside .map-container', (): void => {
+    // Firefox stacking-order fix (PR #126 follow-up): both controls must
+    // live OUTSIDE the container, in sibling overlays. This is asserted
+    // through the source wiring (the DOM tests are in
+    // a11ySession26.test.tsx with the fake controls).
+    expect(useMapSource).toContain('attributionControl: false');
+    expect(useMapSource).toContain('attributionControl.onAdd(mapInstance)');
+    expect(useMapSource).toContain('attributionControl.onRemove()');
+    const mapSource = readFileSync(resolve(__dirname, '..', 'src', 'components', 'Map.tsx'), 'utf8');
+    expect(mapSource).toContain('map-attribution-overlay');
+    expect(mapSource).toContain('overlay.appendChild(attributionElement)');
   });
 });
 
