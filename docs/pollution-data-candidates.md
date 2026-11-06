@@ -1,6 +1,6 @@
 # New open pollution-data candidates for VliegVuil
 
-Survey compiled 1 November 2026; verification update 2 November 2026. Candidate list and sources only — nothing here is a decision or a scheduled session; SPEC.md §8 is unchanged until a candidate is picked.
+Survey compiled 1 November 2026; verification updates 2–3 November 2026. Candidate list and sources only — nothing here is a decision or a scheduled session; SPEC.md §8 is unchanged until a candidate is picked.
 
 ## Question
 
@@ -8,13 +8,13 @@ Which map layers could VliegVuil probably add from open Dutch or international p
 
 ## Executive summary
 
-1. **The strongest unlisted candidate is measured, not modelled, air quality.** SPEC §8 only lists the *modelled* Atlas NO₂/PM₂.₅ grids. The Landelijk Meetnet Luchtkwaliteit (Luchtmeetnet, RIVM + GGD Amsterdam) publishes **hourly measured values** (CC-BY 4.0 on data.overheid.nl; rivm.nl unreadable), with stations around Schiphol (codes and coordinates in Findings). A "measured stations" point layer is new, §9-compliant, and licence-verified.
+1. **The strongest unlisted candidate is measured, not modelled, air quality.** SPEC §8 only lists the *modelled* Atlas NO₂/PM₂.₅ grids. The Landelijk Meetnet Luchtkwaliteit (Luchtmeetnet, RIVM + GGD Amsterdam) publishes **hourly measured values**, with stations around Schiphol (codes and coordinates in Findings). Licence: CC-BY 4.0 on data.overheid.nl, verified for RIVM's LML dataset; the Schiphol-area stations are source PNH — not stated as covered: not verified. A "measured stations" point layer is new, §9-compliant; licence-verified for LML only.
 2. **Satellite-measured NO₂ (Sentinel-5P TROPOMI) is the second strong find.** Daily tropospheric NO₂ columns at ~5.5 × 3.5 km, free, full and open under the Copernicus Sentinel Data Legal Notice (verified 2 Nov). A distinctly different data type from the Atlas grids; airport-related NO₂ enhancements are resolvable in such data (peer-reviewed US studies only).
-3. **A partial unblock for ultrafine particles exists.** SPEC records UFP as blocked because the TNO 2026 inventory has no spatial distribution — but *point measurements* near Schiphol exist: Luchtmeetnet publishes hourly UFP (n/cm³) at 8 stations, two of them GGD Amsterdam (verified 2 Nov), though Ookmeer (Osdorp) reports only NO/NO₂, its 2018 UFP series being in annual PDFs. A point layer would not need spatially distributed national data.
+3. **No near-Schiphol UFP data yet.** SPEC records UFP as blocked because the TNO 2026 inventory has no spatial distribution — and Luchtmeetnet's hourly UFP, though published as data for 11 stations (list in Findings), has none near Schiphol (nearest ~16 km N; the Schiphol-area stations and Ookmeer report no UFP as data). A "near Schiphol" UFP layer is unsupported until the Ookmeer request (or another source) delivers a series.
 4. **Facility-level industrial releases (E-PRTR / European Industrial Emissions Portal)** are downloadable as geodata (2007–2024, ver 16.0, Feb 2026) and could give a point-source layer. Verified 2 November 2026: EEA reuse terms (CC-BY/ODC-By); no airport activity in the official sector list; Schiphol facility presence still unverified (interactive portals).
 5. **Nitrogen data is open and verified but mostly agricultural**: AERIUS total nitrogen deposition hexagons (100 m, "geen beperkingen") and the MAN ammonia measurement network (~350 locations). Natural companion to the already-listed Natura 2000 candidate, needs careful "mostly not aviation" labelling.
 6. **Several more open datasets exist but fit weakly** (water quality beyond PFAS, pesticides in surface water, citizen sensors, night lights, former landfills) — usable as context only.
-7. **Licence status varies**: RWS water data is public domain, LML is CC-BY 4.0 (data.overheid.nl), Copernicus (Sentinel Data Legal Notice), EEA (CC-BY/ODC-By) and EOG are attribution/open licences — verified on official pages (1–2 November 2026). Bestrijdingsmiddelenatlas and MAN licences, and an LML licence statement on an RIVM-run page (rivm.nl blocks reading), remain **to verify** (per AGENTS.md, no licence claim without reading the official page).
+7. **Licence status varies**: RWS water data is public domain, RIVM's LML is CC-BY 4.0 (data.overheid.nl), Copernicus (Sentinel Data Legal Notice), EEA (CC-BY/ODC-By) and EOG are attribution/open licences — verified on official pages (1–2 November 2026). Bestrijdingsmiddelenatlas and MAN licences, PNH/GGDA station data, and an LML licence statement on an RIVM-run page (rivm.nl blocks reading), remain **to verify** (per AGENTS.md, no licence claim without reading the official page).
 
 ## Methodology
 
@@ -29,8 +29,8 @@ Which map layers could VliegVuil probably add from open Dutch or international p
 
 **1. Measured real-time air quality — Luchtmeetnet / Landelijk Meetnet Luchtkwaliteit (RIVM)**
 - Hourly *measured* concentrations (NO₂, PM₁₀, PM₂.₅, O₃, …) at fixed stations, including stations around Schiphol (Oude Meer-Aalsmeerderdijk, Badhoevedorp-Sloterweg) and the GGD Amsterdam network.
-- Access verified: open dataset directory (yearly files, metadata CSVs, R scripts) and a data.overheid.nl entry — **licence CC-BY 4.0** (data.overheid.nl; rivm.nl unreadable).
-- Stations near Schiphol ([official API](https://api.luchtmeetnet.nl/open_api/stations)): NL49565 Oude Meer-Aalsmeerderdijk (52.28013, 4.77082; NO, NO₂, PM₁₀); NL49561 Badhoevedorp-Sloterweg (52.334003, 4.774006; NO, NO₂, CO, PM₁₀, PM₂.₅); NL49564 Hoofddorp-Hoofdweg (52.327450, 4.715071; NO, NO₂, PM₁₀).
+- Access verified: open dataset directory (yearly files, metadata CSVs, R scripts) and a data.overheid.nl entry — **CC-BY 4.0, verified for RIVM's LML dataset**; PNH/GGDA licence is not stated there (PNH = "Meetnet provincie Noord Holland", GGD Amsterdam-run — [brongegegens.csv](https://data.rivm.nl/data/luchtmeetnet/Metadata/luchtmeetnet_brongegegens.csv)): not verified.
+- Stations near Schiphol (source PNH; coordinates per [meetlocaties.csv](https://data.rivm.nl/data/luchtmeetnet/Metadata/luchtmeetnet_meetlocaties.csv) — the API differs by tens of metres): NL49565 Oude Meer-Aalsmeerderdijk (52.279949, 4.770670; NO, NO₂, PM₁₀); NL49561 Badhoevedorp-Sloterweg (52.333617, 4.773469; NO, NO₂, CO, PM₁₀, PM₂.₅); NL49564 Hoofddorp-Hoofdweg (52.327464, 4.715008; NO, NO₂, PM₁₀).
 - API terms ([api-docs.luchtmeetnet.nl](https://api-docs.luchtmeetnet.nl/)): no authentication, fair use, max 100 requests/5 min, hourly updates.
 - Fit: the spec's only air-quality candidate is the *modelled* Atlas grids; a **measured** stations layer (points with latest value, colour-coded) is new, satisfies §9 "measurements, not causes", and strengthens the attribution story ("measured, official network").
 - Caveats: spatially sparse (points, no surface); "real-time" would in practice be a build-time snapshot under the existing refresh workflows (privacy rule: no third-party requests); legend must carry substance, unit and timestamp, no health claims.
@@ -40,10 +40,10 @@ Which map layers could VliegVuil probably add from open Dutch or international p
 - Fit: measured, aviation-relevant — airport-related NO₂ enhancements are resolvable in TROPOMI data ([Goldberg et al. 2021](https://pmc.ncbi.nlm.nih.gov/articles/PMC8047911/), peer-reviewed US study; no Schiphol-specific study found) — and a different data type from the Atlas grids; could ship as an annual-average composite raster around Schiphol.
 - Caveats: column ≠ ground concentration; cloud gaps over the NL; L2→grid processing needed; keep the "dated, label clearly" principle; must not share a legend with concentration grids (mirrors the existing §8 design note).
 
-**4. Measured UFP near Schiphol — GGD Amsterdam (partial unblock of the UFP item)**
-- Verified 2 November 2026: UFP ("ultra fijn stof", n/cm³) is an official Luchtmeetnet component ([RIVM componenten.csv](https://data.rivm.nl/data/luchtmeetnet/Metadata/luchtmeetnet_componenten.csv)); hourly UFP is published for 8 stations incl. GGD Zaandam-Wagenschotpad and Almere-Boomgaardweg — but Ookmeer (Osdorp) reports only NO and NO₂, its 2018 UFP series being in annual PDFs.
-- Fit: SPEC's UFP blocker is the lack of *spatially distributed* national data; a *point-measurement* layer near Schiphol does not need that. Even one labelled station is a meaningful "measured UFP near Schiphol" marker.
-- Caveats: Ookmeer UFP as data is not verified to exist (annual PDFs only; request drafted); single point, wind-direction dependent; the TNO caveat style must be kept.
+**4. Measured UFP — published as data, but not near Schiphol**
+- Verified 3 November 2026: UFP (n/cm³; API formula "PS") is published hourly as data ([2025_UFP.csv](https://data.rivm.nl/data/luchtmeetnet/Vastgesteld-jaar/2025/2025_UFP.csv)); 11 stations return it via the [API](https://api.luchtmeetnet.nl/open_api/measurements?formula=PS), none near Schiphol — GGD: NL49701 Zaandam-Wagenschotpad (~16 km N), NL49680 Almere-Boomgaardweg (~33 km E); RIVM: NL10644 Cabauw, NL10722 Eibergen, NL10934 Kollumerwaard (39–152 km); DCMR: NL01494 Schiedam, NL01913 Sluiskil (50–131 km); ODZL: NL50003 Geleen, NL50010 Maastricht-A2, NL50013 Meerssen, NL50014 Gulpen (164–190 km SE). Schiphol-area stations and Ookmeer: no UFP as data (Ookmeer 2018: annual PDFs).
+- Fit: SPEC's UFP blocker is the lack of *spatially distributed* national data, and every published UFP station is far away — a "near Schiphol" layer is unsupported until another source (e.g. the Ookmeer request) delivers a series.
+- Caveats: no near-Schiphol UFP as data (nearest ~16 km N; Ookmeer request drafted); single point, wind-direction dependent; the TNO caveat style must be kept.
 
 ### Tier 2 — open and verified, context value
 
@@ -106,19 +106,20 @@ Which map layers could VliegVuil probably add from open Dutch or international p
 | [OpenAQ docs — Licenses resource](https://docs.openaq.org/resources/licenses) | 4/5 | - |
 | [Emissieregistratie — Ruimtelijke verdeling](https://www.emissieregistratie.nl/documentatie/ruimtelijke-verdeling) | 5/5 | 2024-06-24 |
 
-Caveats: see Methodology; remaining checks are under Open questions; everything else verified on official pages (2 Nov 2026).
+Caveats: see Methodology; remaining checks are under Open questions; everything else verified on official pages (2–3 Nov 2026).
 
 ## Open questions
 
 1. Does Schiphol report as an E-PRTR/IEPR facility? Needs a manual facility search (portals are interactive) and a full Annex I read (EUR-Lex blocked) to confirm no airport activity.
-2. Is GGD's Ookmeer UFP series available as data? Not via the API (Ookmeer reports NO/NO₂ only); UFP is published for 8 other stations; request drafted.
+2. Is GGD's Ookmeer UFP series available as data? Not via the API (Ookmeer reports NO/NO₂ only; the 11 UFP stations are all far away); request drafted.
 3. What licence governs the Bestrijdingsmiddelenatlas downloads, and MAN's station data?
 4. Do the ER 1 × 1 km spatial files have embargo conditions for aviation sources specifically (SPEC §11 already wants this checked)?
+5. What licence covers the PNH/GGDA station data (the readme's licence terms are not readable — the PDF truncates after ~13 of 79 pages)?
 
 ## Recommendations
 
-1. **Record two new §8 candidates**, both §9-friendly and licence-verified: (a) *Measured air quality stations (Luchtmeetnet/LML, CC-BY 4.0)* — points with latest measured values, designed alongside the existing Atlas grids entry; (b) *Satellite NO₂ (Sentinel-5P TROPOMI, Copernicus Sentinel Data Legal Notice)* — annual composite around Schiphol, never sharing a legend with concentration grids.
-2. **Amend the UFP §8 entry** with the verified findings: hourly UFP is published as data for 8 Luchtmeetnet stations (none at Ookmeer); a measured point layer needs no national spatial data, pending the GGD request for the Ookmeer series.
+1. **Record two new §8 candidates**, both §9-friendly (LML licence verified; PNH/GGDA pending): (a) *Measured air quality stations (Luchtmeetnet/LML, CC-BY 4.0 for RIVM's LML data)* — points with latest measured values, designed alongside the existing Atlas grids entry; (b) *Satellite NO₂ (Sentinel-5P TROPOMI, Copernicus Sentinel Data Legal Notice)* — annual composite around Schiphol, never sharing a legend with concentration grids.
+2. **Amend the UFP §8 entry** with the verified findings: hourly UFP is published as data for 11 Luchtmeetnet stations, none near Schiphol; a "near Schiphol" UFP layer is unsupported until the Ookmeer request (or another source) delivers a series.
 3. **Run the two remaining checks** (manual E-PRTR facility search for Schiphol; send the GGD Ookmeer data request) before adding those as candidates — invent nothing until then.
 4. **Skip for now**: CAMS (overlaps Atlas), pesticides, water quality beyond PFAS, Samen Meten, night lights, landfills. Note them in this survey only; they don't earn a SPEC entry without a concrete layer design.
 5. Any accepted candidate still goes through the existing gates: official licence page read and cited in `sources.json`, attribution-page entry, i18n, legend caveats, build-time snapshot (no third-party requests), and the hide-aircraft-view option designed with the first layer that actually ships.
